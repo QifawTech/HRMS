@@ -1,0 +1,41 @@
+# Environment
+.env
+.env.local
+*.env
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+build/
+npm-debug.log*
+yarn-error.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+backups/
+logs/
+uploads/
+*.log
+
+# Database dumps
+*.bson
+*.json.gz
