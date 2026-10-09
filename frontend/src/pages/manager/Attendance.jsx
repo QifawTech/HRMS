@@ -18,7 +18,7 @@ import Modal from "../../components/common/Modal";
 import * as api from "../../api/attendanceApi";
 import * as deptApi from "../../api/departmentApi";
 
-const FONT = "'Calibri', 'Segoe UI', -apple-system, sans-serif";
+const FONT = "'Inter', 'Segoe UI', -apple-system, sans-serif";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -34,7 +34,6 @@ const formatHours = (hours) => {
   return `${h}h ${m}m`;
 };
 
-// ⭐ Format minutes → "1h 9m" or "45m"
 const formatMinutes = (mins) => {
   if (!mins || mins <= 0) return "0m";
   const h = Math.floor(mins / 60);
@@ -176,7 +175,7 @@ const EmployeeReportModal = ({ open, onClose, employee }) => {
                 .slice(0, 2)
                 .join("")}
             </div>
-            <div>
+            <div style={{ minWidth: 0 }}>
               <div style={{ fontWeight: 700 }}>
                 {employee.employee_name}
               </div>
@@ -363,7 +362,7 @@ const EmployeeReportModal = ({ open, onClose, employee }) => {
             </div>
           </div>
 
-          {/* Records Table */}
+          {/* Records — Desktop table + Mobile cards */}
           <div
             style={{
               maxHeight: 350,
@@ -396,70 +395,152 @@ const EmployeeReportModal = ({ open, onClose, employee }) => {
                 No records this month
               </div>
             ) : (
-              <table className="erp-table" style={{ fontSize: 12.5 }}>
-                <thead style={{ position: "sticky", top: 0, zIndex: 1 }}>
-                  <tr>
-                    <th style={{ padding: "8px 10px" }}>Date</th>
-                    <th style={{ padding: "8px 10px" }}>In</th>
-                    <th style={{ padding: "8px 10px" }}>Out</th>
-                    <th style={{ padding: "8px 10px" }}>Hours</th>
-                    <th style={{ padding: "8px 10px" }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <>
+                {/* Desktop Table */}
+                <div className="d-none d-md-block">
+                  <table className="erp-table" style={{ fontSize: 12.5 }}>
+                    <thead style={{ position: "sticky", top: 0, zIndex: 1 }}>
+                      <tr>
+                        <th style={{ padding: "8px 10px" }}>Date</th>
+                        <th style={{ padding: "8px 10px" }}>In</th>
+                        <th style={{ padding: "8px 10px" }}>Out</th>
+                        <th style={{ padding: "8px 10px" }}>Hours</th>
+                        <th style={{ padding: "8px 10px" }}>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.records.map((r) => (
+                        <tr key={r._id}>
+                          <td style={{ padding: "8px 10px", fontSize: 12 }}>
+                            {formatDateShort(r.date)}
+                          </td>
+                          <td style={{ padding: "8px 10px" }}>
+                            <span
+                              style={{
+                                color: r.is_late ? "#dc2626" : "#059669",
+                                fontWeight: 600,
+                                fontVariantNumeric: "tabular-nums",
+                              }}
+                            >
+                              {formatTime(r.check_in)}
+                            </span>
+                            {r.is_late && (
+                              <div
+                                style={{ fontSize: 10, color: "#dc2626" }}
+                              >
+                                Late {formatMinutes(r.late_minutes)}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ padding: "8px 10px" }}>
+                            <span
+                              style={{
+                                color: r.is_early_logout
+                                  ? "#dc2626"
+                                  : "#d97706",
+                                fontWeight: 600,
+                                fontVariantNumeric: "tabular-nums",
+                              }}
+                            >
+                              {formatTime(r.check_out)}
+                            </span>
+                            {r.is_early_logout && (
+                              <div
+                                style={{ fontSize: 10, color: "#dc2626" }}
+                              >
+                                Early {formatMinutes(r.early_minutes)}
+                              </div>
+                            )}
+                          </td>
+                          <td
+                            style={{
+                              padding: "8px 10px",
+                              fontWeight: 600,
+                              fontVariantNumeric: "tabular-nums",
+                            }}
+                          >
+                            {formatHours(r.working_hours)}
+                          </td>
+                          <td style={{ padding: "8px 10px" }}>
+                            {r.is_late && r.is_early_logout ? (
+                              <span
+                                className="erp-badge"
+                                style={{
+                                  background: "#fee2e2",
+                                  color: "#991b1b",
+                                  fontSize: 10,
+                                }}
+                              >
+                                Late+Early
+                              </span>
+                            ) : r.is_late ? (
+                              <span
+                                className="erp-badge"
+                                style={{
+                                  background: "#fef3c7",
+                                  color: "#92400e",
+                                  fontSize: 10,
+                                }}
+                              >
+                                Late
+                              </span>
+                            ) : r.is_early_logout ? (
+                              <span
+                                className="erp-badge"
+                                style={{
+                                  background: "#fef3c7",
+                                  color: "#92400e",
+                                  fontSize: 10,
+                                }}
+                              >
+                                Early
+                              </span>
+                            ) : (
+                              <span
+                                className="erp-badge erp-badge-green"
+                                style={{ fontSize: 10 }}
+                              >
+                                Present
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Cards */}
+                <div className="d-md-none" style={{ padding: 10 }}>
                   {data.records.map((r) => (
-                    <tr key={r._id}>
-                      <td style={{ padding: "8px 10px", fontSize: 12 }}>
-                        {formatDateShort(r.date)}
-                      </td>
-                      <td style={{ padding: "8px 10px" }}>
-                        <span
-                          style={{
-                            color: r.is_late ? "#dc2626" : "#059669",
-                            fontWeight: 600,
-                            fontVariantNumeric: "tabular-nums",
-                          }}
-                        >
-                          {formatTime(r.check_in)}
-                        </span>
-                        {r.is_late && (
-                          <div
-                            style={{ fontSize: 10, color: "#dc2626" }}
-                          >
-                            Late {formatMinutes(r.late_minutes)}
-                          </div>
-                        )}
-                      </td>
-                      <td style={{ padding: "8px 10px" }}>
-                        <span
-                          style={{
-                            color: r.is_early_logout
-                              ? "#dc2626"
-                              : "#d97706",
-                            fontWeight: 600,
-                            fontVariantNumeric: "tabular-nums",
-                          }}
-                        >
-                          {formatTime(r.check_out)}
-                        </span>
-                        {r.is_early_logout && (
-                          <div
-                            style={{ fontSize: 10, color: "#dc2626" }}
-                          >
-                            Early {formatMinutes(r.early_minutes)}
-                          </div>
-                        )}
-                      </td>
-                      <td
+                    <div
+                      key={r._id}
+                      style={{
+                        padding: 12,
+                        border: "1px solid #e2e8f0",
+                        borderRadius: 10,
+                        marginBottom: 10,
+                        background: "white",
+                        fontFamily: FONT,
+                      }}
+                    >
+                      <div
                         style={{
-                          padding: "8px 10px",
-                          fontWeight: 600,
-                          fontVariantNumeric: "tabular-nums",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: 10,
                         }}
                       >
-                        {formatHours(r.working_hours)}
-                      </td>
-                      <td style={{ padding: "8px 10px" }}>
+                        <div
+                          style={{
+                            fontWeight: 700,
+                            fontSize: 13,
+                            color: "#0f172a",
+                          }}
+                        >
+                          {formatDateShort(r.date)}
+                        </div>
                         {r.is_late && r.is_early_logout ? (
                           <span
                             className="erp-badge"
@@ -501,11 +582,114 @@ const EmployeeReportModal = ({ open, onClose, employee }) => {
                             Present
                           </span>
                         )}
-                      </td>
-                    </tr>
+                      </div>
+
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr",
+                          gap: "8px 12px",
+                          fontSize: 12.5,
+                        }}
+                      >
+                        <div>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              color: "#94a3b8",
+                              fontWeight: 700,
+                              textTransform: "uppercase",
+                              letterSpacing: 0.3,
+                            }}
+                          >
+                            Check In
+                          </div>
+                          <div
+                            style={{
+                              fontWeight: 600,
+                              marginTop: 2,
+                              color: r.is_late ? "#dc2626" : "#059669",
+                              fontVariantNumeric: "tabular-nums",
+                            }}
+                          >
+                            {formatTime(r.check_in)}
+                          </div>
+                          {r.is_late && (
+                            <div
+                              style={{
+                                fontSize: 10,
+                                color: "#dc2626",
+                                marginTop: 1,
+                              }}
+                            >
+                              Late {formatMinutes(r.late_minutes)}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              color: "#94a3b8",
+                              fontWeight: 700,
+                              textTransform: "uppercase",
+                              letterSpacing: 0.3,
+                            }}
+                          >
+                            Check Out
+                          </div>
+                          <div
+                            style={{
+                              fontWeight: 600,
+                              marginTop: 2,
+                              color: r.is_early_logout
+                                ? "#dc2626"
+                                : "#d97706",
+                              fontVariantNumeric: "tabular-nums",
+                            }}
+                          >
+                            {formatTime(r.check_out)}
+                          </div>
+                          {r.is_early_logout && (
+                            <div
+                              style={{
+                                fontSize: 10,
+                                color: "#dc2626",
+                                marginTop: 1,
+                              }}
+                            >
+                              Early {formatMinutes(r.early_minutes)}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              color: "#94a3b8",
+                              fontWeight: 700,
+                              textTransform: "uppercase",
+                              letterSpacing: 0.3,
+                            }}
+                          >
+                            Hours
+                          </div>
+                          <div
+                            style={{
+                              fontWeight: 700,
+                              marginTop: 2,
+                              color: "#4f46e5",
+                              fontVariantNumeric: "tabular-nums",
+                            }}
+                          >
+                            {formatHours(r.working_hours)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -556,14 +740,67 @@ const Attendance = () => {
 
   return (
     <Layout>
-      <div style={{ fontFamily: FONT }}>
+      <style>{`
+        /* Global Inter font for this page */
+        .att-page * { font-family: ${FONT}; }
+        .att-page { font-family: ${FONT}; }
+
+        /* Mobile mini card */
+        .att-mobile-card {
+          padding: 14px;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          background: #fff;
+          margin-bottom: 10px;
+          font-family: ${FONT};
+          cursor: pointer;
+          transition: box-shadow 0.15s, transform 0.15s;
+        }
+        .att-mobile-card:active {
+          transform: scale(0.99);
+          box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .att-mobile-head {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 12px;
+        }
+        .att-mobile-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px 12px;
+          font-size: 12.5px;
+        }
+        .att-mobile-field-label {
+          font-size: 10px;
+          color: #94a3b8;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
+        }
+        .att-mobile-field-value {
+          font-weight: 600;
+          margin-top: 2px;
+          font-variant-numeric: tabular-nums;
+        }
+
+        @media (max-width: 767px) {
+          .att-page .erp-page-title { font-size: 22px; }
+          .att-page .erp-page-subtitle { font-size: 12.5px; }
+          .att-page .erp-stat-value { font-size: 20px; }
+          .att-page .erp-stat-label { font-size: 10.5px; }
+        }
+      `}</style>
+
+      <div className="att-page">
         <div className="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
           <div>
             <h1 className="erp-page-title">Attendance</h1>
             <p className="erp-page-subtitle mb-0">
               View and manage employee attendance ·{" "}
               <span style={{ color: "#4f46e5", fontWeight: 600 }}>
-                Click any employee for full report
+                Tap any employee for full report
               </span>
             </p>
           </div>
@@ -674,154 +911,314 @@ const Attendance = () => {
             </p>
           </div>
         ) : (
-          <div
-            className="erp-card"
-            style={{ padding: 0, overflow: "hidden" }}
-          >
-            <div className="table-responsive">
-              <table className="erp-table">
-                <thead>
-                  <tr>
-                    <th>Employee</th>
-                    <th>Department</th>
-                    <th>Check In</th>
-                    <th>Check Out</th>
-                    <th>Working Hours</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.records.map((r) => (
-                    <tr
-                      key={r.employee_id}
-                      onClick={() => setReportEmployee(r)}
-                      style={{
-                        cursor: "pointer",
-                        opacity: r.status === "ABSENT" ? 0.65 : 1,
-                      }}
-                      title="Click for full report"
-                    >
-                      <td>
-                        <div className="d-flex align-items-center gap-2">
-                          <div
-                            className="erp-avatar"
-                            style={
-                              r.status === "ABSENT"
-                                ? { background: "#9ca3af" }
-                                : {}
-                            }
-                          >
-                            {r.employee_name
-                              ?.split(" ")
-                              .map((n) => n[0])
-                              .slice(0, 2)
-                              .join("")}
-                          </div>
-                          <div>
-                            <div style={{ fontWeight: 600 }}>
-                              {r.employee_name}
-                            </div>
-                            <div
-                              style={{ fontSize: 12, color: "#6b7280" }}
-                            >
-                              {r.employee_code}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        {r.department_name ? (
-                          <span className="erp-badge erp-badge-blue">
-                            <Building2 size={11} />
-                            {r.department_name}
-                          </span>
-                        ) : (
-                          <span style={{ color: "#9ca3af" }}>—</span>
-                        )}
-                      </td>
-                      <td>
-                        <div
-                          style={{
-                            fontVariantNumeric: "tabular-nums",
-                            fontWeight: 600,
-                            color: r.check_in
-                              ? r.is_late
-                                ? "#dc2626"
-                                : "#059669"
-                              : "#9ca3af",
-                          }}
-                        >
-                          {formatTime(r.check_in)}
-                        </div>
-                        {r.check_in && r.is_late && (
-                          <div
-                            style={{
-                              fontSize: 10.5,
-                              color: "#dc2626",
-                              fontWeight: 600,
-                            }}
-                          >
-                            ⚠ Late {formatMinutes(r.late_minutes)}
-                          </div>
-                        )}
-                      </td>
-                      <td>
-                        <div
-                          style={{
-                            fontVariantNumeric: "tabular-nums",
-                            fontWeight: 600,
-                            color: r.check_out
-                              ? r.is_early_logout
-                                ? "#dc2626"
-                                : "#d97706"
-                              : "#9ca3af",
-                          }}
-                        >
-                          {formatTime(r.check_out)}
-                        </div>
-                        {r.check_out && r.is_early_logout && (
-                          <div
-                            style={{
-                              fontSize: 10.5,
-                              color: "#dc2626",
-                              fontWeight: 600,
-                            }}
-                          >
-                            ⚠ Early {formatMinutes(r.early_minutes)}
-                          </div>
-                        )}
-                      </td>
-                      <td
+          <>
+            {/* Desktop View — Table */}
+            <div
+              className="erp-card d-none d-lg-block"
+              style={{ padding: 0, overflow: "hidden" }}
+            >
+              <div className="table-responsive">
+                <table className="erp-table">
+                  <thead>
+                    <tr>
+                      <th>Employee</th>
+                      <th>Department</th>
+                      <th>Check In</th>
+                      <th>Check Out</th>
+                      <th>Working Hours</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.records.map((r) => (
+                      <tr
+                        key={r.employee_id}
+                        onClick={() => setReportEmployee(r)}
                         style={{
-                          fontVariantNumeric: "tabular-nums",
-                          fontWeight: 600,
+                          cursor: "pointer",
+                          opacity: r.status === "ABSENT" ? 0.65 : 1,
+                        }}
+                        title="Click for full report"
+                      >
+                        <td>
+                          <div className="d-flex align-items-center gap-2">
+                            <div
+                              className="erp-avatar"
+                              style={
+                                r.status === "ABSENT"
+                                  ? { background: "#9ca3af" }
+                                  : {}
+                              }
+                            >
+                              {r.employee_name
+                                ?.split(" ")
+                                .map((n) => n[0])
+                                .slice(0, 2)
+                                .join("")}
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 600 }}>
+                                {r.employee_name}
+                              </div>
+                              <div
+                                style={{ fontSize: 12, color: "#6b7280" }}
+                              >
+                                {r.employee_code}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          {r.department_name ? (
+                            <span className="erp-badge erp-badge-blue">
+                              <Building2 size={11} />
+                              {r.department_name}
+                            </span>
+                          ) : (
+                            <span style={{ color: "#9ca3af" }}>—</span>
+                          )}
+                        </td>
+                        <td>
+                          <div
+                            style={{
+                              fontVariantNumeric: "tabular-nums",
+                              fontWeight: 600,
+                              color: r.check_in
+                                ? r.is_late
+                                  ? "#dc2626"
+                                  : "#059669"
+                                : "#9ca3af",
+                            }}
+                          >
+                            {formatTime(r.check_in)}
+                          </div>
+                          {r.check_in && r.is_late && (
+                            <div
+                              style={{
+                                fontSize: 10.5,
+                                color: "#dc2626",
+                                fontWeight: 600,
+                              }}
+                            >
+                              ⚠ Late {formatMinutes(r.late_minutes)}
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          <div
+                            style={{
+                              fontVariantNumeric: "tabular-nums",
+                              fontWeight: 600,
+                              color: r.check_out
+                                ? r.is_early_logout
+                                  ? "#dc2626"
+                                  : "#d97706"
+                                : "#9ca3af",
+                            }}
+                          >
+                            {formatTime(r.check_out)}
+                          </div>
+                          {r.check_out && r.is_early_logout && (
+                            <div
+                              style={{
+                                fontSize: 10.5,
+                                color: "#dc2626",
+                                fontWeight: 600,
+                              }}
+                            >
+                              ⚠ Early {formatMinutes(r.early_minutes)}
+                            </div>
+                          )}
+                        </td>
+                        <td
+                          style={{
+                            fontVariantNumeric: "tabular-nums",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {formatHours(r.working_hours)}
+                        </td>
+                        <td>
+                          {r.status === "PRESENT" && (
+                            <span className="erp-badge erp-badge-green">
+                              ● Present
+                            </span>
+                          )}
+                          {r.status === "WORKING" && (
+                            <span className="erp-badge erp-badge-blue">
+                              ● Working
+                            </span>
+                          )}
+                          {r.status === "ABSENT" && (
+                            <span className="erp-badge erp-badge-gray">
+                              ○ Absent
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Mobile + Tablet — Cards */}
+            <div className="d-lg-none">
+              {data.records.map((r) => (
+                <div
+                  key={r.employee_id}
+                  className="att-mobile-card"
+                  onClick={() => setReportEmployee(r)}
+                  style={{
+                    opacity: r.status === "ABSENT" ? 0.7 : 1,
+                  }}
+                >
+                  <div className="att-mobile-head">
+                    <div
+                      className="erp-avatar"
+                      style={{
+                        flexShrink: 0,
+                        ...(r.status === "ABSENT"
+                          ? { background: "#9ca3af" }
+                          : {}),
+                      }}
+                    >
+                      {r.employee_name
+                        ?.split(" ")
+                        .map((n) => n[0])
+                        .slice(0, 2)
+                        .join("")}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontWeight: 700,
+                          fontSize: 14.5,
+                          marginBottom: 2,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
                         }}
                       >
+                        {r.employee_name}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 11.5,
+                          color: "#6b7280",
+                          display: "flex",
+                          gap: 6,
+                          alignItems: "center",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <span>{r.employee_code}</span>
+                        {r.department_name && (
+                          <>
+                            <span style={{ color: "#cbd5e1" }}>·</span>
+                            <span>{r.department_name}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ flexShrink: 0 }}>
+                      {r.status === "PRESENT" && (
+                        <span className="erp-badge erp-badge-green">
+                          ● Present
+                        </span>
+                      )}
+                      {r.status === "WORKING" && (
+                        <span className="erp-badge erp-badge-blue">
+                          ● Working
+                        </span>
+                      )}
+                      {r.status === "ABSENT" && (
+                        <span className="erp-badge erp-badge-gray">
+                          ○ Absent
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="att-mobile-grid">
+                    <div>
+                      <div className="att-mobile-field-label">Check In</div>
+                      <div
+                        className="att-mobile-field-value"
+                        style={{
+                          color: r.check_in
+                            ? r.is_late
+                              ? "#dc2626"
+                              : "#059669"
+                            : "#9ca3af",
+                        }}
+                      >
+                        {formatTime(r.check_in)}
+                      </div>
+                      {r.check_in && r.is_late && (
+                        <div
+                          style={{
+                            fontSize: 10,
+                            color: "#dc2626",
+                            fontWeight: 600,
+                            marginTop: 1,
+                          }}
+                        >
+                          ⚠ Late {formatMinutes(r.late_minutes)}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="att-mobile-field-label">Check Out</div>
+                      <div
+                        className="att-mobile-field-value"
+                        style={{
+                          color: r.check_out
+                            ? r.is_early_logout
+                              ? "#dc2626"
+                              : "#d97706"
+                            : "#9ca3af",
+                        }}
+                      >
+                        {formatTime(r.check_out)}
+                      </div>
+                      {r.check_out && r.is_early_logout && (
+                        <div
+                          style={{
+                            fontSize: 10,
+                            color: "#dc2626",
+                            fontWeight: 600,
+                            marginTop: 1,
+                          }}
+                        >
+                          ⚠ Early {formatMinutes(r.early_minutes)}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="att-mobile-field-label">
+                        Working Hours
+                      </div>
+                      <div
+                        className="att-mobile-field-value"
+                        style={{ color: "#4f46e5" }}
+                      >
                         {formatHours(r.working_hours)}
-                      </td>
-                      <td>
-                        {r.status === "PRESENT" && (
-                          <span className="erp-badge erp-badge-green">
-                            ● Present
-                          </span>
-                        )}
-                        {r.status === "WORKING" && (
-                          <span className="erp-badge erp-badge-blue">
-                            ● Working
-                          </span>
-                        )}
-                        {r.status === "ABSENT" && (
-                          <span className="erp-badge erp-badge-gray">
-                            ○ Absent
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="att-mobile-field-label">
+                        Department
+                      </div>
+                      <div className="att-mobile-field-value">
+                        {r.department_name || "—"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
+          </>
         )}
 
         {/* Employee Report Modal */}

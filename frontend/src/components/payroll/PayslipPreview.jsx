@@ -48,6 +48,10 @@ const PayslipPreview = ({ payslip, company, innerRef }) => {
   const fineDetails = d.forgot_logout_fine_details || [];
 
   // Build deduction rows dynamically
+    // NEW: Insurance
+  const insurance = d.insurance || 0;
+  const annualInsurance = d.annual_insurance || 0;
+
   const deductionRows = [
     ["Employee PF", formatCurrency(d.pf)],
     ["Employee ESI", formatCurrency(d.esi)],
@@ -57,16 +61,24 @@ const PayslipPreview = ({ payslip, company, innerRef }) => {
     ["Other Deduction", formatCurrency(d.other)],
   ];
 
-  // Add fine row if applicable
+  // NEW: Insurance row
+  if (insurance > 0) {
+    deductionRows.push([
+      annualInsurance > 0
+        ? `Insurance (₹${formatCurrency(annualInsurance)}/year)`
+        : "Insurance",
+      formatCurrency(insurance),
+    ]);
+  }
+
   if (forgotFine > 0) {
     deductionRows.push([
       "Forgot Logout Fine",
       formatCurrency(forgotFine),
-      "fine", // special marker
+      "fine",
     ]);
   }
 
-  // Fill up to 6 rows for alignment
   while (deductionRows.length < 6) {
     deductionRows.push(["", ""]);
   }

@@ -24,3 +24,6 @@ export const deletePayroll = (id) => api.delete(`/payroll/${id}`);
 
 // Employee
 export const getMyPayslips = () => api.get("/payroll/my");
+
+export const generateBulkPayroll = (month, overwrite = false) =>
+  api.post("/payroll/generate-bulk", { month, overwrite });

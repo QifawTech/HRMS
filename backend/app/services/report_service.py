@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta, date
+from calendar import monthrange
 from bson import ObjectId
 from app.db import (
     employees, departments, attendance,
     leave_requests, leave_types, tasks,
+    holidays as holidays_col,      # ✅ NEW
 )
 
 
@@ -23,7 +25,6 @@ def _parse_date(s):
 
 
 def _default_range():
-    """Default: current month start to today."""
     today = datetime.utcnow()
     start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     return start, today
@@ -89,7 +90,6 @@ def employee_report(filters):
             d = departments().find_one({"_id": e["department_id"]})
             dept = d["name"] if d else None
 
-        # Count attendance summary for this employee
         present = attendance().count_documents({
             "employee_id": e["_id"],
             "status": "PRESENT",
@@ -134,7 +134,6 @@ def attendance_report(filters):
     employee_id = filters.get("employee_id")
     status = filters.get("status")
 
-    # Get employee list
     emp_query = {}
     if department_id:
         oid = _oid(department_id)
@@ -266,7 +265,6 @@ def leave_report(filters):
             "reason": lv.get("reason", ""),
         })
 
-    # Distribution by leave type
     type_counts = {}
     for r in records:
         t = r["leave_type"]
@@ -301,7 +299,6 @@ def department_report():
             "status": "ACTIVE",
         })
 
-        # Attendance avg for this dept (last 30 days)
         emp_ids = [e["_id"] for e in employees().find({"department_id": d["_id"]})]
         avg_hours = 0
         if emp_ids:
@@ -339,11 +336,166 @@ def department_report():
 
 
 # ============================================
+# ✅ NEW: MONTHLY WORKING SUMMARY
+# ============================================
+
+def _count_sundays(year, month):
+    days = monthrange(year, month)[1]
+    count = 0
+    for d in range(1, days + 1):
+        if date(year, month, d).weekday() == 6:
+            count += 1
+    return count
+
+
+def get_monthly_working_summary(year, month):
+    """
+    Month-end summary — working days + leave analysis per employee.
+    """
+    if month < 1 or month > 12:
+        raise ValueError("Invalid month")
+
+    total_days = monthrange(year, month)[1]
+    sundays = _count_sundays(year, month)
+
+    # Fetch holidays for that month
+    start_date = f"{year}-{month:02d}-01"
+    end_date = f"{year}-{month:02d}-{total_days:02d}"
+
+    holiday_docs = list(holidays_col().find({
+        "date": {"$gte": start_date, "$lte": end_date},
+    }))
+
+    # Exclude Sundays from holiday list
+    real_holidays = []
+    for h in holiday_docs:
+        try:
+            d = datetime.strptime(h["date"], "%Y-%m-%d").date()
+            if d.weekday() != 6:
+                real_holidays.append(h)
+        except Exception:
+            pass
+
+    holiday_count = len(real_holidays)
+    working_days = total_days - sundays - holiday_count
+    if working_days < 0:
+        working_days = 0
+
+    active_employees = list(employees().find({"status": "ACTIVE"}))
+
+    result_employees = []
+    for emp in active_employees:
+        emp_id = emp["_id"]
+
+        # Present days — unique dates with check_in
+        present_pipeline = [
+            {"$match": {
+                "employee_id": emp_id,
+                "date": {"$gte": start_date, "$lte": end_date},
+                "check_in": {"$ne": None},
+            }},
+            {"$group": {"_id": "$date"}},
+            {"$count": "total"},
+        ]
+        present_agg = list(attendance().aggregate(present_pipeline))
+        present_days = present_agg[0]["total"] if present_agg else 0
+
+        # Approved leaves in this month
+        leaves = list(leave_requests().find({
+            "employee_id": emp_id,
+            "status": "Approved",
+            "start_date": {"$lte": end_date},
+            "end_date": {"$gte": start_date},
+        }))
+
+        cl_days = 0
+        sl_days = 0
+        other_days = 0
+
+        for lv in leaves:
+            days = float(lv.get("total_days") or 0)
+            ltype_id = lv.get("leave_type_id")
+            lt = leave_types().find_one({"_id": ltype_id}) if ltype_id else None
+            lt_name = (lt.get("name") or "").lower() if lt else ""
+
+            if "casual" in lt_name or lt_name == "cl":
+                cl_days += days
+            elif "sick" in lt_name or lt_name == "sl":
+                sl_days += days
+            else:
+                other_days += days
+
+        leave_days = cl_days + sl_days + other_days
+        absent_days = max(0, int(working_days - present_days - leave_days))
+        payable_days = present_days + leave_days
+
+        attendance_pct = (
+            round((present_days / working_days) * 100, 1)
+            if working_days > 0 else 0
+        )
+
+        dept_name = "—"
+        if emp.get("department_id"):
+            dept = departments().find_one({"_id": emp["department_id"]})
+            if dept:
+                dept_name = dept.get("name", "—")
+
+        result_employees.append({
+            "employee_id": str(emp_id),
+            "name": f"{emp.get('first_name','')} {emp.get('last_name','')}".strip(),
+            "code": emp.get("employee_code", ""),
+            "department": dept_name,
+            "present_days": present_days,
+            "cl_days": round(cl_days, 1),
+            "sl_days": round(sl_days, 1),
+            "other_leave_days": round(other_days, 1),
+            "leave_days": round(leave_days, 1),
+            "absent_days": absent_days,
+            "payable_days": round(payable_days, 1),
+            "attendance_pct": attendance_pct,
+        })
+
+    # Sort by name
+    result_employees.sort(key=lambda x: x["name"].lower())
+
+    emp_count = len(result_employees)
+    total_present = sum(e["present_days"] for e in result_employees)
+    total_absent = sum(e["absent_days"] for e in result_employees)
+    total_leave = sum(e["leave_days"] for e in result_employees)
+
+    month_names = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December",
+    ]
+
+    return {
+        "month": f"{year}-{month:02d}",
+        "month_label": f"{month_names[month - 1]} {year}",
+        "total_days": total_days,
+        "sundays": sundays,
+        "holidays": holiday_count,
+        "holiday_list": [
+            {"name": h.get("name"), "date": h.get("date")}
+            for h in real_holidays
+        ],
+        "working_days": working_days,
+        "employees": result_employees,
+        "summary": {
+            "total_employees": emp_count,
+            "total_present": total_present,
+            "total_absent": total_absent,
+            "total_leave": round(total_leave, 1),
+            "avg_present": round(total_present / emp_count, 1) if emp_count else 0,
+            "avg_absent": round(total_absent / emp_count, 1) if emp_count else 0,
+        },
+    }
+
+
+# ============================================
 # Helpers
 # ============================================
 
 def _date_range(filters):
-    """Parse filter dates."""
     start = filters.get("start_date")
     end = filters.get("end_date")
 
@@ -356,12 +508,12 @@ def _date_range(filters):
 
     return _default_range()
 
+
 # ============================================
-# EMPLOYEE FULL REPORT (drill-down)
+# EMPLOYEE FULL REPORT
 # ============================================
 
 def employee_full_report(emp_id):
-    """Complete single-employee report."""
     oid = _oid(emp_id)
     if not oid:
         return None
@@ -370,7 +522,6 @@ def employee_full_report(emp_id):
     if not emp:
         return None
 
-    # Department + Designation
     dept = None
     if emp.get("department_id"):
         d = departments().find_one({"_id": emp["department_id"]})
@@ -382,16 +533,12 @@ def employee_full_report(emp_id):
         ds = desig_col().find_one({"_id": emp["designation_id"]})
         desig = ds["title"] if ds else None
 
-    # ============================================
-    # Attendance stats
-    # ============================================
     all_att = list(attendance().find({"employee_id": oid}).sort("date", -1))
 
     total_present = 0
     total_late = 0
     total_early = 0
     total_hours = 0
-    total_absent = 0
 
     for a in all_att:
         if a.get("check_in") and a.get("check_out"):
@@ -402,7 +549,6 @@ def employee_full_report(emp_id):
         if a.get("is_early_logout"):
             total_early += 1
 
-    # This month attendance
     today = datetime.utcnow()
     month_start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     month_att = [a for a in all_att if _parse_date(a["date"]) and _parse_date(a["date"]) >= month_start]
@@ -414,7 +560,6 @@ def employee_full_report(emp_id):
         sum(a.get("working_hours", 0) or 0 for a in month_att), 2
     )
 
-    # Recent 30 records for table
     recent_records = []
     for a in all_att[:30]:
         recent_records.append({
@@ -430,9 +575,6 @@ def employee_full_report(emp_id):
             "status": a.get("status", "PRESENT"),
         })
 
-    # ============================================
-    # Leave stats
-    # ============================================
     all_leaves = list(leave_requests().find({"employee_id": oid}).sort("created_at", -1))
 
     leave_approved = 0
@@ -461,9 +603,6 @@ def employee_full_report(emp_id):
             "reason": lv.get("reason", ""),
         })
 
-    # ============================================
-    # Task stats
-    # ============================================
     emp_tasks = list(tasks().find({"assigned_to": oid, "is_active": True}))
 
     task_pending = sum(1 for t in emp_tasks if t.get("status") == "Pending")
@@ -489,18 +628,12 @@ def employee_full_report(emp_id):
             else None,
         })
 
-    # ============================================
-    # Documents count
-    # ============================================
     from app.db import documents as docs_col
 
     doc_count = docs_col().count_documents(
         {"employee_id": oid, "is_active": True}
     )
 
-    # ============================================
-    # Compose result
-    # ============================================
     return {
         "profile": {
             "id": str(emp["_id"]),

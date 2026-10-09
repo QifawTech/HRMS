@@ -22,16 +22,26 @@ def _now():
 # ============================================
 # PT DEDUCTION MONTHS
 # ============================================
-PT_DEDUCTION_MONTHS = [4, 10]
-
-
 def _should_apply_pt(month_str):
+    """
+    Check if PT should be deducted this month.
+    Reads pt_deduction_months from settings.
+    """
     try:
         _, month = month_str.split("-")
         month_num = int(month)
     except (ValueError, AttributeError):
         return False
-    return month_num in PT_DEDUCTION_MONTHS
+
+    # Read from settings
+    try:
+        from app.services.settings_service import get_settings
+        settings = get_settings()
+        pt_months = settings.get("pt_deduction_months", [4, 10])
+    except Exception:
+        pt_months = [4, 10]  # Fallback
+
+    return month_num in pt_months
 
 
 # ============================================
@@ -137,11 +147,17 @@ def calculate_payslip(employee, month, paid_days, lop_days, overrides=None):
     lop_amount = round(per_day * lop_days, 2)
 
     # Other
+        # Other
     other = overrides.get("other_deduction", 0)
 
     # ============================================
-        # ============================================
-    # NEW: Forgot Logout Fine (monthly) with details
+    # NEW: Insurance (Monthly auto-split)
+    # ============================================
+    insurance = float(salary.get("monthly_insurance", 0)) or 0
+    annual_insurance = float(salary.get("annual_insurance", 0)) or 0
+
+    # ============================================
+    # Forgot Logout Fine (monthly) with details
     # ============================================
     forgot_logout_fine = 0
     forgot_logout_fine_details = []
@@ -154,7 +170,6 @@ def calculate_payslip(employee, month, paid_days, lop_days, overrides=None):
         year_i, mon_i = int(year_str), int(mon_str)
         fine_data = calculate_fine(employee.get("_id"), year_i, mon_i)
         forgot_logout_fine = fine_data.get("total_fine", 0) or 0
-        # Get date-wise breakdown
         if forgot_logout_fine > 0:
             forgot_logout_fine_details = get_fine_details_for_month(
                 employee.get("_id"), year_i, mon_i
@@ -164,7 +179,8 @@ def calculate_payslip(employee, month, paid_days, lop_days, overrides=None):
         forgot_logout_fine_details = []
 
     total_deductions = round(
-        pf + esi + pt + tds + lop_amount + other + forgot_logout_fine, 2
+        pf + esi + pt + tds + lop_amount + other 
+        + forgot_logout_fine + insurance, 2
     )
     net_salary = round(gross_earnings - total_deductions, 2)
 
@@ -182,6 +198,8 @@ def calculate_payslip(employee, month, paid_days, lop_days, overrides=None):
             "tds": tds,
             "lop": lop_amount,
             "other": other,
+            "insurance": insurance,  # NEW
+            "annual_insurance": annual_insurance,  # NEW (for display)
             "forgot_logout_fine": forgot_logout_fine,
             "forgot_logout_fine_details": forgot_logout_fine_details,
         },
@@ -390,4 +408,131 @@ def stats(month=None):
         "paid": paid,
         "generated": generated,
         "total_amount": round(total_amount, 2),
+    }
+
+def generate_bulk_payroll(month, overwrite=False):
+    """
+    Generate payslips for ALL active employees for a given month.
+    
+    Args:
+        month: "2026-10" format
+        overwrite: If True, regenerate existing payslips
+    
+    Returns:
+        {
+            "created": N,
+            "skipped": M,
+            "errors": [{employee, error}, ...],
+            "month": "2026-10"
+        }
+    """
+    from datetime import datetime
+    from app.db import employees as emp_col, payroll as pr_col
+    from app.services.settings_service import get_settings
+
+    if not month or "-" not in month:
+        raise ValueError("Invalid month format. Use YYYY-MM")
+
+    year, mon = month.split("-")
+    try:
+        year_i = int(year)
+        mon_i = int(mon)
+        if mon_i < 1 or mon_i > 12:
+            raise ValueError()
+    except ValueError:
+        raise ValueError("Invalid month. Use YYYY-MM")
+
+    settings = get_settings()
+
+    # Get all active employees
+    active_employees = list(emp_col().find({"status": "ACTIVE"}))
+
+    if not active_employees:
+        return {
+            "created": 0,
+            "skipped": 0,
+            "errors": [],
+            "month": month,
+            "message": "No active employees found",
+        }
+
+    created = 0
+    skipped = 0
+    errors = []
+
+    # PT months check
+    pt_months = settings.get("pt_deduction_months", [4, 10])
+    is_pt_month = mon_i in pt_months
+
+    for emp in active_employees:
+        try:
+            emp_id = emp["_id"]
+
+            # Check if payslip already exists
+            existing = pr_col().find_one({
+                "employee_id": emp_id,
+                "month": month,
+            })
+
+            if existing and not overwrite:
+                skipped += 1
+                continue
+
+            # If overwrite and existing, delete first
+            if existing and overwrite:
+                pr_col().delete_one({"_id": existing["_id"]})
+
+            # Get salary breakup from employee
+            salary = emp.get("salary", {}) or {}
+            basic = float(salary.get("basic") or 0)
+            hra = float(salary.get("hra") or 0)
+            special = float(salary.get("special_allowance") or 0)
+
+            # If salary missing, skip with error
+            if basic <= 0 and hra <= 0 and special <= 0:
+                errors.append({
+                    "employee_code": emp.get("employee_code"),
+                    "employee_name": f"{emp.get('first_name','')} {emp.get('last_name','')}".strip(),
+                    "error": "Salary not configured",
+                })
+                continue
+
+            # Build payload — same as single generate
+            payload = {
+                "employee_id": str(emp_id),
+                "month": month,
+                "paid_days": 30,
+                "lop_days": 0,
+                "basic": basic,
+                "hra": hra,
+                "special_allowance": special,
+                "pf_applicable": bool(salary.get("pf_applicable", True)),
+                "esi_applicable": bool(salary.get("esi_applicable", True)),
+                "pt_applicable": bool(salary.get("pt_applicable", True)),
+                "tds_applicable": bool(salary.get("tds_applicable", False)),
+                "pf_percent": float(salary.get("pf_percent") or settings.get("pf_percent", 12)),
+                "esi_percent": float(salary.get("esi_percent") or settings.get("esi_percent", 0.75)),
+                "tds_amount": float(salary.get("tds_amount") or 0),
+                "other_deduction": 0,
+            }
+
+            # Call existing single-generate function
+            generate_payroll(payload)
+            created += 1
+
+        except Exception as e:
+            errors.append({
+                "employee_code": emp.get("employee_code"),
+                "employee_name": f"{emp.get('first_name','')} {emp.get('last_name','')}".strip(),
+                "error": str(e),
+            })
+
+    return {
+        "created": created,
+        "skipped": skipped,
+        "errors": errors,
+        "total": len(active_employees),
+        "month": month,
+        "is_pt_month": is_pt_month,
+        "message": f"Generated {created} payslips, skipped {skipped}",
     }

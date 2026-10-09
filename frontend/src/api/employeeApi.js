@@ -60,6 +60,9 @@ export const deactivateEmployee = (id, data) =>
 export const reactivateEmployee = (id) =>
   api.post(`/employees/${id}/reactivate`);
 
+export const terminateEmployee = (id, data) =>
+  api.post(`/employees/${id}/terminate`, data);
+
 // ============================================
 // PROFESSIONAL TAX AUTO-CALCULATION (NEW)
 // ============================================
@@ -81,3 +84,6 @@ export const uploadProfilePicture = (file) => {
 };
 
 export const updateMyProfile = (data) => api.put("/employees/me/profile", data);
+
+export const confirmEmployee = (id, data) =>
+  api.post(`/employees/${id}/confirm`, data);

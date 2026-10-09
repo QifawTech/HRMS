@@ -230,3 +230,29 @@ def delete_payroll(payroll_id):
 def my_payslips():
     emp_id = request.user.get("employee_id")
     return jsonify(svc.my_payslips(emp_id)), 200
+
+@payroll_bp.route("/generate-bulk", methods=["POST"])
+@token_required
+@role_required("MANAGER")
+def generate_bulk():
+    """
+    Generate payslips for ALL active employees for a given month.
+    
+    Body: { "month": "2026-10", "overwrite": false }
+    """
+    try:
+        data = request.get_json() or {}
+        month = (data.get("month") or "").strip()
+        overwrite = bool(data.get("overwrite", False))
+
+        if not month:
+            return jsonify({"error": "Month is required (YYYY-MM)"}), 400
+
+        from app.services.payroll_service import generate_bulk_payroll
+        result = generate_bulk_payroll(month, overwrite=overwrite)
+        return jsonify(result), 200
+
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 422
+    except Exception as e:
+        return jsonify({"error": f"Bulk generation failed: {str(e)}"}), 500

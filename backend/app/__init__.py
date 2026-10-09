@@ -33,6 +33,7 @@ def create_app():
     # ============================================
     from app.routes.auth_routes import auth_bp
     from app.routes.department_routes import department_bp
+    from app.routes.designation_routes import designation_bp  # <-- NEW
     from app.routes.employee_routes import employee_bp
     from app.routes.attendance_routes import attendance_bp
     from app.routes.leave_routes import leave_bp
@@ -47,13 +48,15 @@ def create_app():
     from app.routes.settings_routes import settings_bp
     from app.routes.payroll_routes import payroll_bp
     from app.routes.shift_routes import shift_bp
-    from app.routes.forgot_logout_routes import forgot_logout_bp
+    from app.routes.insurance_routes import insurance_bp
+    from app.routes.holiday_routes import holiday_bp
 
     # ============================================
     # Register blueprints
     # ============================================
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(department_bp, url_prefix="/api/departments")
+    app.register_blueprint(designation_bp, url_prefix="/api/designations")  # <-- NEW
     app.register_blueprint(employee_bp, url_prefix="/api/employees")
     app.register_blueprint(attendance_bp, url_prefix="/api/attendance")
     app.register_blueprint(leave_bp, url_prefix="/api/leaves")
@@ -68,7 +71,8 @@ def create_app():
     app.register_blueprint(report_bp, url_prefix="/api/reports")
     app.register_blueprint(payroll_bp, url_prefix="/api/payroll")
     app.register_blueprint(shift_bp, url_prefix="/api/shifts")
-    
+    app.register_blueprint(insurance_bp, url_prefix="/api/insurances")
+    app.register_blueprint(holiday_bp, url_prefix="/api/holidays")
 
     # ============================================
     # Health check

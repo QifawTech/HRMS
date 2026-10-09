@@ -34,3 +34,6 @@ export const getLeaveReport = (filters = {}) => {
 export const getDepartmentReport = () => api.get("/reports/departments");
 export const getEmployeeFullReport = (empId) =>
   api.get(`/reports/employee/${empId}/full`);
+
+export const getMonthlySummary = (year, month) =>
+  api.get("/reports/monthly-summary", { params: { year, month } });

@@ -1,808 +1,11 @@
-# from datetime import datetime
-# import bcrypt
-# from bson import ObjectId
-# from bson.errors import InvalidId
-# from app.db import users, employees, departments, designations
-# from app.utils.helpers import serialize, serialize_list
-
-
-# def _oid(s):
-#     try:
-#         return ObjectId(s)
-#     except (InvalidId, TypeError):
-#         return None
-
-
-# def _enrich_employee(emp):
-#     """Add department + designation names + email."""
-#     if emp.get("department_id"):
-#         dept = departments().find_one({"_id": emp["department_id"]})
-#         emp["department_name"] = dept["name"] if dept else None
-#     else:
-#         emp["department_name"] = None
-
-#     if emp.get("designation_id"):
-#         desig = designations().find_one({"_id": emp["designation_id"]})
-#         emp["designation_title"] = desig["title"] if desig else None
-#     else:
-#         emp["designation_title"] = None
-
-#     user = users().find_one(
-#         {"_id": emp["user_id"]}, {"email": 1, "is_active": 1}
-#     )
-#     emp["email"] = user["email"] if user else None
-#     emp["user_active"] = user.get("is_active", True) if user else False
-
-#     return emp
-
-
-# # ============================================
-# # SALARY BREAKUP HELPER
-# # ============================================
-
-# def _calc_salary_breakup(total):
-#     """
-#     Calculate Basic, HRA, Special Allowance from Total salary
-#     using the payroll structure configured in Settings.
-#     """
-#     from app.services.settings_service import get_settings
-
-#     settings = get_settings()
-
-#     basic_pct = settings.get("basic_percent", 50)
-#     hra_pct = settings.get("hra_percent_of_basic", 40)
-#     pf_pct = settings.get("pf_percent", 12)
-#     esi_pct = settings.get("esi_percent", 0.75)
-#     pt_amt = settings.get("pt_amount", 200)
-#     tds_pct = settings.get("tds_percent", 0)
-
-#     total = float(total or 0)
-
-#     basic = round(total * basic_pct / 100, 2)
-#     hra = round(basic * hra_pct / 100, 2)
-#     special = round(total - basic - hra, 2)
-
-#     return {
-#         "total": total,
-#         "basic": basic,
-#         "hra": hra,
-#         "special_allowance": special,
-#         "pf_applicable": True,
-#         "esi_applicable": True,
-#         "pt_applicable": True,
-#         "tds_applicable": False,
-#         "pf_percent": pf_pct,
-#         "esi_percent": esi_pct,
-#         "pt_amount": pt_amt,
-#         "tds_percent": tds_pct,
-#         "tds_amount": 0,
-#     }
-
-
-# # ============================================
-# # LIST / GET
-# # ============================================
-
-# def list_employees(search=None, department_id=None, status=None):
-#     """List employees with filters."""
-#     query = {}
-
-#     if status and status in ("ACTIVE", "INACTIVE", "NOTICE_PERIOD", "RESIGNED"):
-#         query["status"] = status
-
-#     if department_id:
-#         oid = _oid(department_id)
-#         if oid:
-#             query["department_id"] = oid
-
-#     if search:
-#         query["$or"] = [
-#             {"first_name": {"$regex": search, "$options": "i"}},
-#             {"last_name": {"$regex": search, "$options": "i"}},
-#             {"employee_code": {"$regex": search, "$options": "i"}},
-#         ]
-#         user_matches = list(
-#             users().find(
-#                 {"email": {"$regex": search, "$options": "i"}}, {"_id": 1}
-#             )
-#         )
-#         if user_matches:
-#             user_ids = [u["_id"] for u in user_matches]
-#             query["$or"].append({"user_id": {"$in": user_ids}})
-
-#     docs = list(employees().find(query).sort("created_at", -1))
-
-#     result = []
-#     for emp in docs:
-#         emp = _enrich_employee(emp)
-#         result.append(emp)
-
-#     return serialize_list(result)
-
-
-# def get_employee(emp_id):
-#     oid = _oid(emp_id)
-#     if not oid:
-#         return None
-
-#     emp = employees().find_one({"_id": oid})
-#     if not emp:
-#         return None
-
-#     emp = _enrich_employee(emp)
-#     return serialize(emp)
-
-
-# def generate_employee_code():
-#     """Generate next employee code like EMP001."""
-#     count = employees().count_documents({})
-#     next_num = count + 1
-#     return f"EMP{next_num:03d}"
-
-
-# # ============================================
-# # CREATE
-# # ============================================
-
-# def create_employee(data):
-#     """Create user account + employee record with auto-calculated salary."""
-#     email = (data.get("email") or "").strip().lower()
-#     password = data.get("password") or ""
-#     first_name = (data.get("first_name") or "").strip()
-#     last_name = (data.get("last_name") or "").strip()
-#     employee_code = (data.get("employee_code") or "").strip().upper()
-
-#     if not email or not password:
-#         raise ValueError("Email and password required")
-#     if not first_name or not last_name:
-#         raise ValueError("First name and last name required")
-#     if len(password) < 6:
-#         raise ValueError("Password must be at least 6 characters")
-#     if not employee_code:
-#         employee_code = generate_employee_code()
-
-#     if users().find_one({"email": email}):
-#         raise ValueError("Email already exists")
-#     if employees().find_one({"employee_code": employee_code}):
-#         raise ValueError("Employee code already exists")
-
-#     pw_hash = bcrypt.hashpw(
-#         password.encode("utf-8"), bcrypt.gensalt()
-#     ).decode("utf-8")
-
-#     # Parse DOJ
-#     doj = data.get("date_of_joining")
-#     if doj:
-#         try:
-#             doj = datetime.fromisoformat(doj)
-#         except Exception:
-#             doj = datetime.utcnow()
-#     else:
-#         doj = datetime.utcnow()
-
-#     # Auto-calculate salary breakup from total
-#     total = float(data.get("total_salary") or 0)
-#     salary = _calc_salary_breakup(total)
-
-#     created_user_id = None
-
-#     try:
-#         # 1. Create user
-#         created_user_id = users().insert_one({
-#             "email": email,
-#             "password_hash": pw_hash,
-#             "role": "EMPLOYEE",
-#             "is_active": True,
-#             "created_at": datetime.utcnow(),
-#             "updated_at": datetime.utcnow(),
-#         }).inserted_id
-
-#         # 2. Create employee record
-#         emp_id = employees().insert_one({
-#             "user_id": created_user_id,
-#             "employee_code": employee_code,
-#             "first_name": first_name,
-#             "last_name": last_name,
-#             "phone": (data.get("phone") or "").strip() or None,
-#             "address": (data.get("address") or "").strip() or None,
-#             "date_of_birth": None,
-#             "date_of_joining": doj,
-#             "department_id": _oid(data.get("department_id")),
-#             "designation_id": _oid(data.get("designation_id")),
-#             "manager_id": None,
-#             "status": "ACTIVE",
-#             "salary": salary,
-#             "resignation_date": None,
-#             "resignation_reason": None,
-#             "deactivated_at": None,
-#             "deactivated_by": None,
-#             "created_at": datetime.utcnow(),
-#             "updated_at": datetime.utcnow(),
-#         }).inserted_id
-
-#         return str(emp_id)
-
-#     except Exception as e:
-#         if created_user_id:
-#             users().delete_one({"_id": created_user_id})
-#         raise e
-
-
-# # ============================================
-# # UPDATE
-# # ============================================
-
-# def update_employee(emp_id, data):
-#     """Update employee info + salary (recalc if total_salary provided)."""
-#     oid = _oid(emp_id)
-#     if not oid:
-#         return 0
-
-#     update_fields = {"updated_at": datetime.utcnow()}
-
-#     for field in ["first_name", "last_name", "phone", "address"]:
-#         if field in data:
-#             update_fields[field] = (data[field] or "").strip() or None
-
-#     if "department_id" in data:
-#         update_fields["department_id"] = _oid(data["department_id"])
-
-#     if "designation_id" in data:
-#         update_fields["designation_id"] = _oid(data["designation_id"])
-
-#     if "date_of_joining" in data and data["date_of_joining"]:
-#         try:
-#             update_fields["date_of_joining"] = datetime.fromisoformat(
-#                 data["date_of_joining"]
-#             )
-#         except Exception:
-#             pass
-
-#     # Salary — if total_salary provided, recalculate breakup
-#     if "total_salary" in data:
-#         total = float(data.get("total_salary") or 0)
-#         update_fields["salary"] = _calc_salary_breakup(total)
-
-#     r = employees().update_one({"_id": oid}, {"$set": update_fields})
-#     return r.modified_count
-
-
-# # ============================================
-# # DEACTIVATE / REACTIVATE
-# # ============================================
-
-# def deactivate_employee(emp_id, reason=None, resignation_date=None, manager_id=None):
-#     """Deactivate employee + block login."""
-#     oid = _oid(emp_id)
-#     if not oid:
-#         return 0
-
-#     emp = employees().find_one({"_id": oid})
-#     if not emp:
-#         return 0
-
-#     resign_date = None
-#     if resignation_date:
-#         try:
-#             resign_date = datetime.fromisoformat(resignation_date)
-#         except Exception:
-#             resign_date = datetime.utcnow()
-#     else:
-#         resign_date = datetime.utcnow()
-
-#     update_data = {
-#         "status": "INACTIVE",
-#         "resignation_date": resign_date,
-#         "resignation_reason": (reason or "").strip() or None,
-#         "deactivated_at": datetime.utcnow(),
-#         "updated_at": datetime.utcnow(),
-#     }
-
-#     if manager_id:
-#         update_data["deactivated_by"] = _oid(manager_id)
-
-#     employees().update_one({"_id": oid}, {"$set": update_data})
-
-#     users().update_one(
-#         {"_id": emp["user_id"]},
-#         {"$set": {"is_active": False, "updated_at": datetime.utcnow()}},
-#     )
-
-#     return 1
-
-
-# def reactivate_employee(emp_id):
-#     """Reactivate employee + unblock login."""
-#     oid = _oid(emp_id)
-#     if not oid:
-#         return 0
-
-#     emp = employees().find_one({"_id": oid})
-#     if not emp:
-#         return 0
-
-#     employees().update_one(
-#         {"_id": oid},
-#         {
-#             "$set": {
-#                 "status": "ACTIVE",
-#                 "resignation_date": None,
-#                 "resignation_reason": None,
-#                 "deactivated_at": None,
-#                 "deactivated_by": None,
-#                 "updated_at": datetime.utcnow(),
-#             }
-#         },
-#     )
-
-#     users().update_one(
-#         {"_id": emp["user_id"]},
-#         {"$set": {"is_active": True, "updated_at": datetime.utcnow()}},
-#     )
-
-#     return 1
-
-
-# # ============================================
-# # SELF-SERVICE (Employee)
-# # ============================================
-
-# def get_my_profile(employee_id):
-#     """Employee: get own full profile."""
-#     oid = _oid(employee_id)
-#     if not oid:
-#         return None
-
-#     emp = employees().find_one({"_id": oid})
-#     if not emp:
-#         return None
-
-#     emp = _enrich_employee(emp)
-#     emp.pop("password_hash", None)
-#     return serialize(emp)
-
-
-# def update_profile_picture(employee_id, picture_data):
-#     """Update employee profile picture path."""
-#     oid = _oid(employee_id)
-#     if not oid:
-#         raise ValueError("Invalid employee ID")
-
-#     from app.utils.file_handler import delete_file
-
-#     emp = employees().find_one({"_id": oid})
-#     if not emp:
-#         raise ValueError("Employee not found")
-
-#     old = emp.get("profile_picture_path")
-#     if old:
-#         try:
-#             delete_file(old)
-#         except Exception:
-#             pass
-
-#     employees().update_one(
-#         {"_id": oid},
-#         {
-#             "$set": {
-#                 "profile_picture_path": picture_data.get("picture_path"),
-#                 "profile_picture_url": picture_data.get("picture_url"),
-#                 "updated_at": datetime.utcnow(),
-#             }
-#         },
-#     )
-
-#     return picture_data.get("picture_url")
-
-
-# from datetime import datetime
-# import bcrypt
-# from bson import ObjectId
-# from bson.errors import InvalidId
-# from app.db import users, employees, departments, designations
-# from app.utils.helpers import serialize, serialize_list
-# from app.services.professional_tax_service import calculate_professional_tax  # <--- NEW IMPORT
-
-
-# def _oid(s):
-#     try:
-#         return ObjectId(s)
-#     except (InvalidId, TypeError):
-#         return None
-
-
-# def _enrich_employee(emp):
-#     """Add department + designation names + email."""
-#     if emp.get("department_id"):
-#         dept = departments().find_one({"_id": emp["department_id"]})
-#         emp["department_name"] = dept["name"] if dept else None
-#     else:
-#         emp["department_name"] = None
-
-#     if emp.get("designation_id"):
-#         desig = designations().find_one({"_id": emp["designation_id"]})
-#         emp["designation_title"] = desig["title"] if desig else None
-#     else:
-#         emp["designation_title"] = None
-
-#     user = users().find_one(
-#         {"_id": emp["user_id"]}, {"email": 1, "is_active": 1}
-#     )
-#     emp["email"] = user["email"] if user else None
-#     emp["user_active"] = user.get("is_active", True) if user else False
-
-#     return emp
-
-
-# # ============================================
-# # SALARY BREAKUP HELPER
-# # ============================================
-
-# def _calc_salary_breakup(total):
-#     """
-#     Calculate Basic, HRA, Special Allowance from Total salary
-#     using the payroll structure configured in Settings.
-#     Also calculates Professional Tax based on 6-month slabs.
-#     """
-#     from app.services.settings_service import get_settings
-
-#     settings = get_settings()
-
-#     basic_pct = settings.get("basic_percent", 50)
-#     hra_pct = settings.get("hra_percent_of_basic", 40)
-#     pf_pct = settings.get("pf_percent", 12)
-#     esi_pct = settings.get("esi_percent", 0.75)
-#     tds_pct = settings.get("tds_percent", 0)
-
-#     total = float(total or 0)
-
-#     basic = round(total * basic_pct / 100, 2)
-#     hra = round(basic * hra_pct / 100, 2)
-#     special = round(total - basic - hra, 2)
-
-#     # NEW: Slab-based Professional Tax calculation
-#     pt_result = calculate_professional_tax(total)
-
-#     return {
-#         "total": total,
-#         "basic": basic,
-#         "hra": hra,
-#         "special_allowance": special,
-#         "pf_applicable": True,
-#         "esi_applicable": True,
-#         "pt_applicable": True,
-#         "tds_applicable": False,
-#         "pf_percent": pf_pct,
-#         "esi_percent": esi_pct,
-#         "six_month_gross": pt_result["six_month_gross"],       # NEW
-#         "professional_tax": pt_result["professional_tax"],     # NEW
-#         "tds_percent": tds_pct,
-#         "tds_amount": 0,
-#     }
-
-
-# # ============================================
-# # LIST / GET
-# # ============================================
-
-# def list_employees(search=None, department_id=None, status=None):
-#     """List employees with filters."""
-#     query = {}
-
-#     if status and status in ("ACTIVE", "INACTIVE", "NOTICE_PERIOD", "RESIGNED"):
-#         query["status"] = status
-
-#     if department_id:
-#         oid = _oid(department_id)
-#         if oid:
-#             query["department_id"] = oid
-
-#     if search:
-#         query["$or"] = [
-#             {"first_name": {"$regex": search, "$options": "i"}},
-#             {"last_name": {"$regex": search, "$options": "i"}},
-#             {"employee_code": {"$regex": search, "$options": "i"}},
-#         ]
-#         user_matches = list(
-#             users().find(
-#                 {"email": {"$regex": search, "$options": "i"}}, {"_id": 1}
-#             )
-#         )
-#         if user_matches:
-#             user_ids = [u["_id"] for u in user_matches]
-#             query["$or"].append({"user_id": {"$in": user_ids}})
-
-#     docs = list(employees().find(query).sort("created_at", -1))
-
-#     result = []
-#     for emp in docs:
-#         emp = _enrich_employee(emp)
-#         result.append(emp)
-
-#     return serialize_list(result)
-
-
-# def get_employee(emp_id):
-#     oid = _oid(emp_id)
-#     if not oid:
-#         return None
-
-#     emp = employees().find_one({"_id": oid})
-#     if not emp:
-#         return None
-
-#     emp = _enrich_employee(emp)
-#     return serialize(emp)
-
-
-# def generate_employee_code():
-#     """Generate next employee code like EMP001."""
-#     count = employees().count_documents({})
-#     next_num = count + 1
-#     return f"EMP{next_num:03d}"
-
-
-# # ============================================
-# # CREATE
-# # ============================================
-
-# def create_employee(data):
-#     """Create user account + employee record with auto-calculated salary."""
-#     email = (data.get("email") or "").strip().lower()
-#     password = data.get("password") or ""
-#     first_name = (data.get("first_name") or "").strip()
-#     last_name = (data.get("last_name") or "").strip()
-#     employee_code = (data.get("employee_code") or "").strip().upper()
-
-#     if not email or not password:
-#         raise ValueError("Email and password required")
-#     if not first_name or not last_name:
-#         raise ValueError("First name and last name required")
-#     if len(password) < 6:
-#         raise ValueError("Password must be at least 6 characters")
-#     if not employee_code:
-#         employee_code = generate_employee_code()
-
-#     if users().find_one({"email": email}):
-#         raise ValueError("Email already exists")
-#     if employees().find_one({"employee_code": employee_code}):
-#         raise ValueError("Employee code already exists")
-
-#     pw_hash = bcrypt.hashpw(
-#         password.encode("utf-8"), bcrypt.gensalt()
-#     ).decode("utf-8")
-
-#     # Parse DOJ
-#     doj = data.get("date_of_joining")
-#     if doj:
-#         try:
-#             doj = datetime.fromisoformat(doj)
-#         except Exception:
-#             doj = datetime.utcnow()
-#     else:
-#         doj = datetime.utcnow()
-
-#     # Auto-calculate salary breakup from total
-#     total = float(data.get("total_salary") or 0)
-#     salary = _calc_salary_breakup(total)
-
-#     created_user_id = None
-
-#     try:
-#         # 1. Create user
-#         created_user_id = users().insert_one({
-#             "email": email,
-#             "password_hash": pw_hash,
-#             "role": "EMPLOYEE",
-#             "is_active": True,
-#             "created_at": datetime.utcnow(),
-#             "updated_at": datetime.utcnow(),
-#         }).inserted_id
-
-#         # 2. Create employee record
-#         emp_id = employees().insert_one({
-#             "user_id": created_user_id,
-#             "employee_code": employee_code,
-#             "first_name": first_name,
-#             "last_name": last_name,
-#             "phone": (data.get("phone") or "").strip() or None,
-#             "address": (data.get("address") or "").strip() or None,
-#             "date_of_birth": None,
-#             "date_of_joining": doj,
-#             "department_id": _oid(data.get("department_id")),
-#             "designation_id": _oid(data.get("designation_id")),
-#             "manager_id": None,
-#             "status": "ACTIVE",
-#             "salary": salary,
-#             "resignation_date": None,
-#             "resignation_reason": None,
-#             "deactivated_at": None,
-#             "deactivated_by": None,
-#             "created_at": datetime.utcnow(),
-#             "updated_at": datetime.utcnow(),
-#         }).inserted_id
-
-#         return str(emp_id)
-
-#     except Exception as e:
-#         if created_user_id:
-#             users().delete_one({"_id": created_user_id})
-#         raise e
-
-
-# # ============================================
-# # UPDATE
-# # ============================================
-
-# def update_employee(emp_id, data):
-#     """Update employee info + salary (recalc if total_salary provided)."""
-#     oid = _oid(emp_id)
-#     if not oid:
-#         return 0
-
-#     update_fields = {"updated_at": datetime.utcnow()}
-
-#     for field in ["first_name", "last_name", "phone", "address"]:
-#         if field in data:
-#             update_fields[field] = (data[field] or "").strip() or None
-
-#     if "department_id" in data:
-#         update_fields["department_id"] = _oid(data["department_id"])
-
-#     if "designation_id" in data:
-#         update_fields["designation_id"] = _oid(data["designation_id"])
-
-#     if "date_of_joining" in data and data["date_of_joining"]:
-#         try:
-#             update_fields["date_of_joining"] = datetime.fromisoformat(
-#                 data["date_of_joining"]
-#             )
-#         except Exception:
-#             pass
-
-#     # Salary — if total_salary provided, recalculate breakup
-#     if "total_salary" in data:
-#         total = float(data.get("total_salary") or 0)
-#         update_fields["salary"] = _calc_salary_breakup(total)
-
-#     r = employees().update_one({"_id": oid}, {"$set": update_fields})
-#     return r.modified_count
-
-
-# # ============================================
-# # DEACTIVATE / REACTIVATE
-# # ============================================
-
-# def deactivate_employee(emp_id, reason=None, resignation_date=None, manager_id=None):
-#     """Deactivate employee + block login."""
-#     oid = _oid(emp_id)
-#     if not oid:
-#         return 0
-
-#     emp = employees().find_one({"_id": oid})
-#     if not emp:
-#         return 0
-
-#     resign_date = None
-#     if resignation_date:
-#         try:
-#             resign_date = datetime.fromisoformat(resignation_date)
-#         except Exception:
-#             resign_date = datetime.utcnow()
-#     else:
-#         resign_date = datetime.utcnow()
-
-#     update_data = {
-#         "status": "INACTIVE",
-#         "resignation_date": resign_date,
-#         "resignation_reason": (reason or "").strip() or None,
-#         "deactivated_at": datetime.utcnow(),
-#         "updated_at": datetime.utcnow(),
-#     }
-
-#     if manager_id:
-#         update_data["deactivated_by"] = _oid(manager_id)
-
-#     employees().update_one({"_id": oid}, {"$set": update_data})
-
-#     users().update_one(
-#         {"_id": emp["user_id"]},
-#         {"$set": {"is_active": False, "updated_at": datetime.utcnow()}},
-#     )
-
-#     return 1
-
-
-# def reactivate_employee(emp_id):
-#     """Reactivate employee + unblock login."""
-#     oid = _oid(emp_id)
-#     if not oid:
-#         return 0
-
-#     emp = employees().find_one({"_id": oid})
-#     if not emp:
-#         return 0
-
-#     employees().update_one(
-#         {"_id": oid},
-#         {
-#             "$set": {
-#                 "status": "ACTIVE",
-#                 "resignation_date": None,
-#                 "resignation_reason": None,
-#                 "deactivated_at": None,
-#                 "deactivated_by": None,
-#                 "updated_at": datetime.utcnow(),
-#             }
-#         },
-#     )
-
-#     users().update_one(
-#         {"_id": emp["user_id"]},
-#         {"$set": {"is_active": True, "updated_at": datetime.utcnow()}},
-#     )
-
-#     return 1
-
-
-# # ============================================
-# # SELF-SERVICE (Employee)
-# # ============================================
-
-# def get_my_profile(employee_id):
-#     """Employee: get own full profile."""
-#     oid = _oid(employee_id)
-#     if not oid:
-#         return None
-
-#     emp = employees().find_one({"_id": oid})
-#     if not emp:
-#         return None
-
-#     emp = _enrich_employee(emp)
-#     emp.pop("password_hash", None)
-#     return serialize(emp)
-
-
-# def update_profile_picture(employee_id, picture_data):
-#     """Update employee profile picture path."""
-#     oid = _oid(employee_id)
-#     if not oid:
-#         raise ValueError("Invalid employee ID")
-
-#     from app.utils.file_handler import delete_file
-
-#     emp = employees().find_one({"_id": oid})
-#     if not emp:
-#         raise ValueError("Employee not found")
-
-#     old = emp.get("profile_picture_path")
-#     if old:
-#         try:
-#             delete_file(old)
-#         except Exception:
-#             pass
-
-#     employees().update_one(
-#         {"_id": oid},
-#         {
-#             "$set": {
-#                 "profile_picture_path": picture_data.get("picture_path"),
-#                 "profile_picture_url": picture_data.get("picture_url"),
-#                 "updated_at": datetime.utcnow(),
-#             }
-#         },
-#     )
-
-#     return picture_data.get("picture_url")
-
-
-
-from datetime import datetime
+from datetime import datetime, date
 import bcrypt
 from bson import ObjectId
 from bson.errors import InvalidId
-from app.db import users, employees, departments, designations, shifts
+from app.db import (
+    users, employees, departments, designations, shifts, insurances,
+    confirmations,
+)
 from app.utils.helpers import serialize, serialize_list
 from app.services.professional_tax_service import calculate_professional_tax
 
@@ -828,7 +31,6 @@ def _enrich_employee(emp):
     else:
         emp["designation_title"] = None
 
-    # NEW: Shift info
     if emp.get("shift_id"):
         sh = shifts().find_one({"_id": emp["shift_id"]})
         if sh:
@@ -847,11 +49,32 @@ def _enrich_employee(emp):
         emp["shift_end"] = None
         emp["shift_grace"] = None
 
+    # Insurance info
+    if emp.get("insurance_id"):
+        ins = insurances().find_one({"_id": emp["insurance_id"]})
+        if ins:
+            emp["insurance_name"] = ins.get("name")
+            emp["insurance_annual"] = ins.get("annual_amount")
+            emp["insurance_monthly"] = round(
+                (ins.get("annual_amount") or 0) / 12, 2
+            )
+        else:
+            emp["insurance_name"] = None
+            emp["insurance_annual"] = None
+            emp["insurance_monthly"] = None
+    else:
+        emp["insurance_name"] = None
+        emp["insurance_annual"] = None
+        emp["insurance_monthly"] = None
+
     user = users().find_one(
         {"_id": emp["user_id"]}, {"email": 1, "is_active": 1}
     )
     emp["email"] = user["email"] if user else None
     emp["user_active"] = user.get("is_active", True) if user else False
+
+    # Default employment_type for legacy employees
+    emp.setdefault("employment_type", "PERMANENT")
 
     return emp
 
@@ -860,11 +83,9 @@ def _enrich_employee(emp):
 # SALARY BREAKUP HELPER
 # ============================================
 
-def _calc_salary_breakup(total):
+def _calc_salary_breakup(total, insurance_id=None, annual_insurance=0):
     """
-    Calculate Basic, HRA, Special Allowance from Total salary
-    using the payroll structure configured in Settings.
-    Also calculates Professional Tax based on 6-month slabs.
+    Calculate Basic, HRA, Special Allowance + PT + Insurance.
     """
     from app.services.settings_service import get_settings
 
@@ -884,6 +105,9 @@ def _calc_salary_breakup(total):
 
     pt_result = calculate_professional_tax(total)
 
+    annual_insurance = float(annual_insurance or 0)
+    monthly_insurance = round(annual_insurance / 12, 2)
+
     return {
         "total": total,
         "basic": basic,
@@ -899,6 +123,9 @@ def _calc_salary_breakup(total):
         "professional_tax": pt_result["professional_tax"],
         "tds_percent": tds_pct,
         "tds_amount": 0,
+        "insurance_id": insurance_id,
+        "annual_insurance": annual_insurance,
+        "monthly_insurance": monthly_insurance,
     }
 
 
@@ -906,12 +133,17 @@ def _calc_salary_breakup(total):
 # LIST / GET
 # ============================================
 
-def list_employees(search=None, department_id=None, status=None):
-    """List employees with filters."""
+def list_employees(search=None, department_id=None, status=None,
+                   employment_type=None):
     query = {}
 
-    if status and status in ("ACTIVE", "INACTIVE", "NOTICE_PERIOD", "RESIGNED"):
+    if status and status in (
+        "ACTIVE", "INACTIVE", "NOTICE_PERIOD", "RESIGNED", "TERMINATED"
+    ):
         query["status"] = status
+
+    if employment_type:
+        query["employment_type"] = employment_type
 
     if department_id:
         oid = _oid(department_id)
@@ -935,11 +167,7 @@ def list_employees(search=None, department_id=None, status=None):
 
     docs = list(employees().find(query).sort("created_at", -1))
 
-    result = []
-    for emp in docs:
-        emp = _enrich_employee(emp)
-        result.append(emp)
-
+    result = [_enrich_employee(emp) for emp in docs]
     return serialize_list(result)
 
 
@@ -957,10 +185,8 @@ def get_employee(emp_id):
 
 
 def generate_employee_code():
-    """Generate next employee code like EMP001."""
     count = employees().count_documents({})
-    next_num = count + 1
-    return f"EMP{next_num:03d}"
+    return f"EMP{count + 1:03d}"
 
 
 # ============================================
@@ -968,7 +194,6 @@ def generate_employee_code():
 # ============================================
 
 def create_employee(data):
-    """Create user account + employee record with auto-calculated salary."""
     email = (data.get("email") or "").strip().lower()
     password = data.get("password") or ""
     first_name = (data.get("first_name") or "").strip()
@@ -993,6 +218,7 @@ def create_employee(data):
         password.encode("utf-8"), bcrypt.gensalt()
     ).decode("utf-8")
 
+    # Parse DOJ
     doj = data.get("date_of_joining")
     if doj:
         try:
@@ -1002,17 +228,43 @@ def create_employee(data):
     else:
         doj = datetime.utcnow()
 
+    # Parse end_date
+    end_dt = None
+    end_date_str = data.get("end_date")
+    if end_date_str:
+        try:
+            end_dt = datetime.fromisoformat(end_date_str)
+        except Exception:
+            end_dt = None
+
+    initial_status = "ACTIVE"
+    if end_dt and end_dt.date() <= date.today():
+        initial_status = "INACTIVE"
+
+    # NEW: employment_type
+    employment_type = (data.get("employment_type") or "PERMANENT").upper()
+    intern_end_date = None
+    if employment_type == "INTERN":
+        ied = data.get("intern_end_date")
+        if ied:
+            try:
+                intern_end_date = datetime.fromisoformat(ied)
+            except Exception:
+                intern_end_date = None
+
+    # Auto-calculate salary breakup
     total = float(data.get("total_salary") or 0)
-    salary = _calc_salary_breakup(total)
+    insurance_id = _oid(data.get("insurance_id"))
+    annual_insurance = float(data.get("annual_insurance") or 0)
+    salary = _calc_salary_breakup(total, insurance_id, annual_insurance)
 
     created_user_id = None
-
     try:
         created_user_id = users().insert_one({
             "email": email,
             "password_hash": pw_hash,
             "role": "EMPLOYEE",
-            "is_active": True,
+            "is_active": (initial_status == "ACTIVE"),
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow(),
         }).inserted_id
@@ -1026,12 +278,24 @@ def create_employee(data):
             "address": (data.get("address") or "").strip() or None,
             "date_of_birth": None,
             "date_of_joining": doj,
+            "end_date": end_dt,
             "department_id": _oid(data.get("department_id")),
             "designation_id": _oid(data.get("designation_id")),
-            "shift_id": _oid(data.get("shift_id")),  # NEW
+            "shift_id": _oid(data.get("shift_id")),
+            "insurance_id": insurance_id,
             "manager_id": None,
-            "status": "ACTIVE",
+            "status": initial_status,
             "salary": salary,
+
+            # NEW: Intern → Permanent tracking
+            "employment_type": employment_type,
+            "intern_end_date": intern_end_date,
+            "confirmation_status": (
+                "PENDING" if employment_type in ("INTERN", "PROBATION") else "N/A"
+            ),
+            "confirmation_date": None,
+            "previous_employment_type": None,
+
             "resignation_date": None,
             "resignation_reason": None,
             "deactivated_at": None,
@@ -1053,7 +317,6 @@ def create_employee(data):
 # ============================================
 
 def update_employee(emp_id, data):
-    """Update employee info + salary (recalc if total_salary provided)."""
     oid = _oid(emp_id)
     if not oid:
         return 0
@@ -1070,9 +333,10 @@ def update_employee(emp_id, data):
     if "designation_id" in data:
         update_fields["designation_id"] = _oid(data["designation_id"])
 
-    # NEW: Shift update
     if "shift_id" in data:
-        update_fields["shift_id"] = _oid(data["shift_id"]) if data["shift_id"] else None
+        update_fields["shift_id"] = (
+            _oid(data["shift_id"]) if data["shift_id"] else None
+        )
 
     if "date_of_joining" in data and data["date_of_joining"]:
         try:
@@ -1082,16 +346,147 @@ def update_employee(emp_id, data):
         except Exception:
             pass
 
-    if "total_salary" in data:
-        total = float(data.get("total_salary") or 0)
-        update_fields["salary"] = _calc_salary_breakup(total)
+    # end_date
+    if "end_date" in data:
+        if data["end_date"]:
+            try:
+                end_dt = datetime.fromisoformat(data["end_date"])
+                update_fields["end_date"] = end_dt
+                if end_dt.date() <= date.today():
+                    update_fields["status"] = "INACTIVE"
+            except Exception:
+                pass
+        else:
+            update_fields["end_date"] = None
+
+    # employment_type change (manual edit)
+    if "employment_type" in data and data["employment_type"]:
+        update_fields["employment_type"] = data["employment_type"].upper()
+        if update_fields["employment_type"] == "INTERN":
+            update_fields["confirmation_status"] = "PENDING"
+        elif update_fields["employment_type"] == "PERMANENT":
+            pass  # don't auto-confirm on manual edit
+
+    # intern_end_date
+    if "intern_end_date" in data:
+        if data["intern_end_date"]:
+            try:
+                update_fields["intern_end_date"] = datetime.fromisoformat(
+                    data["intern_end_date"]
+                )
+            except Exception:
+                pass
+        else:
+            update_fields["intern_end_date"] = None
+
+    # Update insurance_id
+    if "insurance_id" in data:
+        update_fields["insurance_id"] = (
+            _oid(data["insurance_id"]) if data["insurance_id"] else None
+        )
+
+    # Salary — recalculate if any field changed
+    if (
+        "total_salary" in data
+        or "annual_insurance" in data
+        or "insurance_id" in data
+    ):
+        emp = employees().find_one({"_id": oid})
+        existing_salary = (emp or {}).get("salary", {})
+
+        total = float(
+            data.get("total_salary")
+            if "total_salary" in data
+            else existing_salary.get("total", 0) or 0
+        )
+        annual_insurance = float(
+            data.get("annual_insurance")
+            if "annual_insurance" in data
+            else existing_salary.get("annual_insurance", 0) or 0
+        )
+        insurance_id = (
+            _oid(data.get("insurance_id"))
+            if "insurance_id" in data
+            else existing_salary.get("insurance_id")
+        )
+        update_fields["salary"] = _calc_salary_breakup(
+            total, insurance_id, annual_insurance
+        )
 
     r = employees().update_one({"_id": oid}, {"$set": update_fields})
     return r.modified_count
 
 
 # ============================================
-# DEACTIVATE / REACTIVATE
+# CONFIRM INTERN → PERMANENT
+# ============================================
+
+def confirm_employee(employee_id, data):
+    """
+    Convert INTERN / PROBATION → PERMANENT.
+    Recalculates salary if new_salary given.
+    """
+    oid = _oid(employee_id)
+    if not oid:
+        raise ValueError("Invalid employee id")
+
+    emp = employees().find_one({"_id": oid})
+    if not emp:
+        raise ValueError("Employee not found")
+
+    new_type = (data.get("employment_type") or "PERMANENT").upper()
+    confirmation_date = (
+        data.get("confirmation_date")
+        or datetime.utcnow().strftime("%Y-%m-%d")
+    )
+    notes = (data.get("notes") or "").strip()
+    new_salary = data.get("new_salary")
+    new_designation_id = data.get("new_designation_id")
+
+    update = {
+        "employment_type": new_type,
+        "confirmation_status": "CONFIRMED",
+        "confirmation_date": confirmation_date,
+        "previous_employment_type": emp.get("employment_type", "INTERN"),
+        "updated_at": datetime.utcnow(),
+    }
+
+    # If new salary → recalculate breakup
+    if new_salary is not None and str(new_salary).strip() != "":
+        total = float(new_salary)
+        existing_salary = emp.get("salary", {}) or {}
+        insurance_id = existing_salary.get("insurance_id")
+        annual_insurance = existing_salary.get("annual_insurance", 0) or 0
+        update["salary"] = _calc_salary_breakup(
+            total, insurance_id, annual_insurance
+        )
+
+    if new_designation_id:
+        update["designation_id"] = _oid(new_designation_id)
+
+    employees().update_one({"_id": oid}, {"$set": update})
+
+    # Log to confirmations collection
+    confirmations().insert_one({
+        "employee_id": oid,
+        "from_type": emp.get("employment_type", "INTERN"),
+        "to_type": new_type,
+        "confirmation_date": confirmation_date,
+        "notes": notes,
+        "new_salary": new_salary,
+        "new_designation_id": _oid(new_designation_id),
+        "created_at": datetime.utcnow(),
+    })
+
+    return {
+        "message": "Employee confirmed",
+        "employee_id": employee_id,
+        "status": new_type,
+    }
+
+
+# ============================================
+# DEACTIVATE / REACTIVATE / TERMINATE
 # ============================================
 
 def deactivate_employee(emp_id, reason=None, resignation_date=None, manager_id=None):
@@ -1124,12 +519,10 @@ def deactivate_employee(emp_id, reason=None, resignation_date=None, manager_id=N
         update_data["deactivated_by"] = _oid(manager_id)
 
     employees().update_one({"_id": oid}, {"$set": update_data})
-
     users().update_one(
         {"_id": emp["user_id"]},
         {"$set": {"is_active": False, "updated_at": datetime.utcnow()}},
     )
-
     return 1
 
 
@@ -1151,6 +544,11 @@ def reactivate_employee(emp_id):
                 "resignation_reason": None,
                 "deactivated_at": None,
                 "deactivated_by": None,
+                "termination_date": None,
+                "termination_reason": None,
+                "terminated_at": None,
+                "terminated_by": None,
+                "end_date": None,
                 "updated_at": datetime.utcnow(),
             }
         },
@@ -1160,12 +558,50 @@ def reactivate_employee(emp_id):
         {"_id": emp["user_id"]},
         {"$set": {"is_active": True, "updated_at": datetime.utcnow()}},
     )
+    return 1
 
+
+def terminate_employee(emp_id, terminate_date=None, reason=None, manager_id=None):
+    oid = _oid(emp_id)
+    if not oid:
+        return 0
+
+    emp = employees().find_one({"_id": oid})
+    if not emp:
+        return 0
+
+    if not (reason or "").strip():
+        raise ValueError("Termination reason is required")
+
+    if terminate_date:
+        try:
+            term_date = datetime.fromisoformat(terminate_date)
+        except Exception:
+            term_date = datetime.utcnow()
+    else:
+        term_date = datetime.utcnow()
+
+    update_data = {
+        "status": "TERMINATED",
+        "termination_date": term_date,
+        "termination_reason": reason.strip(),
+        "terminated_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    }
+
+    if manager_id:
+        update_data["terminated_by"] = _oid(manager_id)
+
+    employees().update_one({"_id": oid}, {"$set": update_data})
+    users().update_one(
+        {"_id": emp["user_id"]},
+        {"$set": {"is_active": False, "updated_at": datetime.utcnow()}},
+    )
     return 1
 
 
 # ============================================
-# SELF-SERVICE (Employee)
+# SELF-SERVICE
 # ============================================
 
 def get_my_profile(employee_id):

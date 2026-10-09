@@ -26,7 +26,7 @@ import * as flApi from "../../api/forgotLogoutApi";
 import * as resignApi from "../../api/resignationApi";
 import * as leaveApi from "../../api/leaveApi";
 
-const FONT = "'Calibri', 'Segoe UI', -apple-system, sans-serif";
+const FONT = "'Inter', 'Segoe UI', -apple-system, sans-serif";
 
 const managerLinks = [
   { to: "/manager/dashboard", label: "Dashboard", Icon: LayoutDashboard },
@@ -40,6 +40,8 @@ const managerLinks = [
     Icon: CalendarDays,
     badgeKey: "leaves",
   },
+  // ✅ HOLIDAYS MENU — ADDED HERE
+  { to: "/manager/holidays", label: "Holidays", Icon: Calendar },
   { to: "/manager/payroll", label: "Payroll", Icon: Wallet },
   { to: "/manager/documents", label: "Documents", Icon: FileText },
   { to: "/manager/announcements", label: "Announcements", Icon: Megaphone },
@@ -66,6 +68,8 @@ const employeeLinks = [
   { to: "/employee/profile", label: "My Profile", Icon: User },
   { to: "/employee/attendance", label: "My Attendance", Icon: Clock },
   { to: "/employee/leaves", label: "My Leave", Icon: Calendar },
+  // ✅ Employee side Holidays view (optional — feature later)
+  { to: "/employee/holidays", label: "Holidays", Icon: CalendarDays },
   { to: "/employee/payslips", label: "My Payslips", Icon: Receipt },
   { to: "/employee/documents", label: "My Documents", Icon: FolderOpen },
   { to: "/employee/announcements", label: "Announcements", Icon: Megaphone },
@@ -94,8 +98,9 @@ const Sidebar = ({ open, role, onClose }) => {
       const [flRes, resignRes, leaveRes] = await Promise.allSettled([
         flApi.getStats(),
         resignApi.getResignationStats(),
-        // Leave stats — adjust endpoint name if your API uses different name
-        leaveApi.getLeaveStats ? leaveApi.getLeaveStats() : Promise.resolve({ data: {} }),
+        leaveApi.getLeaveStats
+          ? leaveApi.getLeaveStats()
+          : Promise.resolve({ data: {} }),
       ]);
 
       setBadges({

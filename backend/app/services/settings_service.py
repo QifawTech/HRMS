@@ -35,7 +35,9 @@ DEFAULTS = {
     "esi_percent": 0.75,
     "pt_amount": 200,
     "tds_percent": 0,
-    # NEW: Forgot logout settings
+    # NEW: PT deduction months (Apr & Oct by default)
+    "pt_deduction_months": [4, 10],
+    # Forgot logout settings
     "forgot_logout_enabled": True,
     "forgot_logout_max_per_month": 3,
     "forgot_logout_fine_amount": 200,
@@ -66,7 +68,9 @@ def get_settings():
         "esi_percent": doc.get("esi_percent", 0.75),
         "pt_amount": doc.get("pt_amount", 200),
         "tds_percent": doc.get("tds_percent", 0),
-        # NEW
+        # NEW: PT deduction months
+        "pt_deduction_months": doc.get("pt_deduction_months", [4, 10]),
+        # Forgot logout
         "forgot_logout_enabled": doc.get("forgot_logout_enabled", True),
         "forgot_logout_max_per_month": doc.get("forgot_logout_max_per_month", 3),
         "forgot_logout_fine_amount": doc.get("forgot_logout_fine_amount", 200),
@@ -135,7 +139,25 @@ def update_settings(data, manager_user_id):
             except (ValueError, TypeError):
                 raise ValueError(f"Invalid value for {field}")
 
-    # NEW: Forgot logout settings
+    # NEW: PT deduction months
+    if "pt_deduction_months" in data:
+        months = data["pt_deduction_months"]
+        if not isinstance(months, list):
+            raise ValueError("PT deduction months must be a list")
+        cleaned = []
+        for m in months:
+            try:
+                mi = int(m)
+                if mi < 1 or mi > 12:
+                    raise ValueError("Each month must be 1-12")
+                cleaned.append(mi)
+            except (ValueError, TypeError):
+                raise ValueError("Invalid month value")
+        if not cleaned:
+            raise ValueError("At least one PT deduction month is required")
+        update_fields["pt_deduction_months"] = sorted(set(cleaned))
+
+    # Forgot logout settings
     if "forgot_logout_enabled" in data:
         update_fields["forgot_logout_enabled"] = bool(data["forgot_logout_enabled"])
 
@@ -253,6 +275,7 @@ def update_password(user_id, current_password, new_password):
         {"$set": {"password_hash": new_hash, "updated_at": _now()}},
     )
     return True
+
 
 def validate_password(pwd):
     if len(pwd) < 8:

@@ -6,9 +6,6 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 // ============================================
 // Manager Pages
 // ============================================
-// ============================================
-// Manager Pages
-// ============================================
 import ManagerDashboard from "./pages/manager/Dashboard";
 import ManagerEmployees from "./pages/manager/Employees";
 import ManagerDepartments from "./pages/manager/Departments";
@@ -23,7 +20,8 @@ import ManagerReports from "./pages/manager/Reports";
 import ManagerSettings from "./pages/manager/Settings";
 import ManagerTasks from "./pages/manager/Tasks";
 import ManagerResignations from "./pages/manager/Resignations";
-import ManagerForgotLogout from "./pages/manager/ForgotLogoutRequests";  // ← Ithu fix pannunga
+import ManagerForgotLogout from "./pages/manager/ForgotLogoutRequests";
+import ManagerHolidays from "./pages/manager/Holidays";   // ← lowercase ✅
 
 // ============================================
 // Employee Pages
@@ -58,9 +56,7 @@ const withEmployee = (Component) => (
 function App() {
   return (
     <Routes>
-      {/* ============================================
-          Public Routes
-          ============================================ */}
+      {/* Public Routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
 
@@ -81,7 +77,10 @@ function App() {
       <Route path="/manager/settings" element={withManager(ManagerSettings)} />
       <Route path="/manager/tasks" element={withManager(ManagerTasks)} />
       <Route path="/manager/resignations" element={withManager(ManagerResignations)} />
-      <Route path="/manager/forgot-logout" element={<ManagerForgotLogout />} />
+      
+      {/* ✅ FIXED — with wrapper */}
+      <Route path="/manager/forgot-logout" element={withManager(ManagerForgotLogout)} />
+      <Route path="/manager/holidays" element={withManager(ManagerHolidays)} />
 
       {/* ============================================
           Employee Routes
@@ -98,9 +97,7 @@ function App() {
       <Route path="/employee/tasks" element={withEmployee(EmployeeTasks)} />
       <Route path="/employee/resignation" element={withEmployee(EmployeeResignation)} />
 
-      {/* ============================================
-          Defaults
-          ============================================ */}
+      {/* Defaults */}
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

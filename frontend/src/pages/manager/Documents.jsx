@@ -18,7 +18,7 @@ import * as api from "../../api/documentApi";
 import * as empApi from "../../api/employeeApi";
 import { formatDateTime } from "../../utils/dateUtils";
 
-const FONT = "'Calibri', 'Segoe UI', -apple-system, sans-serif";
+const FONT = "'Inter', 'Segoe UI', -apple-system, sans-serif";
 
 const formatSize = (b) => {
   if (!b) return "—";
@@ -65,9 +65,6 @@ const ManagerDocuments = () => {
   const [toast, setToast] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
 
-  // ============================================
-  // Load documents
-  // ============================================
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -94,7 +91,6 @@ const ManagerDocuments = () => {
     return () => clearTimeout(t);
   }, [load]);
 
-  // Load employees + categories once
   useEffect(() => {
     empApi
       .listEmployees("", "", "ACTIVE")
@@ -106,9 +102,6 @@ const ManagerDocuments = () => {
       .catch(() => {});
   }, []);
 
-  // ============================================
-  // Handlers
-  // ============================================
   const openAdd = () => {
     setForm(emptyForm);
     setFile(null);
@@ -197,10 +190,128 @@ const ManagerDocuments = () => {
 
   return (
     <Layout>
-      <div style={{ fontFamily: FONT }}>
-        {/* ============================================
-            Header
-            ============================================ */}
+      <style>{`
+        .doc-page * { font-family: ${FONT}; }
+        .doc-page { font-family: ${FONT}; }
+
+        /* Mobile card view */
+        .doc-mobile-card {
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 14px;
+          margin-bottom: 10px;
+          font-family: ${FONT};
+        }
+        .doc-mobile-head {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 10px;
+          margin-bottom: 12px;
+          padding-bottom: 12px;
+          border-bottom: 1px dashed #f1f5f9;
+        }
+        .doc-mobile-name {
+          font-weight: 700;
+          font-size: 14px;
+          color: #0f172a;
+          margin-bottom: 4px;
+        }
+        .doc-mobile-desc {
+          font-size: 11.5px;
+          color: #64748b;
+          display: -webkit-box;
+          WebkitLineClamp: 2;
+          WebkitBoxOrient: "vertical";
+          overflow: hidden;
+        }
+        .doc-mobile-emp {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px;
+          background: #f8fafc;
+          border-radius: 8px;
+          margin-bottom: 12px;
+          cursor: pointer;
+          border: none;
+          width: 100%;
+          text-align: left;
+          font-family: ${FONT};
+        }
+        .doc-mobile-emp:active {
+          background: #eef2ff;
+        }
+        .doc-mobile-avatar {
+          width: 34px;
+          height: 34px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #6366f1, #8b5cf6);
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 12px;
+          font-weight: 700;
+          flex-shrink: 0;
+        }
+        .doc-mobile-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px 12px;
+          font-size: 12.5px;
+          margin-bottom: 12px;
+        }
+        .doc-field-label {
+          font-size: 10px;
+          color: #94a3b8;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
+        }
+        .doc-field-value {
+          font-weight: 600;
+          margin-top: 3px;
+          color: #0f172a;
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          overflow: hidden;
+        }
+        .doc-mobile-actions {
+          display: flex;
+          gap: 8px;
+          padding-top: 12px;
+          border-top: 1px dashed #f1f5f9;
+        }
+        .doc-mobile-actions .erp-icon-btn {
+          flex: 1;
+          justify-content: center;
+          padding: 9px;
+          border-radius: 8px;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          font-family: ${FONT};
+          text-decoration: none;
+        }
+
+        @media (max-width: 767px) {
+          .doc-page .erp-page-title { font-size: 22px; }
+          .doc-page .erp-page-subtitle { font-size: 12.5px; }
+          .doc-page .erp-stat-value { font-size: 20px; }
+          .doc-page .erp-stat-label { font-size: 10.5px; }
+        }
+      `}</style>
+
+      <div className="doc-page">
+        {/* Header */}
         <div className="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
           <div>
             <h1 className="erp-page-title">Documents</h1>
@@ -213,9 +324,7 @@ const ManagerDocuments = () => {
           </button>
         </div>
 
-        {/* ============================================
-            Stats
-            ============================================ */}
+        {/* Stats */}
         <div className="row g-3 mb-4">
           <div className="col-12 col-md-4">
             <div className="erp-card erp-stat-card">
@@ -265,9 +374,7 @@ const ManagerDocuments = () => {
           </div>
         </div>
 
-        {/* ============================================
-            Filters
-            ============================================ */}
+        {/* Filters */}
         <div className="erp-card mb-3" style={{ padding: 12 }}>
           <div className="row g-2 align-items-center">
             <div className="col-12 col-md-4">
@@ -343,9 +450,7 @@ const ManagerDocuments = () => {
           </div>
         </div>
 
-        {/* ============================================
-            Active Employee Filter Chip
-            ============================================ */}
+        {/* Active Employee Filter Chip */}
         {filterEmployee && selectedEmployee && (
           <div
             style={{
@@ -433,9 +538,7 @@ const ManagerDocuments = () => {
           </div>
         )}
 
-        {/* ============================================
-            Table
-            ============================================ */}
+        {/* List */}
         {loading ? (
           <div
             className="erp-card text-center py-5"
@@ -487,270 +590,443 @@ const ManagerDocuments = () => {
             )}
           </div>
         ) : (
-          <div
-            className="erp-card"
-            style={{ padding: 0, overflow: "hidden" }}
-          >
-            <div className="table-responsive">
-              <table
-                className="erp-table"
-                style={{ fontFamily: FONT, width: "100%" }}
-              >
-                <thead>
-                  <tr>
-                    <th style={{ minWidth: 200 }}>Document</th>
-                    <th style={{ minWidth: 200 }}>Employee</th>
-                    <th style={{ minWidth: 130 }}>Category</th>
-                    <th style={{ minWidth: 140 }}>File</th>
-                    <th style={{ minWidth: 140 }}>Uploaded By</th>
-                    <th style={{ width: 130 }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((doc) => {
-                    const catStyle = getCategoryStyle(doc.doc_category);
-                    const isEmployeeUpload =
-                      doc.uploaded_by_role === "EMPLOYEE";
+          <>
+            {/* Desktop Table */}
+            <div
+              className="erp-card d-none d-lg-block"
+              style={{ padding: 0, overflow: "hidden" }}
+            >
+              <div className="table-responsive">
+                <table
+                  className="erp-table"
+                  style={{ fontFamily: FONT, width: "100%" }}
+                >
+                  <thead>
+                    <tr>
+                      <th style={{ minWidth: 200 }}>Document</th>
+                      <th style={{ minWidth: 200 }}>Employee</th>
+                      <th style={{ minWidth: 130 }}>Category</th>
+                      <th style={{ minWidth: 140 }}>File</th>
+                      <th style={{ minWidth: 140 }}>Uploaded By</th>
+                      <th style={{ width: 130 }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((doc) => {
+                      const catStyle = getCategoryStyle(doc.doc_category);
+                      const isEmployeeUpload =
+                        doc.uploaded_by_role === "EMPLOYEE";
 
-                    return (
-                      <tr key={doc._id}>
-                        {/* Document name + description */}
-                        <td>
-                          <div style={{ fontWeight: 600, fontSize: 13.5 }}>
-                            {doc.doc_name}
-                          </div>
-                          {doc.description && (
-                            <div
-                              style={{
-                                fontSize: 11.5,
-                                color: "#6b7280",
-                                marginTop: 2,
-                                maxWidth: 260,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {doc.description}
+                      return (
+                        <tr key={doc._id}>
+                          <td>
+                            <div style={{ fontWeight: 600, fontSize: 13.5 }}>
+                              {doc.doc_name}
                             </div>
-                          )}
-                        </td>
+                            {doc.description && (
+                              <div
+                                style={{
+                                  fontSize: 11.5,
+                                  color: "#6b7280",
+                                  marginTop: 2,
+                                  maxWidth: 260,
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {doc.description}
+                              </div>
+                            )}
+                          </td>
 
-                        {/* Employee — clickable */}
-                        <td>
-                          <button
-                            type="button"
-                            onClick={() => setFilterEmployee(doc.employee_id)}
-                            title="Click to view all documents of this employee"
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 8,
-                              background: "transparent",
-                              border: "none",
-                              cursor: "pointer",
-                              padding: "4px 6px",
-                              borderRadius: 8,
-                              textAlign: "left",
-                              fontFamily: FONT,
-                              width: "100%",
-                              transition: "all 0.15s",
-                            }}
-                            onMouseEnter={(e) =>
-                              (e.currentTarget.style.background = "#f3f4f6")
-                            }
-                            onMouseLeave={(e) =>
-                              (e.currentTarget.style.background = "transparent")
-                            }
-                          >
-                            <div
+                          <td>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setFilterEmployee(doc.employee_id)
+                              }
+                              title="Click to view all documents of this employee"
                               style={{
-                                width: 30,
-                                height: 30,
-                                borderRadius: "50%",
-                                background:
-                                  "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                                color: "white",
                                 display: "flex",
                                 alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: 11,
-                                fontWeight: 700,
-                                flexShrink: 0,
-                                letterSpacing: "-0.3px",
+                                gap: 8,
+                                background: "transparent",
+                                border: "none",
+                                cursor: "pointer",
+                                padding: "4px 6px",
+                                borderRadius: 8,
+                                textAlign: "left",
+                                fontFamily: FONT,
+                                width: "100%",
+                                transition: "all 0.15s",
                               }}
+                              onMouseEnter={(e) =>
+                                (e.currentTarget.style.background = "#f3f4f6")
+                              }
+                              onMouseLeave={(e) =>
+                                (e.currentTarget.style.background =
+                                  "transparent")
+                              }
                             >
-                              {doc.employee_name
-                                ?.split(" ")
-                                .map((n) => n[0])
-                                .slice(0, 2)
-                                .join("")}
-                            </div>
-                            <div style={{ minWidth: 0, flex: 1 }}>
                               <div
                                 style={{
-                                  fontSize: 12.5,
-                                  fontWeight: 600,
-                                  color: "#4f46e5",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                {doc.employee_name}
-                              </div>
-                              <div
-                                style={{
+                                  width: 30,
+                                  height: 30,
+                                  borderRadius: "50%",
+                                  background:
+                                    "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                                  color: "white",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
                                   fontSize: 11,
-                                  color: "#6b7280",
-                                }}
-                              >
-                                {doc.employee_code}
-                              </div>
-                            </div>
-                            <Eye size={12} color="#9ca3af" />
-                          </button>
-                        </td>
-
-                        {/* Category */}
-                        <td>
-                          <span
-                            className="erp-badge"
-                            style={{
-                              background: catStyle.bg,
-                              color: catStyle.color,
-                              fontWeight: 600,
-                              fontSize: 11,
-                            }}
-                          >
-                            {doc.doc_category}
-                          </span>
-                        </td>
-
-                        {/* File info */}
-                        <td>
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 6,
-                            }}
-                          >
-                            <FileText
-                              size={14}
-                              color="#6b7280"
-                              style={{ flexShrink: 0 }}
-                            />
-                            <div style={{ minWidth: 0 }}>
-                              <div
-                                style={{
-                                  fontSize: 12,
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  whiteSpace: "nowrap",
-                                  maxWidth: 150,
-                                  fontWeight: 500,
-                                }}
-                                title={doc.file_name}
-                              >
-                                {doc.file_name}
-                              </div>
-                              <div
-                                style={{
-                                  fontSize: 10.5,
-                                  color: "#9ca3af",
-                                }}
-                              >
-                                {formatSize(doc.file_size)}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Uploaded By */}
-                        <td>
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 6,
-                              marginBottom: 3,
-                            }}
-                          >
-                            {isEmployeeUpload ? (
-                              <span
-                                className="erp-badge"
-                                style={{
-                                  background: "#fce7f3",
-                                  color: "#9f1239",
-                                  fontSize: 10,
                                   fontWeight: 700,
+                                  flexShrink: 0,
+                                  letterSpacing: "-0.3px",
                                 }}
                               >
-                                <User size={9} /> Employee
-                              </span>
-                            ) : (
-                              <span
-                                className="erp-badge"
-                                style={{
-                                  background: "#ecfdf5",
-                                  color: "#065f46",
-                                  fontSize: 10,
-                                  fontWeight: 700,
-                                }}
-                              >
-                                <Shield size={9} /> Manager
-                              </span>
-                            )}
-                          </div>
-                          <div style={{ fontSize: 11, color: "#6b7280" }}>
-                            {doc.uploaded_by_name}
-                          </div>
-                          <div style={{ fontSize: 10, color: "#9ca3af" }}>
-                            {formatDateTime(doc.created_at).split(",")[0]}
-                          </div>
-                        </td>
+                                {doc.employee_name
+                                  ?.split(" ")
+                                  .map((n) => n[0])
+                                  .slice(0, 2)
+                                  .join("")}
+                              </div>
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div
+                                  style={{
+                                    fontSize: 12.5,
+                                    fontWeight: 600,
+                                    color: "#4f46e5",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  {doc.employee_name}
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: 11,
+                                    color: "#6b7280",
+                                  }}
+                                >
+                                  {doc.employee_code}
+                                </div>
+                              </div>
+                              <Eye size={12} color="#9ca3af" />
+                            </button>
+                          </td>
 
-                        {/* Actions */}
-                        <td>
-                          <div className="d-flex gap-1">
-                            <a
-                              href={api.documentFileUrl(doc.file_id)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="erp-icon-btn"
-                              title="View / Download"
+                          <td>
+                            <span
+                              className="erp-badge"
                               style={{
-                                padding: 6,
-                                color: "#4f46e5",
-                                textDecoration: "none",
+                                background: catStyle.bg,
+                                color: catStyle.color,
+                                fontWeight: 600,
+                                fontSize: 11,
                               }}
                             >
-                              <Eye size={13} />
-                            </a>
-                            <button
-                              className="erp-icon-btn erp-icon-btn-danger"
-                              onClick={() => setConfirmDelete(doc)}
-                              title="Delete"
-                              style={{ padding: 6 }}
+                              {doc.doc_category}
+                            </span>
+                          </td>
+
+                          <td>
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 6,
+                              }}
                             >
-                              <Trash2 size={13} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                              <FileText
+                                size={14}
+                                color="#6b7280"
+                                style={{ flexShrink: 0 }}
+                              />
+                              <div style={{ minWidth: 0 }}>
+                                <div
+                                  style={{
+                                    fontSize: 12,
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                    maxWidth: 150,
+                                    fontWeight: 500,
+                                  }}
+                                  title={doc.file_name}
+                                >
+                                  {doc.file_name}
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: 10.5,
+                                    color: "#9ca3af",
+                                  }}
+                                >
+                                  {formatSize(doc.file_size)}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td>
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 6,
+                                marginBottom: 3,
+                              }}
+                            >
+                              {isEmployeeUpload ? (
+                                <span
+                                  className="erp-badge"
+                                  style={{
+                                    background: "#fce7f3",
+                                    color: "#9f1239",
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  <User size={9} /> Employee
+                                </span>
+                              ) : (
+                                <span
+                                  className="erp-badge"
+                                  style={{
+                                    background: "#ecfdf5",
+                                    color: "#065f46",
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  <Shield size={9} /> Manager
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: 11, color: "#6b7280" }}>
+                              {doc.uploaded_by_name}
+                            </div>
+                            <div style={{ fontSize: 10, color: "#9ca3af" }}>
+                              {formatDateTime(doc.created_at).split(",")[0]}
+                            </div>
+                          </td>
+
+                          <td>
+                            <div className="d-flex gap-1">
+                              <a
+                                href={api.documentFileUrl(doc.file_id)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="erp-icon-btn"
+                                title="View / Download"
+                                style={{
+                                  padding: 6,
+                                  color: "#4f46e5",
+                                  textDecoration: "none",
+                                }}
+                              >
+                                <Eye size={13} />
+                              </a>
+                              <button
+                                className="erp-icon-btn erp-icon-btn-danger"
+                                onClick={() => setConfirmDelete(doc)}
+                                title="Delete"
+                                style={{ padding: 6 }}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+
+            {/* Mobile / Tablet Cards */}
+            <div className="d-lg-none">
+              {items.map((doc) => {
+                const catStyle = getCategoryStyle(doc.doc_category);
+                const isEmployeeUpload =
+                  doc.uploaded_by_role === "EMPLOYEE";
+
+                return (
+                  <div key={doc._id} className="doc-mobile-card">
+                    {/* Head */}
+                    <div className="doc-mobile-head">
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div className="doc-mobile-name">{doc.doc_name}</div>
+                        {doc.description && (
+                          <div className="doc-mobile-desc">
+                            {doc.description}
+                          </div>
+                        )}
+                      </div>
+                      <span
+                        className="erp-badge"
+                        style={{
+                          background: catStyle.bg,
+                          color: catStyle.color,
+                          fontWeight: 600,
+                          fontSize: 10.5,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {doc.doc_category}
+                      </span>
+                    </div>
+
+                    {/* Employee chip */}
+                    <button
+                      type="button"
+                      className="doc-mobile-emp"
+                      onClick={() => setFilterEmployee(doc.employee_id)}
+                      title="View all documents of this employee"
+                    >
+                      <div className="doc-mobile-avatar">
+                        {doc.employee_name
+                          ?.split(" ")
+                          .map((n) => n[0])
+                          .slice(0, 2)
+                          .join("")}
+                      </div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div
+                          style={{
+                            fontSize: 12.5,
+                            fontWeight: 600,
+                            color: "#4f46e5",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {doc.employee_name}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: "#6b7280",
+                          }}
+                        >
+                          {doc.employee_code}
+                        </div>
+                      </div>
+                      <Eye size={13} color="#9ca3af" />
+                    </button>
+
+                    {/* Grid info */}
+                    <div className="doc-mobile-grid">
+                      <div>
+                        <div className="doc-field-label">File</div>
+                        <div
+                          className="doc-field-value"
+                          style={{ fontWeight: 500 }}
+                        >
+                          <FileText size={12} color="#6b7280" />
+                          <span
+                            style={{
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              maxWidth: 120,
+                            }}
+                            title={doc.file_name}
+                          >
+                            {doc.file_name}
+                          </span>
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 10.5,
+                            color: "#9ca3af",
+                            marginTop: 2,
+                          }}
+                        >
+                          {formatSize(doc.file_size)}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="doc-field-label">Uploaded By</div>
+                        <div
+                          className="doc-field-value"
+                          style={{ marginTop: 3 }}
+                        >
+                          {isEmployeeUpload ? (
+                            <span
+                              className="erp-badge"
+                              style={{
+                                background: "#fce7f3",
+                                color: "#9f1239",
+                                fontSize: 10,
+                                fontWeight: 700,
+                              }}
+                            >
+                              <User size={9} /> Employee
+                            </span>
+                          ) : (
+                            <span
+                              className="erp-badge"
+                              style={{
+                                background: "#ecfdf5",
+                                color: "#065f46",
+                                fontSize: 10,
+                                fontWeight: 700,
+                              }}
+                            >
+                              <Shield size={9} /> Manager
+                            </span>
+                          )}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: "#6b7280",
+                            marginTop: 3,
+                          }}
+                        >
+                          {doc.uploaded_by_name}
+                        </div>
+                        <div style={{ fontSize: 10, color: "#9ca3af" }}>
+                          {formatDateTime(doc.created_at).split(",")[0]}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="doc-mobile-actions">
+                      <a
+                        href={api.documentFileUrl(doc.file_id)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="erp-icon-btn"
+                        style={{ color: "#4f46e5" }}
+                      >
+                        <Eye size={13} /> View
+                      </a>
+                      <button
+                        className="erp-icon-btn"
+                        onClick={() => setConfirmDelete(doc)}
+                        style={{ color: "#dc2626" }}
+                      >
+                        <Trash2 size={13} /> Delete
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
 
-      {/* ============================================
-          Upload Modal
-          ============================================ */}
+      {/* Upload Modal */}
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -760,6 +1036,7 @@ const ManagerDocuments = () => {
             <button
               className="erp-btn erp-btn-outline"
               onClick={() => setModalOpen(false)}
+              style={{ fontFamily: FONT }}
             >
               Cancel
             </button>
@@ -767,6 +1044,7 @@ const ManagerDocuments = () => {
               className="erp-btn erp-btn-primary"
               onClick={handleSubmit}
               disabled={saving || uploading}
+              style={{ fontFamily: FONT }}
             >
               {uploading
                 ? "Uploading..."
@@ -797,7 +1075,7 @@ const ManagerDocuments = () => {
         </div>
 
         <div className="row g-3 mb-3">
-          <div className="col-6">
+          <div className="col-12 col-sm-6">
             <label className="erp-label">Category *</label>
             <select
               className="erp-input"
@@ -815,7 +1093,7 @@ const ManagerDocuments = () => {
               ))}
             </select>
           </div>
-          <div className="col-6">
+          <div className="col-12 col-sm-6">
             <label className="erp-label">Document Name *</label>
             <input
               className="erp-input"
@@ -948,9 +1226,7 @@ const ManagerDocuments = () => {
         </div>
       </Modal>
 
-      {/* ============================================
-          Confirm Delete
-          ============================================ */}
+      {/* Confirm Delete */}
       <Modal
         open={!!confirmDelete}
         onClose={() => setConfirmDelete(null)}
@@ -960,12 +1236,14 @@ const ManagerDocuments = () => {
             <button
               className="erp-btn erp-btn-outline"
               onClick={() => setConfirmDelete(null)}
+              style={{ fontFamily: FONT }}
             >
               Cancel
             </button>
             <button
               className="erp-btn erp-btn-danger"
               onClick={handleDelete}
+              style={{ fontFamily: FONT }}
             >
               Yes, Delete
             </button>

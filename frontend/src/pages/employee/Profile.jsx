@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Clock,
+  PartyPopper,
 } from "lucide-react";
 import Layout from "../../components/layout/Layout";
 import Toast from "../../components/common/Toast";
@@ -23,6 +24,9 @@ import Modal from "../../components/common/Modal";
 import AttendanceCalendar from "../../components/employees/AttendanceCalendar";
 import * as api from "../../api/employeeApi";
 import * as attApi from "../../api/attendanceApi";
+import * as holidayApi from "../../api/holidayApi";   // ✅ NEW
+
+const FONT = "'Inter', 'Segoe UI', -apple-system, sans-serif";
 
 const formatDateShort = (dateStr) => {
   if (!dateStr) return "—";
@@ -73,16 +77,11 @@ const formatDateLong = (dateStr) => {
   }
 };
 
-// ============================================
-// Main
-// ============================================
-
 const EmployeeProfile = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
 
-  // Attendance report
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -90,16 +89,17 @@ const EmployeeProfile = () => {
   const [reportLoading, setReportLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(null);
 
-  // Picture upload
+  // ✅ NEW: holidays state
+  const [holidays, setHolidays] = useState([]);
+  const [upcomingHolidays, setUpcomingHolidays] = useState([]);
+
   const fileRef = useRef(null);
   const [uploadingPic, setUploadingPic] = useState(false);
 
-  // Edit modal
   const [editModal, setEditModal] = useState(false);
   const [editForm, setEditForm] = useState({ phone: "", address: "" });
   const [saving, setSaving] = useState(false);
 
-  // Load profile
   const loadProfile = useCallback(async () => {
     try {
       const res = await api.getMyProfile();
@@ -119,7 +119,6 @@ const EmployeeProfile = () => {
     loadProfile();
   }, [loadProfile]);
 
-  // Load attendance report
   const loadReport = useCallback(async () => {
     setReportLoading(true);
     try {
@@ -135,6 +134,32 @@ const EmployeeProfile = () => {
   useEffect(() => {
     loadReport();
   }, [loadReport]);
+
+  // ✅ NEW: Load holidays for current year
+  useEffect(() => {
+    holidayApi
+      .listHolidays(year)
+      .then((res) => {
+        const all = Array.isArray(res.data) ? res.data : [];
+        setHolidays(all);
+
+        // Upcoming holidays (next 5 from today)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const upcoming = all
+          .filter((h) => new Date(h.date) >= today)
+          .sort((a, b) => new Date(a.date) - new Date(b.date))
+          .slice(0, 3);
+        setUpcomingHolidays(upcoming);
+      })
+      .catch(() => {});
+  }, [year]);
+
+  // ✅ Filter holidays for current month
+  const monthHolidays = holidays.filter((h) => {
+    const d = new Date(h.date);
+    return d.getFullYear() === year && d.getMonth() + 1 === month;
+  });
 
   const prevMonth = () => {
     setSelectedDate(null);
@@ -160,7 +185,6 @@ const EmployeeProfile = () => {
     );
   };
 
-  // Picture upload
   const handlePictureUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -190,7 +214,6 @@ const EmployeeProfile = () => {
     }
   };
 
-  // Update profile
   const handleProfileSave = async () => {
     setSaving(true);
     try {
@@ -215,7 +238,10 @@ const EmployeeProfile = () => {
   if (loading || !profile) {
     return (
       <Layout>
-        <div className="erp-card text-center py-5" style={{ color: "#6b7280" }}>
+        <div
+          className="erp-card text-center py-5"
+          style={{ color: "#6b7280", fontFamily: FONT }}
+        >
           <div className="spinner-border spinner-border-sm me-2" />
           Loading profile...
         </div>
@@ -224,520 +250,606 @@ const EmployeeProfile = () => {
   }
 
   const initials = `${profile.first_name?.[0] || ""}${profile.last_name?.[0] || ""}`;
-const fullName = `${profile.first_name} ${profile.last_name}`;
+  const fullName = `${profile.first_name} ${profile.last_name}`;
 
-// Build full URL for profile picture
-const getImageUrl = (url) => {
-  if (!url) return null;
-  if (url.startsWith("http")) return url;
-  return `http://localhost:5000${url}`;
-};
+  const getImageUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith("http")) return url;
+    return `http://localhost:5000${url}`;
+  };
 
-const profilePicUrl = getImageUrl(profile.profile_picture_url);
-const hasPicture = !!profilePicUrl;
+  const profilePicUrl = getImageUrl(profile.profile_picture_url);
+  const hasPicture = !!profilePicUrl;
 
   return (
     <Layout>
-      <div className="mb-4">
-        <h1 className="erp-page-title">My Profile</h1>
-        <p className="erp-page-subtitle mb-0">
-          Your personal information and attendance
-        </p>
-      </div>
+      <style>{`
+        .prof-page * { font-family: ${FONT}; }
+        .prof-page { font-family: ${FONT}; }
 
-      {/* ================================================
-          Hero Profile Card
-          ================================================ */}
-      <div
-        style={{
-          position: "relative",
-          padding: 28,
-          background:
-            "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-          borderRadius: 20,
-          marginBottom: 24,
-          overflow: "hidden",
-          boxShadow: "0 12px 32px -12px rgba(102,126,234,0.5)",
-        }}
-      >
-        {/* Decorative circles */}
-        <div
-          style={{
-            position: "absolute",
-            top: -50,
-            right: -50,
-            width: 180,
-            height: 180,
-            borderRadius: "50%",
-            background: "rgba(255,255,255,0.08)",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            bottom: -60,
-            right: 60,
-            width: 120,
-            height: 120,
-            borderRadius: "50%",
-            background: "rgba(255,255,255,0.06)",
-          }}
-        />
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-        <div
-          style={{
-            position: "relative",
-            zIndex: 1,
-            display: "flex",
-            alignItems: "center",
-            gap: 24,
-            flexWrap: "wrap",
-          }}
-        >
-          {/* Avatar with upload */}
-          <div style={{ position: "relative" }}>
-            <div
-  onClick={() => !uploadingPic && fileRef.current?.click()}
-  style={{
-    width: 110,
-    height: 110,
-    borderRadius: 24,
-    background: hasPicture
-      ? `url(${profilePicUrl}) center/cover`
-      : "rgba(255,255,255,0.2)",
-                backdropFilter: "blur(10px)",
-                border: "3px solid rgba(255,255,255,0.4)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "white",
-                fontSize: 36,
-                fontWeight: 800,
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-                position: "relative",
-                overflow: "hidden",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "scale(1.02)";
-                e.currentTarget.style.borderColor = "rgba(255,255,255,0.7)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "scale(1)";
-                e.currentTarget.style.borderColor = "rgba(255,255,255,0.4)";
-              }}
-            >
-              {!hasPicture && initials}
+        .prof-hero {
+          position: relative;
+          padding: 28px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border-radius: 20px;
+          margin-bottom: 24px;
+          overflow: hidden;
+          box-shadow: 0 12px 32px -12px rgba(102,126,234,0.5);
+        }
+        .prof-hero-circle-1 {
+          position: absolute;
+          top: -50px; right: -50px;
+          width: 180px; height: 180px;
+          border-radius: 50%;
+          background: rgba(255,255,255,0.08);
+        }
+        .prof-hero-circle-2 {
+          position: absolute;
+          bottom: -60px; right: 60px;
+          width: 120px; height: 120px;
+          border-radius: 50%;
+          background: rgba(255,255,255,0.06);
+        }
+        .prof-hero-inner {
+          position: relative;
+          z-index: 1;
+          display: flex;
+          align-items: center;
+          gap: 24px;
+          flex-wrap: wrap;
+        }
+        .prof-avatar {
+          width: 110px;
+          height: 110px;
+          border-radius: 24px;
+          backdrop-filter: blur(10px);
+          border: 3px solid rgba(255,255,255,0.4);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-size: 36px;
+          font-weight: 800;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          position: relative;
+          overflow: hidden;
+          background-size: cover;
+          background-position: center;
+        }
+        .prof-name {
+          font-size: 26px;
+          font-weight: 800;
+          color: white;
+          letter-spacing: -0.5px;
+          margin-bottom: 6px;
+          line-height: 1.1;
+        }
+        .prof-email {
+          font-size: 14px;
+          color: rgba(255,255,255,0.85);
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-bottom: 14px;
+          word-break: break-all;
+        }
+        .prof-pill-row {
+          display: flex; gap: 8px; flex-wrap: wrap;
+        }
 
-              {uploadingPic && (
-                <div
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    background: "rgba(0,0,0,0.5)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Loader2
-                    size={24}
-                    color="white"
-                    style={{ animation: "spin 1s linear infinite" }}
-                  />
-                </div>
-              )}
+        .holiday-strip {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 14px;
+          background: linear-gradient(135deg, #fef3c7, #fde68a);
+          border: 1px solid #fcd34d;
+          border-radius: 12px;
+          margin-bottom: 16px;
+          font-size: 12.5px;
+          color: #92400e;
+        }
+        .holiday-strip-label {
+          font-size: 10.5px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.4px;
+          color: #78350f;
+        }
+        .holiday-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          background: white;
+          padding: 4px 10px;
+          border-radius: 20px;
+          font-size: 11.5px;
+          font-weight: 600;
+          color: #92400e;
+          border: 1px solid #fcd34d;
+        }
+
+        @media (max-width: 767px) {
+          .prof-page { padding: 0 4px; }
+          .prof-hero { padding: 18px; border-radius: 16px; margin-bottom: 16px; }
+          .prof-hero-inner { gap: 14px; }
+          .prof-avatar {
+            width: 76px; height: 76px;
+            font-size: 26px; border-radius: 18px;
+          }
+          .prof-name { font-size: 20px; }
+          .prof-email { font-size: 12.5px; margin-bottom: 10px; }
+          .prof-page .erp-page-title { font-size: 22px; }
+          .prof-page .erp-page-subtitle { font-size: 12.5px; }
+          .prof-page .erp-stat-value { font-size: 20px; }
+          .prof-page .erp-stat-label { font-size: 10.5px; }
+          .holiday-strip { padding: 8px 12px; font-size: 12px; }
+        }
+      `}</style>
+
+      <div className="prof-page">
+        <div className="mb-4">
+          <h1 className="erp-page-title">My Profile</h1>
+          <p className="erp-page-subtitle mb-0">
+            Your personal information and attendance
+          </p>
+        </div>
+
+        {/* Hero Card */}
+        <div className="prof-hero">
+          <div className="prof-hero-circle-1" />
+          <div className="prof-hero-circle-2" />
+
+          <div className="prof-hero-inner">
+            <div style={{ position: "relative" }}>
+              <div
+                className="prof-avatar"
+                onClick={() => !uploadingPic && fileRef.current?.click()}
+                style={{
+                  background: hasPicture
+                    ? `url(${profilePicUrl}) center/cover`
+                    : "rgba(255,255,255,0.2)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "scale(1.02)";
+                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.7)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "scale(1)";
+                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.4)";
+                }}
+              >
+                {!hasPicture && initials}
+
+                {uploadingPic && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      background: "rgba(0,0,0,0.5)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Loader2
+                      size={24}
+                      color="white"
+                      style={{ animation: "spin 1s linear infinite" }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div
+                onClick={() => !uploadingPic && fileRef.current?.click()}
+                style={{
+                  position: "absolute",
+                  bottom: -6,
+                  right: -6,
+                  width: 34,
+                  height: 34,
+                  borderRadius: "50%",
+                  background: "white",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: "#4f46e5",
+                  border: "2px solid white",
+                }}
+                title="Change picture"
+              >
+                <Camera size={16} strokeWidth={2.5} />
+              </div>
+
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={handlePictureUpload}
+              />
             </div>
 
-            {/* Camera badge */}
-            <div
-              onClick={() => !uploadingPic && fileRef.current?.click()}
-              style={{
-                position: "absolute",
-                bottom: -6,
-                right: -6,
-                width: 34,
-                height: 34,
-                borderRadius: "50%",
-                background: "white",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                color: "#4f46e5",
-                border: "2px solid white",
-              }}
-              title="Change picture"
-            >
-              <Camera size={16} strokeWidth={2.5} />
-            </div>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <div className="prof-name">{fullName}</div>
+              <div className="prof-email">
+                <Mail size={14} strokeWidth={2.2} />
+                {profile.email}
+              </div>
 
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              style={{ display: "none" }}
-              onChange={handlePictureUpload}
+              <div className="prof-pill-row">
+                <Pill icon={Hash} text={profile.employee_code} />
+                {profile.department_name && (
+                  <Pill icon={Building2} text={profile.department_name} />
+                )}
+                {profile.designation_title && (
+                  <Pill icon={Briefcase} text={profile.designation_title} />
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Info Grid */}
+        <div className="row g-3 mb-4">
+          <div className="col-12 col-md-4">
+            <InfoCard Icon={Phone} label="Phone" value={profile.phone || "—"} />
+          </div>
+          <div className="col-12 col-md-4">
+            <InfoCard
+              Icon={Calendar}
+              label="Date of Joining"
+              value={formatDateShort(profile.date_of_joining)}
             />
           </div>
-
-          {/* Name + badges */}
-          <div style={{ flex: 1, minWidth: 220 }}>
-            <div
-              style={{
-                fontSize: 26,
-                fontWeight: 800,
-                color: "white",
-                letterSpacing: "-0.5px",
-                marginBottom: 6,
-                lineHeight: 1.1,
-              }}
-            >
-              {fullName}
-            </div>
-
-            <div
-              style={{
-                fontSize: 14,
-                color: "rgba(255,255,255,0.85)",
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                marginBottom: 14,
-              }}
-            >
-              <Mail size={14} strokeWidth={2.2} />
-              {profile.email}
-            </div>
-
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <Pill icon={Hash} text={profile.employee_code} />
-              {profile.department_name && (
-                <Pill icon={Building2} text={profile.department_name} />
-              )}
-              {profile.designation_title && (
-                <Pill icon={Briefcase} text={profile.designation_title} />
-              )}
-            </div>
+          <div className="col-12 col-md-4">
+            <InfoCard
+              Icon={MapPin}
+              label="Address"
+              value={profile.address || "—"}
+              truncate
+            />
           </div>
         </div>
-      </div>
 
-      {/* ================================================
-          Info Grid
-          ================================================ */}
-      <div className="row g-3 mb-4">
-        <div className="col-12 col-md-4">
-          <InfoCard
-            Icon={Phone}
-            label="Phone"
-            value={profile.phone || "—"}
-          />
-        </div>
-        <div className="col-12 col-md-4">
-          <InfoCard
-            Icon={Calendar}
-            label="Date of Joining"
-            value={formatDateShort(profile.date_of_joining)}
-          />
-        </div>
-        <div className="col-12 col-md-4">
-          <InfoCard
-            Icon={MapPin}
-            label="Address"
-            value={profile.address || "—"}
-            truncate
-          />
-        </div>
-      </div>
-
-      {/* Edit Profile Button */}
-      <div className="d-flex justify-content-end mb-4">
-        <button
-          className="erp-btn erp-btn-outline"
-          onClick={() => setEditModal(true)}
-        >
-          <Edit2 size={14} /> Edit Contact Info
-        </button>
-      </div>
-
-      {/* ================================================
-          Attendance Summary
-          ================================================ */}
-      <div className="row g-3 mb-4">
-        <div className="col-6 col-md-3">
-          <SummaryCard
-            label="Present"
-            value={summary.present_days || 0}
-            Icon={CheckCircle2}
-            color="#15803d"
-            bg="#dcfce7"
-          />
-        </div>
-        <div className="col-6 col-md-3">
-          <SummaryCard
-            label="Late"
-            value={summary.late_days || 0}
-            Icon={AlertTriangle}
-            color="#b91c1c"
-            bg="#fee2e2"
-          />
-        </div>
-        <div className="col-6 col-md-3">
-          <SummaryCard
-            label="Early"
-            value={summary.early_logout_days || 0}
-            Icon={Clock}
-            color="#b45309"
-            bg="#fef3c7"
-          />
-        </div>
-        <div className="col-6 col-md-3">
-          <SummaryCard
-            label="Hours"
-            value={formatHours(summary.total_hours)}
-            Icon={TrendingUp}
-            color="#4f46e5"
-            bg="#eef2ff"
-          />
-        </div>
-      </div>
-
-      {/* ================================================
-          Calendar
-          ================================================ */}
-      <div
-        className="erp-card"
-        style={{ padding: 22, marginBottom: 20 }}
-      >
-        <div
-          style={{
-            fontSize: 11,
-            fontWeight: 800,
-            color: "#374151",
-            textTransform: "uppercase",
-            letterSpacing: 0.6,
-            marginBottom: 16,
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          <Calendar size={13} strokeWidth={2.5} color="#4f46e5" />
-          Attendance Calendar
-          <span
-            style={{
-              marginLeft: "auto",
-              fontSize: 10.5,
-              fontWeight: 500,
-              color: "#9ca3af",
-              textTransform: "none",
-              letterSpacing: 0,
-            }}
+        <div className="d-flex justify-content-end mb-4">
+          <button
+            className="erp-btn erp-btn-outline"
+            onClick={() => setEditModal(true)}
+            style={{ fontFamily: FONT }}
           >
-            Click a day to view details
-          </span>
+            <Edit2 size={14} /> Edit Contact Info
+          </button>
         </div>
 
-        {reportLoading ? (
-          <div className="text-center py-5" style={{ color: "#9ca3af" }}>
-            <div className="spinner-border spinner-border-sm me-2" />
-            Loading...
+        {/* ✅ Upcoming Holidays Strip */}
+        {upcomingHolidays.length > 0 && (
+          <div className="holiday-strip">
+            <PartyPopper size={16} style={{ flexShrink: 0 }} />
+            <span className="holiday-strip-label">Upcoming:</span>
+            <div
+              style={{
+                display: "flex",
+                gap: 6,
+                flexWrap: "wrap",
+                flex: 1,
+                minWidth: 0,
+              }}
+            >
+              {upcomingHolidays.map((h) => (
+                <span key={h._id} className="holiday-chip">
+                  {h.name} · {formatDateShort(h.date).slice(0, 6)}
+                </span>
+              ))}
+            </div>
           </div>
-        ) : (
-          <AttendanceCalendar
-            year={year}
-            month={month}
-            records={records}
-            onPrev={prevMonth}
-            onNext={nextMonth}
-            canGoNext={canGoNext()}
-            selectedDate={selectedDate?.dateStr}
-            onDateClick={(cell) => setSelectedDate(cell)}
-          />
         )}
-      </div>
 
-      {/* ================================================
-          Selected Date Details
-          ================================================ */}
-      {selectedDate && selectedRecord && (
-        <div
-          className="erp-card"
-          style={{
-            padding: 20,
-            background: "#fafafa",
-            animation: "slideDown 0.25s ease",
-          }}
-        >
+        {/* Summary Cards */}
+        <div className="row g-3 mb-4">
+          <div className="col-6 col-md-3">
+            <SummaryCard
+              label="Present"
+              value={summary.present_days || 0}
+              Icon={CheckCircle2}
+              color="#15803d"
+              bg="#dcfce7"
+            />
+          </div>
+          <div className="col-6 col-md-3">
+            <SummaryCard
+              label="Late"
+              value={summary.late_days || 0}
+              Icon={AlertTriangle}
+              color="#b91c1c"
+              bg="#fee2e2"
+            />
+          </div>
+          <div className="col-6 col-md-3">
+            <SummaryCard
+              label="Early"
+              value={summary.early_logout_days || 0}
+              Icon={Clock}
+              color="#b45309"
+              bg="#fef3c7"
+            />
+          </div>
+          <div className="col-6 col-md-3">
+            <SummaryCard
+              label="Hours"
+              value={formatHours(summary.total_hours)}
+              Icon={TrendingUp}
+              color="#4f46e5"
+              bg="#eef2ff"
+            />
+          </div>
+        </div>
+
+        {/* Calendar */}
+        <div className="erp-card" style={{ padding: 22, marginBottom: 20 }}>
           <div
             style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
+              fontSize: 11,
+              fontWeight: 800,
+              color: "#374151",
+              textTransform: "uppercase",
+              letterSpacing: 0.6,
               marginBottom: 16,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
               flexWrap: "wrap",
-              gap: 8,
             }}
           >
+            <Calendar size={13} strokeWidth={2.5} color="#4f46e5" />
+            Attendance Calendar
+            <span
+              style={{
+                marginLeft: "auto",
+                fontSize: 10.5,
+                fontWeight: 500,
+                color: "#9ca3af",
+                textTransform: "none",
+                letterSpacing: 0,
+              }}
+            >
+              Tap a day to view details
+            </span>
+          </div>
+
+          {/* Holiday legend */}
+          {monthHolidays.length > 0 && (
             <div
               style={{
-                fontSize: 14,
-                fontWeight: 700,
                 display: "flex",
                 alignItems: "center",
                 gap: 8,
-                color: "#111827",
+                marginBottom: 14,
+                padding: "8px 12px",
+                background: "#fef3c7",
+                border: "1px solid #fde68a",
+                borderRadius: 8,
+                fontSize: 11.5,
+                color: "#92400e",
+                flexWrap: "wrap",
               }}
             >
-              <Calendar size={15} color="#4f46e5" strokeWidth={2.5} />
-              {formatDateLong(selectedDate.dateStr)}
+              <PartyPopper size={13} />
+              <strong>{monthHolidays.length}</strong>
+              <span>
+                {monthHolidays.length === 1 ? "holiday" : "holidays"} this
+                month:
+              </span>
+              {monthHolidays.map((h) => (
+                <span key={h._id} className="holiday-chip">
+                  {h.name}
+                </span>
+              ))}
             </div>
+          )}
+
+          {reportLoading ? (
+            <div className="text-center py-5" style={{ color: "#9ca3af" }}>
+              <div className="spinner-border spinner-border-sm me-2" />
+              Loading...
+            </div>
+          ) : (
+            <AttendanceCalendar
+              year={year}
+              month={month}
+              records={records}
+              holidays={monthHolidays}    // ✅ NEW
+              onPrev={prevMonth}
+              onNext={nextMonth}
+              canGoNext={canGoNext()}
+              selectedDate={selectedDate?.dateStr}
+              onDateClick={(cell) => setSelectedDate(cell)}
+            />
+          )}
+        </div>
+
+        {/* Selected Date Details */}
+        {selectedDate && selectedRecord && (
+          <div
+            className="erp-card"
+            style={{ padding: 20, background: "#fafafa" }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 16,
+                flexWrap: "wrap",
+                gap: 8,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  color: "#111827",
+                }}
+              >
+                <Calendar size={15} color="#4f46e5" strokeWidth={2.5} />
+                {formatDateLong(selectedDate.dateStr)}
+              </div>
+            </div>
+
+            <div className="row g-2">
+              <div className="col-12 col-sm-4">
+                <DayTile
+                  label="Check In"
+                  value={formatTime(selectedRecord.check_in)}
+                  Icon={Clock}
+                  color={selectedRecord.is_late ? "#b91c1c" : "#15803d"}
+                  bg="#ffffff"
+                  border={selectedRecord.is_late ? "#fecaca" : "#e5e7eb"}
+                  tag={
+                    selectedRecord.is_late
+                      ? `Late ${selectedRecord.late_minutes}m`
+                      : null
+                  }
+                />
+              </div>
+              <div className="col-12 col-sm-4">
+                <DayTile
+                  label="Check Out"
+                  value={formatTime(selectedRecord.check_out)}
+                  Icon={Clock}
+                  color={
+                    selectedRecord.is_early_logout ? "#b91c1c" : "#d97706"
+                  }
+                  bg="#ffffff"
+                  border={
+                    selectedRecord.is_early_logout ? "#fecaca" : "#e5e7eb"
+                  }
+                  tag={
+                    selectedRecord.is_early_logout
+                      ? `Early ${selectedRecord.early_minutes}m`
+                      : null
+                  }
+                />
+              </div>
+              <div className="col-12 col-sm-4">
+                <DayTile
+                  label="Worked"
+                  value={formatHours(selectedRecord.working_hours)}
+                  Icon={TrendingUp}
+                  color="#4f46e5"
+                  bg="#ffffff"
+                  border="#e5e7eb"
+                />
+              </div>
+            </div>
+
+            {selectedRecord.early_logout_reason && (
+              <div
+                style={{
+                  marginTop: 12,
+                  padding: 12,
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  borderRadius: 8,
+                  fontSize: 12.5,
+                  color: "#991b1b",
+                }}
+              >
+                <strong>Reason:</strong>{" "}
+                <span style={{ fontStyle: "italic" }}>
+                  {selectedRecord.early_logout_reason}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Edit Modal */}
+        <Modal
+          open={editModal}
+          onClose={() => setEditModal(false)}
+          title="Edit Contact Info"
+          footer={
+            <>
+              <button
+                className="erp-btn erp-btn-outline"
+                onClick={() => setEditModal(false)}
+                style={{ fontFamily: FONT }}
+              >
+                Cancel
+              </button>
+              <button
+                className="erp-btn erp-btn-primary"
+                onClick={handleProfileSave}
+                disabled={saving}
+                style={{ fontFamily: FONT }}
+              >
+                <Save size={14} />
+                {saving ? "Saving..." : "Save Changes"}
+              </button>
+            </>
+          }
+        >
+          <div className="mb-3">
+            <label className="erp-label">Phone Number</label>
+            <input
+              className="erp-input"
+              placeholder="+91 98765 43210"
+              value={editForm.phone}
+              onChange={(e) =>
+                setEditForm({ ...editForm, phone: e.target.value })
+              }
+              style={{ fontFamily: FONT }}
+            />
+          </div>
+
+          <div className="mb-3">
+            <label className="erp-label">Address</label>
+            <textarea
+              className="erp-input"
+              rows={3}
+              placeholder="Your address"
+              value={editForm.address}
+              onChange={(e) =>
+                setEditForm({ ...editForm, address: e.target.value })
+              }
+              style={{ resize: "vertical", fontFamily: FONT }}
+            />
           </div>
 
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: 10,
+              padding: 12,
+              background: "#eff6ff",
+              border: "1px solid #bfdbfe",
+              borderRadius: 8,
+              fontSize: 12.5,
+              color: "#1e40af",
+              fontFamily: FONT,
             }}
           >
-            <DayTile
-              label="Check In"
-              value={formatTime(selectedRecord.check_in)}
-              Icon={Clock}
-              color={selectedRecord.is_late ? "#b91c1c" : "#15803d"}
-              bg="#ffffff"
-              border={selectedRecord.is_late ? "#fecaca" : "#e5e7eb"}
-              tag={
-                selectedRecord.is_late
-                  ? `Late ${selectedRecord.late_minutes}m`
-                  : null
-              }
-            />
-            <DayTile
-              label="Check Out"
-              value={formatTime(selectedRecord.check_out)}
-              Icon={Clock}
-              color={
-                selectedRecord.is_early_logout ? "#b91c1c" : "#d97706"
-              }
-              bg="#ffffff"
-              border={
-                selectedRecord.is_early_logout ? "#fecaca" : "#e5e7eb"
-              }
-              tag={
-                selectedRecord.is_early_logout
-                  ? `Early ${selectedRecord.early_minutes}m`
-                  : null
-              }
-            />
-            <DayTile
-              label="Worked"
-              value={formatHours(selectedRecord.working_hours)}
-              Icon={TrendingUp}
-              color="#4f46e5"
-              bg="#ffffff"
-              border="#e5e7eb"
-            />
+            <strong>Note:</strong> Other fields like name, email, department can
+            only be changed by your manager.
           </div>
+        </Modal>
 
-          {selectedRecord.early_logout_reason && (
-            <div
-              style={{
-                marginTop: 12,
-                padding: 12,
-                background: "#fef2f2",
-                border: "1px solid #fecaca",
-                borderRadius: 8,
-                fontSize: 12.5,
-                color: "#991b1b",
-              }}
-            >
-              <strong>Reason:</strong>{" "}
-              <span style={{ fontStyle: "italic" }}>
-                {selectedRecord.early_logout_reason}
-              </span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ================================================
-          Edit Modal
-          ================================================ */}
-      <Modal
-        open={editModal}
-        onClose={() => setEditModal(false)}
-        title="Edit Contact Info"
-        footer={
-          <>
-            <button
-              className="erp-btn erp-btn-outline"
-              onClick={() => setEditModal(false)}
-            >
-              Cancel
-            </button>
-            <button
-              className="erp-btn erp-btn-primary"
-              onClick={handleProfileSave}
-              disabled={saving}
-            >
-              <Save size={14} />
-              {saving ? "Saving..." : "Save Changes"}
-            </button>
-          </>
-        }
-      >
-        <div className="mb-3">
-          <label className="erp-label">Phone Number</label>
-          <input
-            className="erp-input"
-            placeholder="+91 98765 43210"
-            value={editForm.phone}
-            onChange={(e) =>
-              setEditForm({ ...editForm, phone: e.target.value })
-            }
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
           />
-        </div>
-
-        <div className="mb-3">
-          <label className="erp-label">Address</label>
-          <textarea
-            className="erp-input"
-            rows={3}
-            placeholder="Your address"
-            value={editForm.address}
-            onChange={(e) =>
-              setEditForm({ ...editForm, address: e.target.value })
-            }
-            style={{ resize: "vertical" }}
-          />
-        </div>
-
-        <div
-          style={{
-            padding: 12,
-            background: "#eff6ff",
-            border: "1px solid #bfdbfe",
-            borderRadius: 8,
-            fontSize: 12.5,
-            color: "#1e40af",
-          }}
-        >
-          <strong>Note:</strong> Other fields like name, email, department can
-          only be changed by your manager.
-        </div>
-      </Modal>
-
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
+        )}
+      </div>
     </Layout>
   );
 };
@@ -760,6 +872,7 @@ const Pill = ({ icon: Icon, text }) => (
       alignItems: "center",
       gap: 5,
       border: "1px solid rgba(255,255,255,0.25)",
+      fontFamily: FONT,
     }}
   >
     <Icon size={11} strokeWidth={2.5} />
@@ -776,6 +889,7 @@ const InfoCard = ({ Icon, label, value, truncate }) => (
       alignItems: "center",
       gap: 14,
       height: "100%",
+      fontFamily: FONT,
     }}
   >
     <div
@@ -830,6 +944,7 @@ const SummaryCard = ({ label, value, Icon, color, bg }) => (
       display: "flex",
       alignItems: "center",
       gap: 12,
+      fontFamily: FONT,
     }}
   >
     <div
@@ -882,6 +997,7 @@ const DayTile = ({ label, value, Icon, color, bg, border, tag }) => (
       background: bg,
       borderRadius: 12,
       border: `1px solid ${border}`,
+      fontFamily: FONT,
     }}
   >
     <div

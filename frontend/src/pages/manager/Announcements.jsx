@@ -21,7 +21,7 @@ import * as api from "../../api/announcementApi";
 import * as empApi from "../../api/employeeApi";
 import { formatSentTime, formatDateTime } from "../../utils/dateUtils";
 
-const FONT = "'Calibri', 'Segoe UI', -apple-system, sans-serif";
+const FONT = "'Inter', 'Segoe UI', -apple-system, sans-serif";
 
 const priorityConfig = {
   LOW: { color: "#64748b", bg: "#f1f5f9", label: "Low", dot: "#94a3b8" },
@@ -194,86 +194,270 @@ const ManagerAnnouncements = () => {
 
   return (
     <Layout>
-      <div style={{ fontFamily: FONT, maxWidth: 1200, margin: "0 auto" }}>
-        {/* ============================================
-            Header
-            ============================================ */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            marginBottom: 28,
-            flexWrap: "wrap",
-            gap: 12,
-          }}
-        >
+      <style>{`
+        .ann-page * { font-family: ${FONT}; }
+        .ann-page { font-family: ${FONT}; max-width: 1200px; margin: 0 auto; }
+
+        .ann-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 28px;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+        .ann-title {
+          font-size: 24px;
+          font-weight: 700;
+          color: #0f172a;
+          letter-spacing: -0.5px;
+          margin-bottom: 4px;
+        }
+        .ann-subtitle {
+          font-size: 13.5px;
+          color: #64748b;
+          margin: 0;
+        }
+        .ann-new-btn {
+          background: linear-gradient(135deg, #6366f1, #4f46e5);
+          color: white;
+          border: none;
+          border-radius: 10px;
+          padding: 10px 18px;
+          font-size: 13.5px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-family: ${FONT};
+          box-shadow: 0 4px 12px -4px rgba(79,70,229,0.4);
+          transition: all 0.15s;
+        }
+
+        .ann-stats {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 12px;
+          margin-bottom: 24px;
+        }
+
+        .ann-toolbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 16px;
+          padding: 4px 0;
+          flex-wrap: wrap;
+        }
+        .ann-tabs {
+          display: flex;
+          gap: 2px;
+          background: #f1f5f9;
+          padding: 3px;
+          border-radius: 10px;
+        }
+        .ann-tab-btn {
+          padding: 7px 16px;
+          font-size: 13px;
+          font-weight: 600;
+          border: none;
+          background: transparent;
+          color: #64748b;
+          border-radius: 8px;
+          cursor: pointer;
+          font-family: ${FONT};
+          transition: all 0.15s;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .ann-tab-btn.active {
+          background: white;
+          color: #0f172a;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .ann-tab-count {
+          border-radius: 6px;
+          padding: 1px 6px;
+          font-size: 11px;
+          font-weight: 700;
+        }
+        .ann-search-wrapper {
+          position: relative;
+          flex: 1 1 240px;
+          max-width: 320px;
+        }
+        .ann-search-input {
+          width: 100%;
+          padding: 9px 12px 9px 34px;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          font-size: 13px;
+          font-family: ${FONT};
+          background: white;
+          outline: none;
+          color: #0f172a;
+          transition: all 0.15s;
+        }
+
+        .ann-list {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .ann-card {
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 14px;
+          padding: 18px 20px;
+          transition: all 0.25s ease;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+          position: relative;
+          overflow: hidden;
+        }
+        .ann-card.highlighted {
+          border: 1.5px solid #6366f1;
+          box-shadow: 0 0 0 4px rgba(99,102,241,0.1), 0 4px 12px -4px rgba(0,0,0,0.08);
+        }
+        .ann-card-accent {
+          position: absolute;
+          left: 0;
+          top: 0;
+          bottom: 0;
+          width: 3px;
+        }
+        .ann-card-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 12px;
+          flex-wrap: wrap;
+        }
+        .ann-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          padding: 3px 9px;
+          border-radius: 6px;
+          font-size: 11px;
+          font-weight: 700;
+        }
+        .ann-card-title {
+          font-size: 15.5px;
+          font-weight: 700;
+          color: #0f172a;
+          margin: 0 0 6px 0;
+          letter-spacing: -0.2px;
+          line-height: 1.4;
+        }
+        .ann-card-content {
+          font-size: 13px;
+          color: #475569;
+          margin: 0 0 16px 0;
+          line-height: 1.55;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+        }
+        .ann-card-footer {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          padding-top: 12px;
+          border-top: 1px solid #f1f5f9;
+          flex-wrap: wrap;
+        }
+        .ann-meta {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 11.5px;
+          color: #94a3b8;
+          flex-wrap: wrap;
+        }
+        .ann-progress {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          min-width: 200px;
+          flex: 1;
+          max-width: 300px;
+        }
+
+        @media (max-width: 767px) {
+          .ann-page { padding: 0 4px; }
+          .ann-title { font-size: 22px; }
+          .ann-subtitle { font-size: 12.5px; }
+          .ann-header { margin-bottom: 16px; }
+          .ann-new-btn { width: 100%; justify-content: center; }
+          .ann-stats {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+          }
+          .ann-toolbar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+          }
+          .ann-tabs {
+            width: 100%;
+            justify-content: space-between;
+          }
+          .ann-tab-btn {
+            flex: 1;
+            justify-content: center;
+            padding: 8px 10px;
+            font-size: 12.5px;
+          }
+          .ann-search-wrapper {
+            max-width: none;
+            flex: 1 1 100%;
+          }
+          .ann-card {
+            padding: 14px 14px 14px 16px;
+          }
+          .ann-card-title { font-size: 14.5px; }
+          .ann-card-content { font-size: 12.5px; margin-bottom: 12px; }
+          .ann-card-top { gap: 8px; }
+          .ann-card-footer {
+            gap: 10px;
+            padding-top: 10px;
+          }
+          .ann-progress {
+            min-width: 0;
+            max-width: none;
+            flex: 1 1 100%;
+          }
+        }
+
+        @media (max-width: 400px) {
+          .ann-tab-btn { padding: 8px 6px; font-size: 12px; }
+          .ann-tab-count { font-size: 10px; padding: 1px 5px; }
+        }
+      `}</style>
+
+      <div className="ann-page">
+        {/* Header */}
+        <div className="ann-header">
           <div>
-            <h1
-              style={{
-                fontSize: 24,
-                fontWeight: 700,
-                color: "#0f172a",
-                letterSpacing: "-0.5px",
-                marginBottom: 4,
-              }}
-            >
-              Announcements
-            </h1>
-            <p
-              style={{
-                fontSize: 13.5,
-                color: "#64748b",
-                margin: 0,
-              }}
-            >
-              Send messages to your team
-            </p>
+            <h1 className="ann-title">Announcements</h1>
+            <p className="ann-subtitle">Send messages to your team</p>
           </div>
-          <button
-            onClick={openAdd}
-            style={{
-              background: "linear-gradient(135deg, #6366f1, #4f46e5)",
-              color: "white",
-              border: "none",
-              borderRadius: 10,
-              padding: "10px 18px",
-              fontSize: 13.5,
-              fontWeight: 600,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontFamily: FONT,
-              boxShadow: "0 4px 12px -4px rgba(79,70,229,0.4)",
-              transition: "all 0.15s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-1px)";
-              e.currentTarget.style.boxShadow =
-                "0 6px 16px -4px rgba(79,70,229,0.5)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow =
-                "0 4px 12px -4px rgba(79,70,229,0.4)";
-            }}
-          >
+          <button onClick={openAdd} className="ann-new-btn">
             <Plus size={15} strokeWidth={2.5} /> New Announcement
           </button>
         </div>
 
-        {/* ============================================
-            Stats — compact inline row
-            ============================================ */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: 12,
-            marginBottom: 24,
-          }}
-        >
+        {/* Stats */}
+        <div className="ann-stats">
           <StatTile
             label="Total"
             value={stats.total || 0}
@@ -304,63 +488,23 @@ const ManagerAnnouncements = () => {
           />
         </div>
 
-        {/* ============================================
-            Tabs + Search — sticky bar
-            ============================================ */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-            marginBottom: 16,
-            padding: "4px 0",
-            flexWrap: "wrap",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              gap: 2,
-              background: "#f1f5f9",
-              padding: 3,
-              borderRadius: 10,
-            }}
-          >
+        {/* Tabs + Search */}
+        <div className="ann-toolbar">
+          <div className="ann-tabs">
             {tabs.map((t) => {
               const active = tab === t.key;
               return (
                 <button
                   key={t.key}
                   onClick={() => setTab(t.key)}
-                  style={{
-                    padding: "7px 16px",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    border: "none",
-                    background: active ? "white" : "transparent",
-                    color: active ? "#0f172a" : "#64748b",
-                    borderRadius: 8,
-                    cursor: "pointer",
-                    fontFamily: FONT,
-                    boxShadow: active
-                      ? "0 1px 3px rgba(0,0,0,0.08)"
-                      : "none",
-                    transition: "all 0.15s",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                  }}
+                  className={`ann-tab-btn ${active ? "active" : ""}`}
                 >
                   {t.label}
                   <span
+                    className="ann-tab-count"
                     style={{
                       background: active ? "#eef2ff" : "transparent",
                       color: active ? "#4f46e5" : "#94a3b8",
-                      borderRadius: 6,
-                      padding: "1px 6px",
-                      fontSize: 11,
-                      fontWeight: 700,
                     }}
                   >
                     {t.count}
@@ -370,13 +514,7 @@ const ManagerAnnouncements = () => {
             })}
           </div>
 
-          <div
-            style={{
-              position: "relative",
-              flex: "1 1 240px",
-              maxWidth: 320,
-            }}
-          >
+          <div className="ann-search-wrapper">
             <Search
               size={15}
               color="#94a3b8"
@@ -393,18 +531,7 @@ const ManagerAnnouncements = () => {
               placeholder="Search announcements..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "9px 12px 9px 34px",
-                border: "1px solid #e2e8f0",
-                borderRadius: 10,
-                fontSize: 13,
-                fontFamily: FONT,
-                background: "white",
-                outline: "none",
-                color: "#0f172a",
-                transition: "all 0.15s",
-              }}
+              className="ann-search-input"
               onFocus={(e) => {
                 e.currentTarget.style.borderColor = "#6366f1";
                 e.currentTarget.style.boxShadow =
@@ -418,9 +545,7 @@ const ManagerAnnouncements = () => {
           </div>
         </div>
 
-        {/* ============================================
-            List
-            ============================================ */}
+        {/* List */}
         {loading ? (
           <div
             style={{
@@ -439,7 +564,7 @@ const ManagerAnnouncements = () => {
         ) : items.length === 0 ? (
           <EmptyState tab={tab} onAdd={openAdd} />
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div className="ann-list">
             {items.map((a) => (
               <AnnouncementRow
                 key={a._id}
@@ -454,9 +579,7 @@ const ManagerAnnouncements = () => {
         )}
       </div>
 
-      {/* ============================================
-          Create Modal
-          ============================================ */}
+      {/* Create Modal */}
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -466,6 +589,7 @@ const ManagerAnnouncements = () => {
             <button
               className="erp-btn erp-btn-outline"
               onClick={() => setModalOpen(false)}
+              style={{ fontFamily: FONT }}
             >
               Cancel
             </button>
@@ -473,6 +597,7 @@ const ManagerAnnouncements = () => {
               className="erp-btn erp-btn-primary"
               onClick={handleSubmit}
               disabled={saving}
+              style={{ fontFamily: FONT }}
             >
               {saving
                 ? "Publishing..."
@@ -526,7 +651,7 @@ const ManagerAnnouncements = () => {
               }
               style={{ fontFamily: FONT }}
             >
-              <option value="ALL">All Employees (Common)</option>
+              <option value="ALL">All (Common)</option>
               <option value="SPECIFIC">Specific (Private)</option>
             </select>
           </div>
@@ -602,7 +727,7 @@ const ManagerAnnouncements = () => {
                         {emp.first_name?.[0]}
                         {emp.last_name?.[0]}
                       </div>
-                      <div style={{ flex: 1 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 600 }}>
                           {emp.first_name} {emp.last_name}
                         </div>
@@ -651,12 +776,14 @@ const ManagerAnnouncements = () => {
             <button
               className="erp-btn erp-btn-outline"
               onClick={() => setConfirmDelete(null)}
+              style={{ fontFamily: FONT }}
             >
               Cancel
             </button>
             <button
               className="erp-btn erp-btn-danger"
               onClick={handleDelete}
+              style={{ fontFamily: FONT }}
             >
               Yes, Delete
             </button>
@@ -697,17 +824,8 @@ const StatTile = ({ label, value, color, bg, Icon }) => (
       fontFamily: FONT,
       transition: "all 0.15s",
     }}
-    onMouseEnter={(e) => {
-      e.currentTarget.style.borderColor = "#cbd5e1";
-      e.currentTarget.style.boxShadow =
-        "0 2px 8px -2px rgba(0,0,0,0.05)";
-    }}
-    onMouseLeave={(e) => {
-      e.currentTarget.style.borderColor = "#e2e8f0";
-      e.currentTarget.style.boxShadow = "none";
-    }}
   >
-    <div>
+    <div style={{ minWidth: 0 }}>
       <div
         style={{
           fontSize: 10.5,
@@ -768,66 +886,27 @@ const AnnouncementRow = ({
       : 0;
   const seenFull = pct === 100;
 
+  const accentColor =
+    ann.priority === "URGENT"
+      ? "#ef4444"
+      : ann.priority === "HIGH"
+      ? "#f59e0b"
+      : isPrivate
+      ? "#d97706"
+      : "#6366f1";
+
   return (
     <div
       ref={innerRef}
-      style={{
-        background: "white",
-        border: highlighted ? "1.5px solid #6366f1" : "1px solid #e2e8f0",
-        borderRadius: 14,
-        padding: "18px 20px",
-        fontFamily: FONT,
-        transition: "all 0.25s ease",
-        boxShadow: highlighted
-          ? "0 0 0 4px rgba(99,102,241,0.1), 0 4px 12px -4px rgba(0,0,0,0.08)"
-          : "0 1px 2px rgba(0,0,0,0.02)",
-        position: "relative",
-        overflow: "hidden",
-      }}
-      onMouseEnter={(e) => {
-        if (!highlighted) {
-          e.currentTarget.style.borderColor = "#cbd5e1";
-          e.currentTarget.style.boxShadow =
-            "0 4px 12px -4px rgba(0,0,0,0.06)";
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!highlighted) {
-          e.currentTarget.style.borderColor = "#e2e8f0";
-          e.currentTarget.style.boxShadow =
-            "0 1px 2px rgba(0,0,0,0.02)";
-        }
-      }}
+      className={`ann-card ${highlighted ? "highlighted" : ""}`}
     >
-      {/* Left accent bar */}
       <div
-        style={{
-          position: "absolute",
-          left: 0,
-          top: 0,
-          bottom: 0,
-          width: 3,
-          background:
-            ann.priority === "URGENT"
-              ? "#ef4444"
-              : ann.priority === "HIGH"
-              ? "#f59e0b"
-              : isPrivate
-              ? "#d97706"
-              : "#6366f1",
-        }}
+        className="ann-card-accent"
+        style={{ background: accentColor }}
       />
 
-      {/* ============ TOP ROW — Badges + Actions ============ */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-          marginBottom: 12,
-        }}
-      >
+      {/* Top row */}
+      <div className="ann-card-top">
         <div
           style={{
             display: "flex",
@@ -838,18 +917,8 @@ const AnnouncementRow = ({
         >
           {/* Priority pill */}
           <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 5,
-              background: p.bg,
-              color: p.color,
-              padding: "3px 9px",
-              borderRadius: 6,
-              fontSize: 11,
-              fontWeight: 700,
-              letterSpacing: 0.2,
-            }}
+            className="ann-pill"
+            style={{ background: p.bg, color: p.color }}
           >
             <span
               style={{
@@ -864,15 +933,10 @@ const AnnouncementRow = ({
 
           {/* Type pill */}
           <span
+            className="ann-pill"
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
               background: isPrivate ? "#fffbeb" : "#f1f5f9",
               color: isPrivate ? "#92400e" : "#475569",
-              padding: "3px 9px",
-              borderRadius: 6,
-              fontSize: 11,
               fontWeight: 600,
               border: `1px solid ${isPrivate ? "#fde68a" : "#e2e8f0"}`,
             }}
@@ -891,15 +955,10 @@ const AnnouncementRow = ({
           {/* Attachment pill */}
           {ann.attachments?.length > 0 && (
             <span
+              className="ann-pill"
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
                 background: "#f8fafc",
                 color: "#64748b",
-                padding: "3px 9px",
-                borderRadius: 6,
-                fontSize: 11,
                 fontWeight: 600,
                 border: "1px solid #e2e8f0",
               }}
@@ -909,7 +968,7 @@ const AnnouncementRow = ({
             </span>
           )}
 
-          {/* Recipients info for private */}
+          {/* Recipients info */}
           {isPrivate && ann.total_recipients > 0 && (
             <span
               style={{
@@ -941,62 +1000,16 @@ const AnnouncementRow = ({
         </div>
       </div>
 
-      {/* ============ TITLE ============ */}
-      <h3
-        style={{
-          fontSize: 15.5,
-          fontWeight: 700,
-          color: "#0f172a",
-          margin: 0,
-          marginBottom: 6,
-          letterSpacing: "-0.2px",
-          lineHeight: 1.4,
-        }}
-      >
-        {ann.title}
-      </h3>
+      {/* Title */}
+      <h3 className="ann-card-title">{ann.title}</h3>
 
-      {/* ============ CONTENT ============ */}
-      <p
-        style={{
-          fontSize: 13,
-          color: "#475569",
-          margin: 0,
-          marginBottom: 16,
-          lineHeight: 1.55,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          display: "-webkit-box",
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: "vertical",
-        }}
-      >
-        {ann.content}
-      </p>
+      {/* Content */}
+      <p className="ann-card-content">{ann.content}</p>
 
-      {/* ============ FOOTER — Metadata + Progress ============ */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 16,
-          paddingTop: 12,
-          borderTop: "1px solid #f1f5f9",
-          flexWrap: "wrap",
-        }}
-      >
+      {/* Footer */}
+      <div className="ann-card-footer">
         {/* Metadata */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            fontSize: 11.5,
-            color: "#94a3b8",
-            flexWrap: "wrap",
-          }}
-        >
+        <div className="ann-meta">
           <span
             style={{
               display: "inline-flex",
@@ -1030,15 +1043,8 @@ const AnnouncementRow = ({
           <span>{formatSentTime(ann.created_at)}</span>
         </div>
 
-        {/* Seen progress — compact */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            minWidth: 200,
-          }}
-        >
+        {/* Progress */}
+        <div className="ann-progress">
           <div
             style={{
               flex: 1,
@@ -1226,7 +1232,11 @@ const SeenListModal = ({ annId, onClose }) => {
       onClose={onClose}
       title="Who has seen this?"
       footer={
-        <button className="erp-btn erp-btn-outline" onClick={onClose}>
+        <button
+          className="erp-btn erp-btn-outline"
+          onClick={onClose}
+          style={{ fontFamily: FONT }}
+        >
           Close
         </button>
       }
@@ -1246,6 +1256,8 @@ const SeenListModal = ({ annId, onClose }) => {
               display: "flex",
               justifyContent: "space-between",
               fontSize: 13,
+              flexWrap: "wrap",
+              gap: 8,
             }}
           >
             <span>
@@ -1299,6 +1311,8 @@ const SeenListModal = ({ annId, onClose }) => {
                       fontSize: 13,
                       display: "flex",
                       justifyContent: "space-between",
+                      gap: 8,
+                      flexWrap: "wrap",
                     }}
                   >
                     <span>

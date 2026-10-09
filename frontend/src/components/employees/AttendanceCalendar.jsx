@@ -1,5 +1,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
+const FONT = "'Inter', 'Segoe UI', -apple-system, sans-serif";
+
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
@@ -11,6 +13,7 @@ const AttendanceCalendar = ({
   year,
   month,
   records,
+  holidays = [],          // ✅ NEW: holiday support
   onPrev,
   onNext,
   canGoNext,
@@ -29,6 +32,12 @@ const AttendanceCalendar = ({
     recordMap[r.date] = r;
   });
 
+  // ✅ NEW: Holiday lookup map
+  const holidayMap = {};
+  (holidays || []).forEach((h) => {
+    holidayMap[h.date] = h;
+  });
+
   const todayStr = new Date().toISOString().split("T")[0];
 
   const cells = [];
@@ -39,10 +48,12 @@ const AttendanceCalendar = ({
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
     const rec = recordMap[dateStr];
+    const holiday = holidayMap[dateStr];    // ✅ NEW
     const dayOfWeek = new Date(dateStr).getDay();
     const isSunday = dayOfWeek === 0;
     const isPast = dateStr < todayStr;
     const isFuture = dateStr > todayStr;
+    const isHoliday = !!holiday;
 
     let statusLabel = null;
     let statusColor = null;
@@ -61,7 +72,8 @@ const AttendanceCalendar = ({
         statusLabel = "P";
         statusColor = "#16a34a";
       }
-    } else if (isPast && !isSunday) {
+    } else if (isPast && !isSunday && !isHoliday) {
+      // ✅ Holiday la "Absent" kaataadhu
       statusLabel = "A";
       statusColor = "#9ca3af";
     }
@@ -70,6 +82,8 @@ const AttendanceCalendar = ({
       day: d,
       dateStr,
       record: rec,
+      holiday,              // ✅ NEW
+      isHoliday,            // ✅ NEW
       statusLabel,
       statusColor,
       isToday: dateStr === todayStr,
@@ -87,7 +101,14 @@ const AttendanceCalendar = ({
   }
 
   return (
-    <div style={{ maxWidth: 400, margin: "0 auto", width: "100%" }}>
+    <div
+      style={{
+        maxWidth: 440,
+        margin: "0 auto",
+        width: "100%",
+        fontFamily: FONT,
+      }}
+    >
       {/* Header */}
       <div
         style={{
@@ -101,8 +122,8 @@ const AttendanceCalendar = ({
           type="button"
           onClick={onPrev}
           style={{
-            width: 26,
-            height: 26,
+            width: 30,
+            height: 30,
             borderRadius: "50%",
             background: "#f3f4f6",
             border: "none",
@@ -112,6 +133,7 @@ const AttendanceCalendar = ({
             justifyContent: "center",
             color: "#6b7280",
             transition: "all 0.15s",
+            fontFamily: FONT,
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = "#e5e7eb";
@@ -122,15 +144,16 @@ const AttendanceCalendar = ({
             e.currentTarget.style.color = "#6b7280";
           }}
         >
-          <ChevronLeft size={13} />
+          <ChevronLeft size={14} />
         </button>
 
         <div
           style={{
             fontWeight: 700,
-            fontSize: 13,
+            fontSize: 14,
             color: "#111827",
             letterSpacing: "-0.2px",
+            fontFamily: FONT,
           }}
         >
           {MONTHS[month - 1]} {year}
@@ -141,8 +164,8 @@ const AttendanceCalendar = ({
           onClick={onNext}
           disabled={!canGoNext}
           style={{
-            width: 26,
-            height: 26,
+            width: 30,
+            height: 30,
             borderRadius: "50%",
             background: "#f3f4f6",
             border: "none",
@@ -153,6 +176,7 @@ const AttendanceCalendar = ({
             color: canGoNext ? "#6b7280" : "#d1d5db",
             opacity: canGoNext ? 1 : 0.4,
             transition: "all 0.15s",
+            fontFamily: FONT,
           }}
           onMouseEnter={(e) => {
             if (canGoNext) {
@@ -167,7 +191,7 @@ const AttendanceCalendar = ({
             }
           }}
         >
-          <ChevronRight size={13} />
+          <ChevronRight size={14} />
         </button>
       </div>
 
@@ -176,8 +200,8 @@ const AttendanceCalendar = ({
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(7, 1fr)",
-          gap: 2,
-          marginBottom: 4,
+          gap: 3,
+          marginBottom: 5,
         }}
       >
         {WEEKDAYS.map((w, i) => {
@@ -187,11 +211,12 @@ const AttendanceCalendar = ({
               key={w}
               style={{
                 textAlign: "center",
-                fontSize: 9.5,
+                fontSize: 10,
                 fontWeight: 700,
                 color: isSunday ? "#f87171" : "#9ca3af",
                 letterSpacing: 0.5,
-                padding: "4px 0",
+                padding: "5px 0",
+                fontFamily: FONT,
               }}
             >
               {w}
@@ -205,12 +230,12 @@ const AttendanceCalendar = ({
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(7, 1fr)",
-          gap: 2,
+          gap: 3,
         }}
       >
         {cells.map((cell) => {
           if (cell.empty) {
-            return <div key={cell.key} style={{ height: 36 }} />;
+            return <div key={cell.key} style={{ height: 40 }} />;
           }
 
           const clickable = !!cell.record;
@@ -220,10 +245,18 @@ const AttendanceCalendar = ({
           let borderColor = "transparent";
           let fontWeight = 500;
 
+          // ✅ Holiday priority: if holiday and no attendance record
           if (cell.isSelected) {
             bg = "#2563eb";
             textColor = "white";
             fontWeight = 700;
+            borderColor = "transparent";
+          } else if (cell.isHoliday) {
+            // Holiday: yellow highlight
+            bg = "#fef3c7";
+            textColor = "#92400e";
+            fontWeight = 700;
+            borderColor = "#fcd34d";
           } else if (cell.isToday) {
             bg = "#dbeafe";
             textColor = "#1d4ed8";
@@ -243,35 +276,56 @@ const AttendanceCalendar = ({
               type="button"
               onClick={() => clickable && onDateClick && onDateClick(cell)}
               disabled={!clickable}
+              title={cell.holiday ? `🎉 ${cell.holiday.name}` : undefined}
               style={{
-                height: 36,
+                height: 40,
+                position: "relative",              // ✅ For 🎉 absolute
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
                 background: bg,
                 border: `1px solid ${borderColor}`,
-                borderRadius: 6,
+                borderRadius: 8,
                 cursor: clickable ? "pointer" : "default",
                 padding: 0,
-                fontFamily: "inherit",
+                fontFamily: FONT,
                 gap: 0,
                 transition: "all 0.15s ease",
               }}
               onMouseEnter={(e) => {
-                if (clickable && !cell.isSelected) {
+                if (clickable && !cell.isSelected && !cell.isHoliday) {
                   e.currentTarget.style.background = "#f3f4f6";
+                } else if (cell.isHoliday && !cell.isSelected) {
+                  e.currentTarget.style.background = "#fde68a";
                 }
               }}
               onMouseLeave={(e) => {
                 if (clickable && !cell.isSelected) {
-                  e.currentTarget.style.background = bg;
+                  e.currentTarget.style.background = cell.isHoliday
+                    ? "#fef3c7"
+                    : bg;
                 }
               }}
             >
+              {/* Holiday emoji marker — top right corner */}
+              {cell.isHoliday && !cell.isSelected && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: 1,
+                    right: 2,
+                    fontSize: 9,
+                    lineHeight: 1,
+                  }}
+                >
+                  🎉
+                </span>
+              )}
+
               <div
                 style={{
-                  fontSize: 11.5,
+                  fontSize: 12,
                   fontWeight,
                   color: textColor,
                   lineHeight: 1,
@@ -280,13 +334,14 @@ const AttendanceCalendar = ({
               >
                 {cell.day}
               </div>
+
               {cell.statusLabel && (
                 <div
                   style={{
-                    fontSize: 7.5,
+                    fontSize: 8,
                     fontWeight: 800,
                     color: cell.isSelected ? "white" : cell.statusColor,
-                    marginTop: 1,
+                    marginTop: 2,
                     letterSpacing: 0.3,
                     lineHeight: 1,
                   }}
@@ -305,12 +360,13 @@ const AttendanceCalendar = ({
           display: "flex",
           flexWrap: "wrap",
           gap: 10,
-          marginTop: 12,
-          paddingTop: 10,
+          marginTop: 14,
+          paddingTop: 12,
           borderTop: "1px solid #f3f4f6",
-          fontSize: 10,
+          fontSize: 10.5,
           color: "#6b7280",
           justifyContent: "center",
+          fontFamily: FONT,
         }}
       >
         {[
@@ -319,6 +375,7 @@ const AttendanceCalendar = ({
           { color: "#d97706", label: "E — Early" },
           { color: "#9ca3af", label: "A — Absent" },
           { color: "#f87171", label: "S — Sunday" },
+          { color: "#fcd34d", label: "🎉 Holiday", dot: "#fcd34d" },  // ✅ NEW
         ].map((l) => (
           <div
             key={l.label}
@@ -326,8 +383,8 @@ const AttendanceCalendar = ({
           >
             <span
               style={{
-                width: 6,
-                height: 6,
+                width: 7,
+                height: 7,
                 borderRadius: "50%",
                 background: l.color,
                 display: "inline-block",

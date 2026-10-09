@@ -15,6 +15,10 @@ import {
   AlertTriangle,
   XCircle,
   Eye,
+  Calendar,
+  PartyPopper,
+  Award,
+  Target,
 } from "lucide-react";
 import {
   PieChart,
@@ -30,10 +34,7 @@ import * as deptApi from "../../api/departmentApi";
 import * as empApi from "../../api/employeeApi";
 import EmployeeFullReport from "../../components/reports/EmployeeFullReport";
 
-// ============================================
-// Constants
-// ============================================
-const FONT = "'Calibri', 'Segoe UI', -apple-system, sans-serif";
+const FONT = "'Inter', 'Segoe UI', -apple-system, sans-serif";
 
 const COLORS = [
   "#4f46e5",
@@ -45,9 +46,16 @@ const COLORS = [
   "#db2777",
 ];
 
-// ============================================
-// Helpers
-// ============================================
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+const currentMonthStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+};
+
 const formatTime = (iso) => {
   if (!iso) return "—";
   try {
@@ -83,7 +91,6 @@ const formatHours = (h) => {
   return `${hrs}h ${mins}m`;
 };
 
-// Export to CSV
 const exportCSV = (data, filename) => {
   if (!data || data.length === 0) return;
 
@@ -108,9 +115,6 @@ const exportCSV = (data, filename) => {
   URL.revokeObjectURL(url);
 };
 
-// ============================================
-// Report Type Cards
-// ============================================
 const reportTypes = [
   {
     key: "employees",
@@ -144,11 +148,17 @@ const reportTypes = [
     color: "#d97706",
     bg: "#fffbeb",
   },
+  // ✅ NEW
+  {
+    key: "monthly",
+    label: "Monthly Summary",
+    desc: "Working days + leave analysis",
+    Icon: Target,
+    color: "#7c3aed",
+    bg: "#ede9fe",
+  },
 ];
 
-// ============================================
-// Stat Card
-// ============================================
 const StatCard = ({ label, value, Icon, color, bg }) => (
   <div
     className="erp-card"
@@ -175,7 +185,7 @@ const StatCard = ({ label, value, Icon, color, bg }) => (
     >
       <Icon size={20} strokeWidth={2.4} />
     </div>
-    <div>
+    <div style={{ minWidth: 0 }}>
       <div
         style={{
           fontSize: 10.5,
@@ -203,9 +213,19 @@ const StatCard = ({ label, value, Icon, color, bg }) => (
   </div>
 );
 
-// ============================================
-// Main Reports Component
-// ============================================
+const MobileRecordCard = ({ children }) => (
+  <div className="rpt-mobile-card">{children}</div>
+);
+
+const MobileField = ({ label, value, color }) => (
+  <div>
+    <div className="rpt-field-label">{label}</div>
+    <div className="rpt-field-value" style={{ color }}>
+      {value}
+    </div>
+  </div>
+);
+
 const ManagerReports = () => {
   const [summary, setSummary] = useState({});
   const [activeReport, setActiveReport] = useState(null);
@@ -213,11 +233,11 @@ const ManagerReports = () => {
     records: [],
     summary: {},
     distribution: [],
+    employees: [],
   });
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
 
-  // Filters
   const [departments, setDepartments] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [filters, setFilters] = useState({
@@ -233,12 +253,11 @@ const ManagerReports = () => {
       .toISOString()
       .split("T")[0],
     end_date: new Date().toISOString().split("T")[0],
+    month: currentMonthStr(),   // ✅ For monthly summary
   });
 
-  // Employee full report drill-down
   const [detailEmployeeId, setDetailEmployeeId] = useState(null);
 
-  // Load summary + dropdowns
   useEffect(() => {
     api
       .getSummary()
@@ -272,11 +291,30 @@ const ManagerReports = () => {
         case "departments":
           res = await api.getDepartmentReport();
           break;
+        case "monthly": {
+          const [y, m] = (filters.month || currentMonthStr()).split("-");
+          res = await api.getMonthlySummary(parseInt(y), parseInt(m));
+          break;
+        }
         default:
           return;
       }
-      setData(res.data || { records: [], summary: {}, distribution: [] });
+      const d = res.data || {};
+      setData({
+        records: d.records || [],
+        summary: d.summary || {},
+        distribution: d.distribution || [],
+        employees: d.employees || [],
+        // For monthly
+        month_label: d.month_label,
+        total_days: d.total_days,
+        sundays: d.sundays,
+        holidays: d.holidays,
+        holiday_list: d.holiday_list || [],
+        working_days: d.working_days,
+      });
     } catch (e) {
+      console.error(e);
       setToast({ message: "Failed to load report", type: "error" });
     } finally {
       setLoading(false);
@@ -289,16 +327,39 @@ const ManagerReports = () => {
 
   const backToTypes = () => {
     setActiveReport(null);
-    setData({ records: [], summary: {}, distribution: [] });
+    setData({
+      records: [],
+      summary: {},
+      distribution: [],
+      employees: [],
+    });
     setDetailEmployeeId(null);
   };
 
   const handleExport = () => {
-    if (!data.records || data.records.length === 0) {
+    let rows = [];
+    if (activeReport === "monthly") {
+      rows = (data.employees || []).map((e) => ({
+        Name: e.name,
+        Code: e.code,
+        Department: e.department,
+        Present: e.present_days,
+        CL: e.cl_days,
+        SL: e.sl_days,
+        "Total Leave": e.leave_days,
+        Absent: e.absent_days,
+        "Payable Days": e.payable_days,
+        "Attendance %": e.attendance_pct,
+      }));
+    } else {
+      rows = data.records || [];
+    }
+
+    if (!rows.length) {
       setToast({ message: "No data to export", type: "error" });
       return;
     }
-    exportCSV(data.records, `${activeReport}_report`);
+    exportCSV(rows, `${activeReport}_report`);
     setToast({ message: "CSV downloaded", type: "success" });
   };
 
@@ -343,7 +404,34 @@ const ManagerReports = () => {
   if (!activeReport) {
     return (
       <Layout>
-        <div style={{ fontFamily: FONT }}>
+        <style>{`
+          .rpt-page * { font-family: ${FONT}; }
+          .rpt-page { font-family: ${FONT}; }
+          .rpt-type-btn {
+            width: 100%;
+            padding: 20px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            cursor: pointer;
+            text-align: left;
+            font-family: ${FONT};
+            transition: all 0.2s ease;
+          }
+          .rpt-type-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px -8px rgba(0,0,0,0.15);
+          }
+          @media (max-width: 767px) {
+            .rpt-page .erp-page-title { font-size: 22px; }
+            .rpt-page .erp-page-subtitle { font-size: 12.5px; }
+            .rpt-page .erp-stat-value { font-size: 20px; }
+            .rpt-page .erp-stat-label { font-size: 10.5px; }
+            .rpt-type-btn { padding: 16px; }
+          }
+        `}</style>
+
+        <div className="rpt-page">
           <div className="mb-4">
             <h1 className="erp-page-title">Reports</h1>
             <p className="erp-page-subtitle mb-0">
@@ -351,7 +439,6 @@ const ManagerReports = () => {
             </p>
           </div>
 
-          {/* Overall summary */}
           <div className="row g-3 mb-4">
             <div className="col-6 col-md-3">
               <StatCard
@@ -391,14 +478,6 @@ const ManagerReports = () => {
             </div>
           </div>
 
-                    {/* ============================================
-              EMPLOYEE QUICK SELECT
-              ============================================ */}
-          
-
-          {/* ============================================
-              SELECT REPORT TYPE
-              ============================================ */}
           <h5
             style={{
               fontWeight: 700,
@@ -416,29 +495,14 @@ const ManagerReports = () => {
             {reportTypes.map((rt) => {
               const Icon = rt.Icon;
               return (
-                <div className="col-12 col-md-6 col-lg-3" key={rt.key}>
+                <div className="col-12 col-md-6 col-lg-4" key={rt.key}>
                   <button
                     onClick={() => setActiveReport(rt.key)}
-                    style={{
-                      width: "100%",
-                      padding: 20,
-                      background: "white",
-                      border: "1px solid var(--border)",
-                      borderRadius: 14,
-                      cursor: "pointer",
-                      textAlign: "left",
-                      fontFamily: FONT,
-                      transition: "all 0.2s ease",
-                    }}
+                    className="rpt-type-btn"
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = "translateY(-2px)";
-                      e.currentTarget.style.boxShadow =
-                        "0 8px 20px -8px rgba(0,0,0,0.15)";
                       e.currentTarget.style.borderColor = rt.color;
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = "translateY(0)";
-                      e.currentTarget.style.boxShadow = "none";
                       e.currentTarget.style.borderColor = "var(--border)";
                     }}
                   >
@@ -502,17 +566,91 @@ const ManagerReports = () => {
 
   return (
     <Layout>
-      <div style={{ fontFamily: FONT }}>
-        {/* Header with back */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 14,
-            marginBottom: 22,
-            flexWrap: "wrap",
-          }}
-        >
+      <style>{`
+        .rpt-page * { font-family: ${FONT}; }
+        .rpt-page { font-family: ${FONT}; }
+        .rpt-header {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          margin-bottom: 22px;
+          flex-wrap: wrap;
+        }
+        .rpt-header-actions {
+          display: flex;
+          gap: 8px;
+          margin-left: auto;
+        }
+        .rpt-mobile-card {
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 14px;
+          margin-bottom: 10px;
+          font-family: ${FONT};
+        }
+        .rpt-mobile-head {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 8px;
+          margin-bottom: 10px;
+          padding-bottom: 10px;
+          border-bottom: 1px dashed #f1f5f9;
+        }
+        .rpt-mobile-name {
+          font-weight: 700;
+          font-size: 14px;
+          color: #0f172a;
+        }
+        .rpt-mobile-sub {
+          font-size: 11.5px;
+          color: #94a3b8;
+          margin-top: 2px;
+        }
+        .rpt-mobile-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px 12px;
+          font-size: 12.5px;
+        }
+        .rpt-field-label {
+          font-size: 10px;
+          color: #94a3b8;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
+          margin-bottom: 3px;
+        }
+        .rpt-field-value {
+          font-weight: 600;
+          color: #0f172a;
+          font-variant-numeric: tabular-nums;
+        }
+        @media (max-width: 767px) {
+          .rpt-page { padding: 0 4px; }
+          .rpt-header { gap: 10px; }
+          .rpt-header-actions {
+            width: 100%;
+            margin-left: 0;
+            flex-wrap: wrap;
+          }
+          .rpt-header-actions .erp-btn {
+            flex: 1 1 calc(50% - 4px);
+            justify-content: center;
+            font-size: 12.5px;
+            padding: 8px 10px;
+          }
+          .rpt-page .erp-page-title { font-size: 18px; }
+          .rpt-page .erp-page-subtitle { font-size: 12px; }
+          .rpt-page .erp-stat-value { font-size: 20px; }
+          .rpt-page .erp-stat-label { font-size: 10.5px; }
+        }
+      `}</style>
+
+      <div className="rpt-page">
+        {/* Header */}
+        <div className="rpt-header">
           <button
             onClick={backToTypes}
             style={{
@@ -527,6 +665,7 @@ const ManagerReports = () => {
               justifyContent: "center",
               color: "#6b7280",
               transition: "all 0.15s",
+              flexShrink: 0,
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = "#e5e7eb";
@@ -550,12 +689,13 @@ const ManagerReports = () => {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              flexShrink: 0,
             }}
           >
             <ActiveIcon size={20} strokeWidth={2.4} />
           </div>
 
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <h1
               className="erp-page-title"
               style={{ fontSize: 20, marginBottom: 2 }}
@@ -570,8 +710,7 @@ const ManagerReports = () => {
             </p>
           </div>
 
-          {/* Export buttons */}
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="rpt-header-actions">
             <button
               className="erp-btn erp-btn-outline"
               onClick={handleExport}
@@ -592,10 +731,26 @@ const ManagerReports = () => {
         {/* Filters */}
         <div className="erp-card mb-3" style={{ padding: 14 }}>
           <div className="row g-2">
+            {/* Monthly summary — Month picker */}
+            {activeReport === "monthly" && (
+              <div className="col-12 col-md-4">
+                <label className="erp-label">Month</label>
+                <input
+                  type="month"
+                  className="erp-input"
+                  value={filters.month}
+                  onChange={(e) =>
+                    setFilters({ ...filters, month: e.target.value })
+                  }
+                  style={{ fontFamily: FONT }}
+                />
+              </div>
+            )}
+
             {(activeReport === "attendance" ||
               activeReport === "leaves") && (
               <>
-                <div className="col-6 col-md-3">
+                <div className="col-12 col-md-3">
                   <label className="erp-label">Start Date</label>
                   <input
                     type="date"
@@ -606,7 +761,7 @@ const ManagerReports = () => {
                     }
                   />
                 </div>
-                <div className="col-6 col-md-3">
+                <div className="col-12 col-md-3">
                   <label className="erp-label">End Date</label>
                   <input
                     type="date"
@@ -620,114 +775,153 @@ const ManagerReports = () => {
               </>
             )}
 
-            {activeReport !== "departments" && (
-              <>
-                <div className="col-6 col-md-3">
-                  <label className="erp-label">Department</label>
-                  <select
-                    className="erp-input"
-                    value={filters.department_id}
-                    onChange={(e) =>
-                      setFilters({
-                        ...filters,
-                        department_id: e.target.value,
-                      })
-                    }
-                  >
-                    <option value="">All</option>
-                    {departments.map((d) => (
-                      <option key={d._id} value={d._id}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {(activeReport === "attendance" ||
-                  activeReport === "leaves") && (
-                  <div className="col-6 col-md-3">
-                    <label className="erp-label">Employee</label>
+            {activeReport !== "departments" &&
+              activeReport !== "monthly" && (
+                <>
+                  <div className="col-12 col-md-3">
+                    <label className="erp-label">Department</label>
                     <select
                       className="erp-input"
-                      value={filters.employee_id}
+                      value={filters.department_id}
                       onChange={(e) =>
                         setFilters({
                           ...filters,
-                          employee_id: e.target.value,
+                          department_id: e.target.value,
                         })
                       }
                     >
                       <option value="">All</option>
-                      {employees.map((emp) => (
-                        <option key={emp._id} value={emp._id}>
-                          {emp.first_name} {emp.last_name}
+                      {departments.map((d) => (
+                        <option key={d._id} value={d._id}>
+                          {d.name}
                         </option>
                       ))}
                     </select>
                   </div>
-                )}
 
-                {activeReport === "leaves" && (
-                  <div className="col-6 col-md-3">
-                    <label className="erp-label">Status</label>
-                    <select
-                      className="erp-input"
-                      value={filters.status}
-                      onChange={(e) =>
-                        setFilters({ ...filters, status: e.target.value })
-                      }
-                    >
-                      <option value="">All</option>
-                      <option value="Pending">Pending</option>
-                      <option value="Approved">Approved</option>
-                      <option value="Rejected">Rejected</option>
-                    </select>
-                  </div>
-                )}
+                  {(activeReport === "attendance" ||
+                    activeReport === "leaves") && (
+                    <div className="col-12 col-md-3">
+                      <label className="erp-label">Employee</label>
+                      <select
+                        className="erp-input"
+                        value={filters.employee_id}
+                        onChange={(e) =>
+                          setFilters({
+                            ...filters,
+                            employee_id: e.target.value,
+                          })
+                        }
+                      >
+                        <option value="">All</option>
+                        {employees.map((emp) => (
+                          <option key={emp._id} value={emp._id}>
+                            {emp.first_name} {emp.last_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
-                {activeReport === "employees" && (
-                  <>
-                    <div className="col-6 col-md-3">
+                  {activeReport === "leaves" && (
+                    <div className="col-12 col-md-3">
                       <label className="erp-label">Status</label>
                       <select
                         className="erp-input"
                         value={filters.status}
                         onChange={(e) =>
-                          setFilters({
-                            ...filters,
-                            status: e.target.value,
-                          })
+                          setFilters({ ...filters, status: e.target.value })
                         }
                       >
                         <option value="">All</option>
-                        <option value="ACTIVE">Active</option>
-                        <option value="INACTIVE">Inactive</option>
-                        <option value="NOTICE_PERIOD">Notice Period</option>
-                        <option value="RESIGNED">Resigned</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Approved">Approved</option>
+                        <option value="Rejected">Rejected</option>
                       </select>
                     </div>
-                    <div className="col-12 col-md-3">
-                      <label className="erp-label">Search</label>
-                      <div className="erp-input-wrapper">
-                        <Search size={14} className="erp-input-icon" />
-                        <input
+                  )}
+
+                  {activeReport === "employees" && (
+                    <>
+                      <div className="col-12 col-md-3">
+                        <label className="erp-label">Status</label>
+                        <select
                           className="erp-input"
-                          placeholder="Name or code..."
-                          value={filters.search}
+                          value={filters.status}
                           onChange={(e) =>
                             setFilters({
                               ...filters,
-                              search: e.target.value,
+                              status: e.target.value,
                             })
                           }
-                        />
+                        >
+                          <option value="">All</option>
+                          <option value="ACTIVE">Active</option>
+                          <option value="INACTIVE">Inactive</option>
+                          <option value="NOTICE_PERIOD">Notice Period</option>
+                          <option value="RESIGNED">Resigned</option>
+                        </select>
                       </div>
-                    </div>
-                  </>
-                )}
-              </>
-            )}
+                      <div className="col-12 col-md-3">
+                        <label className="erp-label">Search</label>
+                        <div className="erp-input-wrapper">
+                          <Search size={14} className="erp-input-icon" />
+                          <input
+                            className="erp-input"
+                            placeholder="Name or code..."
+                            value={filters.search}
+                            onChange={(e) =>
+                              setFilters({
+                                ...filters,
+                                search: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
           </div>
+
+          {/* ✅ Holiday list for monthly */}
+          {activeReport === "monthly" &&
+            data.holiday_list?.length > 0 && (
+              <div
+                style={{
+                  marginTop: 12,
+                  padding: "10px 14px",
+                  background: "#fef3c7",
+                  border: "1px solid #fcd34d",
+                  borderRadius: 8,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  flexWrap: "wrap",
+                  fontSize: 12,
+                  color: "#92400e",
+                }}
+              >
+                <PartyPopper size={14} />
+                <strong>Holidays this month:</strong>
+                {data.holiday_list.map((h, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      background: "white",
+                      padding: "3px 10px",
+                      borderRadius: 20,
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      border: "1px solid #fcd34d",
+                    }}
+                  >
+                    {h.name} · {formatDate(h.date).slice(0, 6)}
+                  </span>
+                ))}
+              </div>
+            )}
         </div>
 
         {/* Summary cards */}
@@ -869,12 +1063,53 @@ const ManagerReports = () => {
                 </div>
               </>
             )}
+
+            {/* ✅ Monthly Summary cards */}
+            {activeReport === "monthly" && (
+              <>
+                <div className="col-6 col-md-3">
+                  <StatCard
+                    label="Working Days"
+                    value={data.working_days || 0}
+                    Icon={CalendarDays}
+                    color="#4f46e5"
+                    bg="#eef2ff"
+                  />
+                </div>
+                <div className="col-6 col-md-3">
+                  <StatCard
+                    label="Sundays"
+                    value={data.sundays || 0}
+                    Icon={Calendar}
+                    color="#dc2626"
+                    bg="#fef2f2"
+                  />
+                </div>
+                <div className="col-6 col-md-3">
+                  <StatCard
+                    label="Holidays"
+                    value={data.holidays || 0}
+                    Icon={PartyPopper}
+                    color="#d97706"
+                    bg="#fffbeb"
+                  />
+                </div>
+                <div className="col-6 col-md-3">
+                  <StatCard
+                    label="Total Days"
+                    value={data.total_days || 0}
+                    Icon={TrendingUp}
+                    color="#0891b2"
+                    bg="#ecfeff"
+                  />
+                </div>
+              </>
+            )}
           </div>
         )}
 
         {/* Chart + Table */}
         <div className="row g-3">
-          {/* Pie Chart */}
           {data.distribution && data.distribution.length > 0 && (
             <div className="col-12 col-lg-4">
               <div
@@ -938,7 +1173,6 @@ const ManagerReports = () => {
             </div>
           )}
 
-          {/* Table */}
           <div
             className={
               data.distribution && data.distribution.length > 0
@@ -966,7 +1200,10 @@ const ManagerReports = () => {
               >
                 <span>Detailed Records</span>
                 <span style={{ color: "#9ca3af", fontWeight: 500 }}>
-                  {data.records?.length || 0} rows
+                  {activeReport === "monthly"
+                    ? data.employees?.length || 0
+                    : data.records?.length || 0}{" "}
+                  rows
                 </span>
               </div>
 
@@ -978,7 +1215,9 @@ const ManagerReports = () => {
                   <div className="spinner-border spinner-border-sm me-2" />
                   Loading...
                 </div>
-              ) : !data.records || data.records.length === 0 ? (
+              ) : (activeReport === "monthly"
+                  ? !data.employees || data.employees.length === 0
+                  : !data.records || data.records.length === 0) ? (
                 <div
                   className="text-center py-5"
                   style={{ color: "#9ca3af", fontFamily: FONT }}
@@ -994,251 +1233,675 @@ const ManagerReports = () => {
                   No data for the selected filters
                 </div>
               ) : (
-                <div
-                  className="table-responsive"
-                  style={{ maxHeight: 480, overflowY: "auto" }}
-                >
-                  <table className="erp-table" style={{ fontFamily: FONT }}>
-                    <thead style={{ position: "sticky", top: 0, zIndex: 1 }}>
-                      {activeReport === "employees" && (
-                        <tr>
-                          <th>Employee</th>
-                          <th>Code</th>
-                          <th>Department</th>
-                          <th>Joined</th>
-                          <th>Present</th>
-                          <th>Late</th>
-                          <th>Status</th>
-                          <th style={{ width: 60 }}></th>
-                        </tr>
-                      )}
-                      {activeReport === "attendance" && (
-                        <tr>
-                          <th>Date</th>
-                          <th>Employee</th>
-                          <th>Check In</th>
-                          <th>Check Out</th>
-                          <th>Hours</th>
-                          <th>Late</th>
-                          <th>Early</th>
-                          <th>Status</th>
-                        </tr>
-                      )}
-                      {activeReport === "leaves" && (
-                        <tr>
-                          <th>Employee</th>
-                          <th>Type</th>
-                          <th>From</th>
-                          <th>To</th>
-                          <th>Days</th>
-                          <th>Status</th>
-                        </tr>
-                      )}
-                      {activeReport === "departments" && (
-                        <tr>
-                          <th>Department</th>
-                          <th>Employees</th>
-                          <th>Avg Hours</th>
-                          <th>Description</th>
-                        </tr>
-                      )}
-                    </thead>
-                    <tbody>
-                      {activeReport === "employees" &&
-                        data.records.map((r) => (
-                          <tr key={r.employee_id}>
-                            <td style={{ fontWeight: 600 }}>{r.name}</td>
-                            <td>
-                              <span className="erp-badge erp-badge-gray">
-                                {r.code}
-                              </span>
-                            </td>
-                            <td>{r.department}</td>
-                            <td style={{ fontSize: 12.5 }}>
-                              {formatDate(r.joined)}
-                            </td>
-                            <td>{r.present_days}</td>
-                            <td>
-                              {r.late_days > 0 ? (
+                <>
+                  {/* Desktop Table */}
+                  <div
+                    className="table-responsive d-none d-lg-block"
+                    style={{ maxHeight: 480, overflowY: "auto" }}
+                  >
+                    <table className="erp-table" style={{ fontFamily: FONT }}>
+                      <thead
+                        style={{ position: "sticky", top: 0, zIndex: 1 }}
+                      >
+                        {activeReport === "employees" && (
+                          <tr>
+                            <th>Employee</th>
+                            <th>Code</th>
+                            <th>Department</th>
+                            <th>Joined</th>
+                            <th>Present</th>
+                            <th>Late</th>
+                            <th>Status</th>
+                            <th style={{ width: 60 }}></th>
+                          </tr>
+                        )}
+                        {activeReport === "attendance" && (
+                          <tr>
+                            <th>Date</th>
+                            <th>Employee</th>
+                            <th>Check In</th>
+                            <th>Check Out</th>
+                            <th>Hours</th>
+                            <th>Late</th>
+                            <th>Early</th>
+                            <th>Status</th>
+                          </tr>
+                        )}
+                        {activeReport === "leaves" && (
+                          <tr>
+                            <th>Employee</th>
+                            <th>Type</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Days</th>
+                            <th>Status</th>
+                          </tr>
+                        )}
+                        {activeReport === "departments" && (
+                          <tr>
+                            <th>Department</th>
+                            <th>Employees</th>
+                            <th>Avg Hours</th>
+                            <th>Description</th>
+                          </tr>
+                        )}
+                        {/* ✅ Monthly Summary */}
+                        {activeReport === "monthly" && (
+                          <tr>
+                            <th>Employee</th>
+                            <th>Code</th>
+                            <th>Dept</th>
+                            <th style={{ textAlign: "center" }}>Present</th>
+                            <th style={{ textAlign: "center" }}>CL</th>
+                            <th style={{ textAlign: "center" }}>SL</th>
+                            <th style={{ textAlign: "center" }}>
+                              Total Leave
+                            </th>
+                            <th style={{ textAlign: "center" }}>Absent</th>
+                            <th style={{ textAlign: "center" }}>Payable</th>
+                            <th style={{ textAlign: "center" }}>Att %</th>
+                          </tr>
+                        )}
+                      </thead>
+                      <tbody>
+                        {activeReport === "employees" &&
+                          data.records.map((r) => (
+                            <tr key={r.employee_id}>
+                              <td style={{ fontWeight: 600 }}>{r.name}</td>
+                              <td>
+                                <span className="erp-badge erp-badge-gray">
+                                  {r.code}
+                                </span>
+                              </td>
+                              <td>{r.department}</td>
+                              <td style={{ fontSize: 12.5 }}>
+                                {formatDate(r.joined)}
+                              </td>
+                              <td>{r.present_days}</td>
+                              <td>
+                                {r.late_days > 0 ? (
+                                  <span
+                                    style={{
+                                      color: "#dc2626",
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    {r.late_days}
+                                  </span>
+                                ) : (
+                                  <span style={{ color: "#9ca3af" }}>0</span>
+                                )}
+                              </td>
+                              <td>
                                 <span
+                                  className={
+                                    r.status === "ACTIVE"
+                                      ? "erp-badge erp-badge-green"
+                                      : "erp-badge erp-badge-gray"
+                                  }
+                                >
+                                  ● {r.status}
+                                </span>
+                              </td>
+                              <td>
+                                <button
+                                  className="erp-icon-btn"
+                                  onClick={() =>
+                                    setDetailEmployeeId(r.employee_id)
+                                  }
+                                  title="View Full Report"
+                                  style={{ padding: 4, color: "#4f46e5" }}
+                                >
+                                  <Eye size={13} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+
+                        {activeReport === "attendance" &&
+                          data.records.map((r, i) => (
+                            <tr key={i}>
+                              <td style={{ fontSize: 12.5 }}>
+                                {formatDate(r.date)}
+                              </td>
+                              <td>
+                                <div style={{ fontWeight: 600 }}>
+                                  {r.employee_name}
+                                </div>
+                                <div
                                   style={{
-                                    color: "#dc2626",
-                                    fontWeight: 600,
+                                    fontSize: 11,
+                                    color: "#6b7280",
                                   }}
                                 >
-                                  {r.late_days}
+                                  {r.employee_code}
+                                </div>
+                              </td>
+                              <td>{formatTime(r.check_in)}</td>
+                              <td>{formatTime(r.check_out)}</td>
+                              <td>{formatHours(r.working_hours)}</td>
+                              <td>
+                                {r.late_minutes > 0 ? (
+                                  <span
+                                    style={{
+                                      color: "#dc2626",
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    {r.late_minutes}m
+                                  </span>
+                                ) : (
+                                  <span style={{ color: "#9ca3af" }}>—</span>
+                                )}
+                              </td>
+                              <td>
+                                {r.early_minutes > 0 ? (
+                                  <span
+                                    style={{
+                                      color: "#d97706",
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    {r.early_minutes}m
+                                  </span>
+                                ) : (
+                                  <span style={{ color: "#9ca3af" }}>—</span>
+                                )}
+                              </td>
+                              <td>
+                                <span
+                                  className={
+                                    r.status === "PRESENT"
+                                      ? "erp-badge erp-badge-green"
+                                      : r.status.includes("Late")
+                                      ? "erp-badge erp-badge-red"
+                                      : "erp-badge erp-badge-gray"
+                                  }
+                                >
+                                  {r.status}
                                 </span>
-                              ) : (
-                                <span style={{ color: "#9ca3af" }}>0</span>
-                              )}
-                            </td>
-                            <td>
-                              <span
-                                className={
-                                  r.status === "ACTIVE"
-                                    ? "erp-badge erp-badge-green"
-                                    : "erp-badge erp-badge-gray"
-                                }
+                              </td>
+                            </tr>
+                          ))}
+
+                        {activeReport === "leaves" &&
+                          data.records.map((r, i) => (
+                            <tr key={i}>
+                              <td>
+                                <div style={{ fontWeight: 600 }}>
+                                  {r.employee_name}
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: 11,
+                                    color: "#6b7280",
+                                  }}
+                                >
+                                  {r.employee_code}
+                                </div>
+                              </td>
+                              <td>
+                                <span className="erp-badge erp-badge-blue">
+                                  {r.leave_type}
+                                </span>
+                              </td>
+                              <td style={{ fontSize: 12.5 }}>
+                                {formatDate(r.start_date)}
+                              </td>
+                              <td style={{ fontSize: 12.5 }}>
+                                {formatDate(r.end_date)}
+                              </td>
+                              <td>
+                                <strong>{r.total_days}d</strong>
+                              </td>
+                              <td>
+                                <span
+                                  className={
+                                    r.status === "Approved"
+                                      ? "erp-badge erp-badge-green"
+                                      : r.status === "Pending"
+                                      ? "erp-badge erp-badge-yellow"
+                                      : r.status === "Rejected"
+                                      ? "erp-badge erp-badge-red"
+                                      : "erp-badge erp-badge-gray"
+                                  }
+                                >
+                                  ● {r.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+
+                        {activeReport === "departments" &&
+                          data.records.map((r) => (
+                            <tr key={r.department_id}>
+                              <td style={{ fontWeight: 600 }}>{r.name}</td>
+                              <td>
+                                <span className="erp-badge erp-badge-blue">
+                                  {r.employee_count} employees
+                                </span>
+                              </td>
+                              <td>{formatHours(r.avg_hours)}</td>
+                              <td
+                                style={{
+                                  fontSize: 12.5,
+                                  color: "#6b7280",
+                                  maxWidth: 300,
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
                               >
-                                ● {r.status}
-                              </span>
-                            </td>
-                            <td>
+                                {r.description || "—"}
+                              </td>
+                            </tr>
+                          ))}
+
+                        {/* ✅ Monthly Summary rows */}
+                        {activeReport === "monthly" &&
+                          data.employees.map((e) => (
+                            <tr key={e.employee_id}>
+                              <td style={{ fontWeight: 600 }}>{e.name}</td>
+                              <td>
+                                <span className="erp-badge erp-badge-gray">
+                                  {e.code}
+                                </span>
+                              </td>
+                              <td style={{ fontSize: 12.5 }}>
+                                {e.department || "—"}
+                              </td>
+                              <td
+                                style={{
+                                  textAlign: "center",
+                                  fontWeight: 700,
+                                  color: "#059669",
+                                }}
+                              >
+                                {e.present_days}
+                              </td>
+                              <td
+                                style={{
+                                  textAlign: "center",
+                                  color: "#4f46e5",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {e.cl_days || 0}
+                              </td>
+                              <td
+                                style={{
+                                  textAlign: "center",
+                                  color: "#0891b2",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {e.sl_days || 0}
+                              </td>
+                              <td
+                                style={{
+                                  textAlign: "center",
+                                  fontWeight: 700,
+                                }}
+                              >
+                                {e.leave_days || 0}
+                              </td>
+                              <td
+                                style={{
+                                  textAlign: "center",
+                                  color:
+                                    e.absent_days > 0
+                                      ? "#dc2626"
+                                      : "#9ca3af",
+                                  fontWeight:
+                                    e.absent_days > 0 ? 700 : 400,
+                                }}
+                              >
+                                {e.absent_days}
+                              </td>
+                              <td
+                                style={{
+                                  textAlign: "center",
+                                  fontWeight: 700,
+                                  color: "#7c3aed",
+                                }}
+                              >
+                                {e.payable_days}
+                              </td>
+                              <td style={{ textAlign: "center" }}>
+                                <span
+                                  className="erp-badge"
+                                  style={{
+                                    background:
+                                      e.attendance_pct >= 90
+                                        ? "#dcfce7"
+                                        : e.attendance_pct >= 75
+                                        ? "#fef3c7"
+                                        : "#fee2e2",
+                                    color:
+                                      e.attendance_pct >= 90
+                                        ? "#166534"
+                                        : e.attendance_pct >= 75
+                                        ? "#92400e"
+                                        : "#991b1b",
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  {e.attendance_pct}%
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile Cards */}
+                  <div className="d-lg-none" style={{ padding: 12 }}>
+                    {activeReport === "employees" &&
+                      data.records.map((r) => (
+                        <MobileRecordCard key={r.employee_id}>
+                          <div className="rpt-mobile-head">
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div className="rpt-mobile-name">
+                                {r.name}
+                              </div>
+                              <div className="rpt-mobile-sub">
+                                {r.code}
+                                {r.department && ` · ${r.department}`}
+                              </div>
+                            </div>
+                            <span
+                              className={
+                                r.status === "ACTIVE"
+                                  ? "erp-badge erp-badge-green"
+                                  : "erp-badge erp-badge-gray"
+                              }
+                              style={{ flexShrink: 0 }}
+                            >
+                              ● {r.status}
+                            </span>
+                          </div>
+                          <div className="rpt-mobile-grid">
+                            <MobileField
+                              label="Joined"
+                              value={formatDate(r.joined)}
+                            />
+                            <MobileField
+                              label="Present"
+                              value={r.present_days}
+                            />
+                            <MobileField
+                              label="Late"
+                              value={r.late_days || 0}
+                              color={
+                                r.late_days > 0 ? "#dc2626" : "#0f172a"
+                              }
+                            />
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "flex-end",
+                              }}
+                            >
                               <button
                                 className="erp-icon-btn"
                                 onClick={() =>
                                   setDetailEmployeeId(r.employee_id)
                                 }
-                                title="View Full Report"
-                                style={{ padding: 4, color: "#4f46e5" }}
+                                style={{
+                                  color: "#4f46e5",
+                                  padding: "6px 10px",
+                                  borderRadius: 8,
+                                  background: "#eef2ff",
+                                  border: "1px solid #c7d2fe",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 5,
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                  cursor: "pointer",
+                                }}
                               >
-                                <Eye size={13} />
+                                <Eye size={12} /> Full Report
                               </button>
-                            </td>
-                          </tr>
-                        ))}
+                            </div>
+                          </div>
+                        </MobileRecordCard>
+                      ))}
 
-                      {activeReport === "attendance" &&
-                        data.records.map((r, i) => (
-                          <tr key={i}>
-                            <td style={{ fontSize: 12.5 }}>
-                              {formatDate(r.date)}
-                            </td>
-                            <td>
-                              <div style={{ fontWeight: 600 }}>
+                    {activeReport === "attendance" &&
+                      data.records.map((r, i) => (
+                        <MobileRecordCard key={i}>
+                          <div className="rpt-mobile-head">
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div className="rpt-mobile-name">
                                 {r.employee_name}
                               </div>
-                              <div
-                                style={{
-                                  fontSize: 11,
-                                  color: "#6b7280",
-                                }}
-                              >
-                                {r.employee_code}
+                              <div className="rpt-mobile-sub">
+                                {r.employee_code} · {formatDate(r.date)}
                               </div>
-                            </td>
-                            <td>{formatTime(r.check_in)}</td>
-                            <td>{formatTime(r.check_out)}</td>
-                            <td>{formatHours(r.working_hours)}</td>
-                            <td>
-                              {r.late_minutes > 0 ? (
-                                <span
-                                  style={{
-                                    color: "#dc2626",
-                                    fontWeight: 600,
-                                  }}
-                                >
-                                  {r.late_minutes}m
-                                </span>
-                              ) : (
-                                <span style={{ color: "#9ca3af" }}>—</span>
-                              )}
-                            </td>
-                            <td>
-                              {r.early_minutes > 0 ? (
-                                <span
-                                  style={{
-                                    color: "#d97706",
-                                    fontWeight: 600,
-                                  }}
-                                >
-                                  {r.early_minutes}m
-                                </span>
-                              ) : (
-                                <span style={{ color: "#9ca3af" }}>—</span>
-                              )}
-                            </td>
-                            <td>
-                              <span
-                                className={
-                                  r.status === "PRESENT"
-                                    ? "erp-badge erp-badge-green"
-                                    : r.status.includes("Late")
-                                    ? "erp-badge erp-badge-red"
-                                    : "erp-badge erp-badge-gray"
-                                }
-                              >
-                                {r.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
+                            </div>
+                            <span
+                              className={
+                                r.status === "PRESENT"
+                                  ? "erp-badge erp-badge-green"
+                                  : r.status.includes("Late")
+                                  ? "erp-badge erp-badge-red"
+                                  : "erp-badge erp-badge-gray"
+                              }
+                              style={{ flexShrink: 0, fontSize: 10 }}
+                            >
+                              {r.status}
+                            </span>
+                          </div>
+                          <div className="rpt-mobile-grid">
+                            <MobileField
+                              label="Check In"
+                              value={formatTime(r.check_in)}
+                              color={
+                                r.late_minutes > 0 ? "#dc2626" : undefined
+                              }
+                            />
+                            <MobileField
+                              label="Check Out"
+                              value={formatTime(r.check_out)}
+                            />
+                            <MobileField
+                              label="Hours"
+                              value={formatHours(r.working_hours)}
+                            />
+                            <MobileField
+                              label="Late"
+                              value={
+                                r.late_minutes > 0
+                                  ? `${r.late_minutes}m`
+                                  : "—"
+                              }
+                              color={
+                                r.late_minutes > 0 ? "#dc2626" : "#9ca3af"
+                              }
+                            />
+                            {r.early_minutes > 0 && (
+                              <MobileField
+                                label="Early"
+                                value={`${r.early_minutes}m`}
+                                color="#d97706"
+                              />
+                            )}
+                          </div>
+                        </MobileRecordCard>
+                      ))}
 
-                      {activeReport === "leaves" &&
-                        data.records.map((r, i) => (
-                          <tr key={i}>
-                            <td>
-                              <div style={{ fontWeight: 600 }}>
+                    {activeReport === "leaves" &&
+                      data.records.map((r, i) => (
+                        <MobileRecordCard key={i}>
+                          <div className="rpt-mobile-head">
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div className="rpt-mobile-name">
                                 {r.employee_name}
                               </div>
-                              <div
-                                style={{
-                                  fontSize: 11,
-                                  color: "#6b7280",
-                                }}
-                              >
+                              <div className="rpt-mobile-sub">
                                 {r.employee_code}
                               </div>
-                            </td>
-                            <td>
-                              <span className="erp-badge erp-badge-blue">
-                                {r.leave_type}
-                              </span>
-                            </td>
-                            <td style={{ fontSize: 12.5 }}>
-                              {formatDate(r.start_date)}
-                            </td>
-                            <td style={{ fontSize: 12.5 }}>
-                              {formatDate(r.end_date)}
-                            </td>
-                            <td>
-                              <strong>{r.total_days}d</strong>
-                            </td>
-                            <td>
-                              <span
-                                className={
-                                  r.status === "Approved"
-                                    ? "erp-badge erp-badge-green"
-                                    : r.status === "Pending"
-                                    ? "erp-badge erp-badge-yellow"
-                                    : r.status === "Rejected"
-                                    ? "erp-badge erp-badge-red"
-                                    : "erp-badge erp-badge-gray"
-                                }
+                            </div>
+                            <span
+                              className={
+                                r.status === "Approved"
+                                  ? "erp-badge erp-badge-green"
+                                  : r.status === "Pending"
+                                  ? "erp-badge erp-badge-yellow"
+                                  : r.status === "Rejected"
+                                  ? "erp-badge erp-badge-red"
+                                  : "erp-badge erp-badge-gray"
+                              }
+                              style={{ flexShrink: 0, fontSize: 10 }}
+                            >
+                              ● {r.status}
+                            </span>
+                          </div>
+                          <div className="rpt-mobile-grid">
+                            <div style={{ gridColumn: "1 / -1" }}>
+                              <div className="rpt-field-label">Type</div>
+                              <div
+                                className="rpt-field-value"
+                                style={{ marginTop: 4 }}
                               >
-                                ● {r.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
+                                <span className="erp-badge erp-badge-blue">
+                                  {r.leave_type}
+                                </span>
+                              </div>
+                            </div>
+                            <MobileField
+                              label="From"
+                              value={formatDate(r.start_date)}
+                            />
+                            <MobileField
+                              label="To"
+                              value={formatDate(r.end_date)}
+                            />
+                            <MobileField
+                              label="Days"
+                              value={`${r.total_days}d`}
+                              color="#4f46e5"
+                            />
+                          </div>
+                        </MobileRecordCard>
+                      ))}
 
-                      {activeReport === "departments" &&
-                        data.records.map((r) => (
-                          <tr key={r.department_id}>
-                            <td style={{ fontWeight: 600 }}>{r.name}</td>
-                            <td>
-                              <span className="erp-badge erp-badge-blue">
-                                {r.employee_count} employees
-                              </span>
-                            </td>
-                            <td>{formatHours(r.avg_hours)}</td>
-                            <td
+                    {activeReport === "departments" &&
+                      data.records.map((r) => (
+                        <MobileRecordCard key={r.department_id}>
+                          <div className="rpt-mobile-head">
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div className="rpt-mobile-name">{r.name}</div>
+                            </div>
+                            <span
+                              className="erp-badge erp-badge-blue"
+                              style={{ flexShrink: 0 }}
+                            >
+                              {r.employee_count} employees
+                            </span>
+                          </div>
+                          <div className="rpt-mobile-grid">
+                            <MobileField
+                              label="Avg Hours"
+                              value={formatHours(r.avg_hours)}
+                            />
+                            {r.description && (
+                              <div style={{ gridColumn: "1 / -1" }}>
+                                <div className="rpt-field-label">
+                                  Description
+                                </div>
+                                <div
+                                  className="rpt-field-value"
+                                  style={{
+                                    fontWeight: 500,
+                                    color: "#475569",
+                                  }}
+                                >
+                                  {r.description}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </MobileRecordCard>
+                      ))}
+
+                    {/* ✅ Monthly Summary mobile cards */}
+                    {activeReport === "monthly" &&
+                      data.employees.map((e) => (
+                        <MobileRecordCard key={e.employee_id}>
+                          <div className="rpt-mobile-head">
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div className="rpt-mobile-name">
+                                {e.name}
+                              </div>
+                              <div className="rpt-mobile-sub">
+                                {e.code}
+                                {e.department && ` · ${e.department}`}
+                              </div>
+                            </div>
+                            <span
+                              className="erp-badge"
                               style={{
-                                fontSize: 12.5,
-                                color: "#6b7280",
-                                maxWidth: 300,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
+                                background:
+                                  e.attendance_pct >= 90
+                                    ? "#dcfce7"
+                                    : e.attendance_pct >= 75
+                                    ? "#fef3c7"
+                                    : "#fee2e2",
+                                color:
+                                  e.attendance_pct >= 90
+                                    ? "#166534"
+                                    : e.attendance_pct >= 75
+                                    ? "#92400e"
+                                    : "#991b1b",
+                                fontWeight: 700,
+                                fontSize: 10,
+                                flexShrink: 0,
                               }}
                             >
-                              {r.description || "—"}
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
+                              {e.attendance_pct}%
+                            </span>
+                          </div>
+
+                          <div className="rpt-mobile-grid">
+                            <MobileField
+                              label="Present"
+                              value={e.present_days}
+                              color="#059669"
+                            />
+                            <MobileField
+                              label="Absent"
+                              value={e.absent_days}
+                              color={
+                                e.absent_days > 0 ? "#dc2626" : "#9ca3af"
+                              }
+                            />
+                            <MobileField
+                              label="CL"
+                              value={e.cl_days || 0}
+                              color="#4f46e5"
+                            />
+                            <MobileField
+                              label="SL"
+                              value={e.sl_days || 0}
+                              color="#0891b2"
+                            />
+                            <MobileField
+                              label="Total Leave"
+                              value={e.leave_days || 0}
+                            />
+                            <MobileField
+                              label="Payable Days"
+                              value={e.payable_days}
+                              color="#7c3aed"
+                            />
+                          </div>
+                        </MobileRecordCard>
+                      ))}
+                  </div>
+                </>
               )}
             </div>
           </div>

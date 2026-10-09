@@ -17,15 +17,22 @@ import {
   Clock,
   Pencil,
   ShieldAlert,
+  Shield,
 } from "lucide-react";
 import Layout from "../../components/layout/Layout";
 import Toast from "../../components/common/Toast";
 import * as api from "../../api/settingsApi";
 import * as shiftApi from "../../api/shiftApi";
+import * as insuranceApi from "../../api/insuranceApi";
 
-const FONT = "'Calibri', 'Segoe UI', -apple-system, sans-serif";
+const FONT = "'Inter', 'Segoe UI', -apple-system, sans-serif";
 
 const WORKING_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+const MONTHS_SHORT = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
 
 // Format "06:00" → "06:00 AM", "14:00" → "02:00 PM"
 const formatTime12 = (t) => {
@@ -36,39 +43,28 @@ const formatTime12 = (t) => {
   return `${String(h12).padStart(2, "0")}:${String(m).padStart(2, "0")} ${ampm}`;
 };
 
+// Simple mobile detection hook
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  return isMobile;
+};
+
 const SectionCard = ({ icon: Icon, title, subtitle, children }) => (
-  <div className="erp-card" style={{ padding: 22, marginBottom: 20 }}>
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        marginBottom: 18,
-        paddingBottom: 14,
-        borderBottom: "1px solid var(--border)",
-      }}
-    >
-      <div
-        style={{
-          width: 42,
-          height: 42,
-          borderRadius: 12,
-          background: "#eef2ff",
-          color: "#4f46e5",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
+  <div className="erp-card settings-section-card">
+    <div className="settings-section-head">
+      <div className="settings-section-icon">
         <Icon size={20} />
       </div>
-      <div>
-        <div style={{ fontWeight: 700, fontSize: 15 }}>{title}</div>
-        {subtitle && (
-          <div style={{ fontSize: 12.5, color: "#6b7280", marginTop: 2 }}>
-            {subtitle}
-          </div>
-        )}
+      <div style={{ minWidth: 0 }}>
+        <div className="settings-section-title">{title}</div>
+        {subtitle && <div className="settings-section-sub">{subtitle}</div>}
       </div>
     </div>
     {children}
@@ -76,42 +72,52 @@ const SectionCard = ({ icon: Icon, title, subtitle, children }) => (
 );
 
 const MiniBox = ({ label, value, highlight }) => (
-  <div
-    style={{
-      padding: "8px 10px",
-      background: "white",
-      borderRadius: 8,
-      border: "1px solid #e2e8f0",
-      textAlign: "center",
-    }}
-  >
+  <div className="settings-minibox">
+    <div className="settings-minibox-label">{label}</div>
     <div
-      style={{
-        fontSize: 9.5,
-        fontWeight: 700,
-        color: "#94a3b8",
-        textTransform: "uppercase",
-        letterSpacing: 0.4,
-        marginBottom: 3,
-      }}
-    >
-      {label}
-    </div>
-    <div
-      style={{
-        fontSize: 13,
-        fontWeight: 800,
-        color: highlight ? "#4f46e5" : "#0f172a",
-        letterSpacing: "-0.2px",
-      }}
+      className="settings-minibox-value"
+      style={{ color: highlight ? "#4f46e5" : "#0f172a" }}
     >
       {value}
     </div>
   </div>
 );
 
+const InfoBanner = ({ tone = "blue", children }) => {
+  const tones = {
+    blue: { bg: "#eef2ff", border: "#c7d2fe", color: "#3730a3" },
+    cyan: { bg: "#ecfeff", border: "#a5f3fc", color: "#155e75" },
+    green: { bg: "#f0fdf4", border: "#bbf7d0", color: "#166534" },
+    amber: { bg: "#fef3c7", border: "#fde68a", color: "#92400e" },
+    sky: { bg: "#f0f9ff", border: "#bae6fd", color: "#0c4a6e" },
+  };
+  const t = tones[tone] || tones.blue;
+  return (
+    <div
+      className="settings-info-banner"
+      style={{ background: t.bg, border: `1px solid ${t.border}`, color: t.color }}
+    >
+      <div className="settings-info-banner-text">{children}</div>
+    </div>
+  );
+};
+
+const Modal = ({ open, onClose, title, children, footer }) => {
+  if (!open) return null;
+  return (
+    <div className="settings-modal-backdrop" onClick={onClose}>
+      <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
+        <h3 className="settings-modal-title">{title}</h3>
+        <div className="settings-modal-body">{children}</div>
+        <div className="settings-modal-footer">{footer}</div>
+      </div>
+    </div>
+  );
+};
+
 const ManagerSettings = () => {
   const [toast, setToast] = useState(null);
+  const isMobile = useIsMobile();
 
   // Company settings
   const [company, setCompany] = useState({
@@ -131,7 +137,7 @@ const ManagerSettings = () => {
     pf_percent: 12,
     esi_percent: 0.75,
     tds_percent: 0,
-    // NEW: Forgot logout settings
+    pt_deduction_months: [4, 10],
     forgot_logout_enabled: true,
     forgot_logout_max_per_month: 3,
     forgot_logout_fine_amount: 200,
@@ -139,12 +145,12 @@ const ManagerSettings = () => {
   const [companyLoading, setCompanyLoading] = useState(true);
   const [companySaving, setCompanySaving] = useState(false);
 
-  // PT Slabs state
+  // PT Slabs
   const [ptSlabs, setPtSlabs] = useState([]);
   const [ptSlabsLoading, setPtSlabsLoading] = useState(true);
   const [ptSlabsSaving, setPtSlabsSaving] = useState(false);
 
-  // Shift state
+  // Shifts
   const [shifts, setShifts] = useState([]);
   const [shiftsLoading, setShiftsLoading] = useState(true);
   const [shiftModalOpen, setShiftModalOpen] = useState(false);
@@ -156,6 +162,18 @@ const ManagerSettings = () => {
     grace_period_minutes: 15,
   });
   const [shiftSaving, setShiftSaving] = useState(false);
+
+  // Insurance
+  const [insurances, setInsurances] = useState([]);
+  const [insurancesLoading, setInsurancesLoading] = useState(true);
+  const [insuranceModalOpen, setInsuranceModalOpen] = useState(false);
+  const [editInsurance, setEditInsurance] = useState(null);
+  const [insuranceForm, setInsuranceForm] = useState({
+    name: "",
+    annual_amount: "",
+    description: "",
+  });
+  const [insuranceSaving, setInsuranceSaving] = useState(false);
 
   // Email / Password
   const [email, setEmail] = useState("");
@@ -181,23 +199,25 @@ const ManagerSettings = () => {
       api.getMyAccount(),
       api.getProfessionalTaxSlabs(),
       shiftApi.listShifts(),
+      insuranceApi.listInsurances(),
     ])
-      .then(([cRes, aRes, ptRes, shRes]) => {
+      .then(([cRes, aRes, ptRes, shRes, insRes]) => {
         setCompany((prev) => ({ ...prev, ...cRes.data }));
         setEmail(aRes.data.email || "");
         setNewEmail(aRes.data.email || "");
         setPtSlabs(ptRes.data || []);
         setShifts(Array.isArray(shRes.data) ? shRes.data : []);
+        setInsurances(Array.isArray(insRes.data) ? insRes.data : []);
       })
       .catch((e) => console.error(e))
       .finally(() => {
         setCompanyLoading(false);
         setPtSlabsLoading(false);
         setShiftsLoading(false);
+        setInsurancesLoading(false);
       });
   }, []);
 
-  // Logo upload
   const handleLogoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -368,6 +388,77 @@ const ManagerSettings = () => {
     }
   };
 
+  // Insurance handlers
+  const openAddInsurance = () => {
+    setEditInsurance(null);
+    setInsuranceForm({ name: "", annual_amount: "", description: "" });
+    setInsuranceModalOpen(true);
+  };
+
+  const openEditInsurance = (ins) => {
+    setEditInsurance(ins);
+    setInsuranceForm({
+      name: ins.name,
+      annual_amount: ins.annual_amount,
+      description: ins.description || "",
+    });
+    setInsuranceModalOpen(true);
+  };
+
+  const handleInsuranceSave = async () => {
+    if (!insuranceForm.name.trim()) {
+      setToast({ message: "Insurance name required", type: "error" });
+      return;
+    }
+    if (
+      !insuranceForm.annual_amount ||
+      parseFloat(insuranceForm.annual_amount) < 0
+    ) {
+      setToast({ message: "Valid annual amount required", type: "error" });
+      return;
+    }
+
+    setInsuranceSaving(true);
+    try {
+      const payload = {
+        ...insuranceForm,
+        annual_amount: parseFloat(insuranceForm.annual_amount),
+      };
+      if (editInsurance) {
+        await insuranceApi.updateInsurance(editInsurance._id, payload);
+        setToast({ message: "Insurance updated!", type: "success" });
+      } else {
+        await insuranceApi.createInsurance(payload);
+        setToast({ message: "Insurance created!", type: "success" });
+      }
+      const res = await insuranceApi.listInsurances();
+      setInsurances(Array.isArray(res.data) ? res.data : []);
+      setInsuranceModalOpen(false);
+    } catch (err) {
+      setToast({
+        message: err.response?.data?.error || "Failed to save",
+        type: "error",
+      });
+    } finally {
+      setInsuranceSaving(false);
+    }
+  };
+
+  const handleInsuranceDelete = async (ins) => {
+    if (!window.confirm(`Delete "${ins.name}"?`)) return;
+    try {
+      await insuranceApi.deleteInsurance(ins._id);
+      setToast({ message: "Insurance deleted", type: "success" });
+      const res = await insuranceApi.listInsurances();
+      setInsurances(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      setToast({
+        message: err.response?.data?.error || "Failed to delete",
+        type: "error",
+      });
+    }
+  };
+
   const handleEmailSave = async () => {
     if (!emailPassword) {
       setToast({ message: "Enter current password", type: "error" });
@@ -446,6 +537,16 @@ const ManagerSettings = () => {
     }));
   };
 
+  const togglePTMonth = (monthNum) => {
+    setCompany((c) => {
+      const current = c.pt_deduction_months || [];
+      const updated = current.includes(monthNum)
+        ? current.filter((m) => m !== monthNum)
+        : [...current, monthNum].sort((a, b) => a - b);
+      return { ...c, pt_deduction_months: updated };
+    });
+  };
+
   if (companyLoading) {
     return (
       <Layout>
@@ -464,7 +565,231 @@ const ManagerSettings = () => {
 
   return (
     <Layout>
-      <div style={{ fontFamily: FONT, maxWidth: 1100, margin: "0 auto" }}>
+      {/* Global Inter font + responsive styles */}
+      <style>{`
+        .settings-page * { font-family: ${FONT}; }
+        .settings-page {
+          font-family: ${FONT};
+          max-width: 1100px;
+          margin: 0 auto;
+          padding: 0 4px;
+        }
+        .settings-section-card {
+          padding: 22px;
+          margin-bottom: 20px;
+        }
+        .settings-section-head {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 18px;
+          padding-bottom: 14px;
+          border-bottom: 1px solid var(--border);
+        }
+        .settings-section-icon {
+          width: 42px;
+          height: 42px;
+          border-radius: 12px;
+          background: #eef2ff;
+          color: #4f46e5;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .settings-section-title {
+          font-weight: 700;
+          font-size: 15px;
+        }
+        .settings-section-sub {
+          font-size: 12.5px;
+          color: #6b7280;
+          margin-top: 2px;
+        }
+        .settings-info-banner {
+          padding: 12px 14px;
+          border-radius: 10px;
+          margin-bottom: 16px;
+        }
+        .settings-info-banner-text {
+          font-size: 12.5px;
+          line-height: 1.55;
+        }
+        .settings-minibox {
+          padding: 8px 10px;
+          background: white;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+          text-align: center;
+        }
+        .settings-minibox-label {
+          font-size: 9.5px;
+          font-weight: 700;
+          color: #94a3b8;
+          text-transform: uppercase;
+          letter-spacing: 0.4px;
+          margin-bottom: 3px;
+        }
+        .settings-minibox-value {
+          font-size: 13px;
+          font-weight: 800;
+          letter-spacing: -0.2px;
+        }
+        .settings-modal-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+          padding: 16px;
+        }
+        .settings-modal {
+          background: white;
+          border-radius: 14px;
+          padding: 24px;
+          max-width: 480px;
+          width: 100%;
+          max-height: 90vh;
+          overflow-y: auto;
+          font-family: ${FONT};
+        }
+        .settings-modal-title {
+          font-size: 16px;
+          font-weight: 700;
+          margin-bottom: 16px;
+        }
+        .settings-modal-body { padding-bottom: 4px; }
+        .settings-modal-footer {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          margin-top: 8px;
+        }
+
+        /* --- Mobile responsive --- */
+        @media (max-width: 767px) {
+          .settings-section-card { padding: 16px; margin-bottom: 14px; }
+          .settings-section-icon { width: 36px; height: 36px; border-radius: 10px; }
+          .settings-section-icon svg { width: 17px; height: 17px; }
+          .settings-section-title { font-size: 14px; }
+          .settings-section-sub { font-size: 11.5px; }
+          .settings-minibox { padding: 6px 6px; }
+          .settings-minibox-value { font-size: 12px; }
+          .settings-modal { padding: 18px; border-radius: 12px; }
+          .settings-modal-title { font-size: 15px; }
+          .settings-modal-footer { flex-direction: column-reverse; }
+          .settings-modal-footer .erp-btn { width: 100%; justify-content: center; }
+          .settings-page .erp-btn { justify-content: center; }
+        }
+
+        /* Mobile card list */
+        .settings-card-list { display: flex; flex-direction: column; gap: 10px; }
+        .settings-mini-card {
+          padding: 12px;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          background: #fff;
+        }
+        .settings-mini-card-head {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 8px;
+          margin-bottom: 8px;
+        }
+        .settings-mini-card-title {
+          font-weight: 700;
+          font-size: 13.5px;
+          color: #0f172a;
+        }
+        .settings-mini-card-sub {
+          font-size: 11.5px;
+          color: #94a3b8;
+          margin-top: 2px;
+        }
+        .settings-mini-card-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 6px 0;
+          font-size: 12.5px;
+          border-top: 1px dashed #f1f5f9;
+        }
+        .settings-mini-card-row:first-of-type { border-top: none; }
+        .settings-mini-card-label {
+          color: #64748b;
+          font-weight: 500;
+        }
+        .settings-mini-card-value {
+          font-weight: 700;
+          color: #0f172a;
+        }
+        .settings-mini-card-actions {
+          display: flex;
+          gap: 8px;
+          margin-top: 10px;
+        }
+        .settings-icon-btn {
+          border: none;
+          border-radius: 8px;
+          padding: 7px 10px;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        /* PT Month buttons */
+        .settings-month-grid {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .settings-month-btn {
+          padding: 8px 14px;
+          font-size: 12.5px;
+          min-width: 56px;
+          justify-content: center;
+          font-weight: 600;
+        }
+        @media (max-width: 480px) {
+          .settings-month-btn {
+            flex: 1 1 calc(33.333% - 8px);
+            min-width: 0;
+            padding: 8px 6px;
+            font-size: 12px;
+          }
+        }
+
+        /* Working days buttons */
+        .settings-day-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+        .settings-day-btn {
+          padding: 8px 16px;
+          font-size: 12.5px;
+          min-width: 60px;
+          justify-content: center;
+        }
+        @media (max-width: 480px) {
+          .settings-day-btn {
+            flex: 1 1 calc(25% - 8px);
+            min-width: 0;
+            padding: 8px 6px;
+            font-size: 12px;
+          }
+        }
+
+        /* Page title responsive */
+        @media (max-width: 767px) {
+          .settings-page .erp-page-title { font-size: 22px; }
+          .settings-page .erp-page-subtitle { font-size: 12.5px; }
+        }
+      `}</style>
+
+      <div className="settings-page">
         <div className="mb-4">
           <h1 className="erp-page-title">Settings</h1>
           <p className="erp-page-subtitle mb-0">
@@ -472,7 +797,7 @@ const ManagerSettings = () => {
           </p>
         </div>
 
-        {/* Company Settings */}
+        {/* COMPANY SETTINGS */}
         <SectionCard
           icon={Building2}
           title="Company Settings"
@@ -492,7 +817,7 @@ const ManagerSettings = () => {
 
             <div className="col-12">
               <label className="erp-label">Company Logo</label>
-              <div className="d-flex align-items-center gap-3">
+              <div className="d-flex align-items-center gap-3 flex-wrap">
                 {company.company_logo_url ? (
                   <div
                     style={{
@@ -525,7 +850,7 @@ const ManagerSettings = () => {
                     No Logo
                   </div>
                 )}
-                <div>
+                <div style={{ minWidth: 0, flex: 1 }}>
                   <input
                     ref={logoRef}
                     type="file"
@@ -538,14 +863,11 @@ const ManagerSettings = () => {
                     className="erp-btn erp-btn-outline"
                     onClick={() => logoRef.current?.click()}
                     disabled={uploadingLogo}
-                    style={{ fontFamily: FONT }}
                   >
                     <Upload size={14} />
                     {uploadingLogo ? "Uploading..." : "Upload Logo"}
                   </button>
-                  <div
-                    style={{ fontSize: 11, color: "#9ca3af", marginTop: 6 }}
-                  >
+                  <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 6 }}>
                     PNG, JPG, SVG · Max 2MB
                   </div>
                 </div>
@@ -666,7 +988,7 @@ const ManagerSettings = () => {
 
             <div className="col-12">
               <label className="erp-label">Working Days</label>
-              <div className="d-flex gap-2 flex-wrap">
+              <div className="settings-day-grid">
                 {WORKING_DAYS.map((d) => {
                   const active = company.working_days.includes(d);
                   return (
@@ -674,17 +996,13 @@ const ManagerSettings = () => {
                       key={d}
                       type="button"
                       onClick={() => toggleDay(d)}
-                      className="erp-btn"
+                      className="erp-btn settings-day-btn"
                       style={{
                         background: active ? "var(--primary)" : "white",
                         color: active ? "white" : "#6b7280",
                         border: `1px solid ${
                           active ? "var(--primary)" : "#e5e7eb"
                         }`,
-                        padding: "8px 16px",
-                        fontSize: 12.5,
-                        minWidth: 60,
-                        justifyContent: "center",
                       }}
                     >
                       {active && <CheckCircle2 size={12} />}
@@ -708,27 +1026,17 @@ const ManagerSettings = () => {
           </div>
         </SectionCard>
 
-        {/* Shift Management */}
+        {/* SHIFT MANAGEMENT */}
         <SectionCard
           icon={Clock}
           title="Shift Management"
           subtitle="Define work shifts and assign to employees"
         >
-          <div
-            style={{
-              padding: 14,
-              background: "#ecfeff",
-              borderRadius: 10,
-              marginBottom: 16,
-              border: "1px solid #a5f3fc",
-            }}
-          >
-            <div style={{ fontSize: 12.5, color: "#155e75", lineHeight: 1.55 }}>
-              <strong>How it works:</strong> Create shifts with start/end times.
-              Assign a shift to each employee. Attendance late/early
-              calculations use the employee's assigned shift.
-            </div>
-          </div>
+          <InfoBanner tone="cyan">
+            <strong>How it works:</strong> Create shifts with start/end times.
+            Assign a shift to each employee. Attendance late/early calculations
+            use the employee's assigned shift.
+          </InfoBanner>
 
           {shiftsLoading ? (
             <div
@@ -740,93 +1048,156 @@ const ManagerSettings = () => {
             </div>
           ) : (
             <>
-              <div className="table-responsive">
-                <table
-                  className="table align-middle"
-                  style={{ fontSize: 13, marginBottom: 0 }}
-                >
-                  <thead>
-                    <tr
-                      style={{
-                        background: "#f8fafc",
-                        fontSize: 11,
-                        color: "#64748b",
-                        textTransform: "uppercase",
-                        letterSpacing: 0.4,
-                      }}
-                    >
-                      <th style={{ width: 40 }}>#</th>
-                      <th>Shift Name</th>
-                      <th>Start Time</th>
-                      <th>End Time</th>
-                      <th>Grace (min)</th>
-                      <th style={{ width: 100 }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {shifts.map((s, idx) => (
-                      <tr key={s._id}>
-                        <td style={{ color: "#94a3b8", fontWeight: 600 }}>
-                          {idx + 1}
-                        </td>
-                        <td style={{ fontWeight: 600 }}>{s.name}</td>
-                        <td style={{ fontWeight: 600, color: "#0f172a" }}>
-                          {formatTime12(s.start_time)}
-                        </td>
-                        <td style={{ fontWeight: 600, color: "#0f172a" }}>
-                          {formatTime12(s.end_time)}
-                        </td>
-                        <td>{s.grace_period_minutes}</td>
-                        <td>
-                          <div className="d-flex gap-1">
-                            <button
-                              type="button"
-                              onClick={() => openEditShift(s)}
-                              title="Edit"
-                              style={{
-                                background: "#eef2ff",
-                                border: "none",
-                                color: "#4f46e5",
-                                borderRadius: 6,
-                                padding: "5px 8px",
-                                cursor: "pointer",
-                              }}
-                            >
-                              <Pencil size={12} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleShiftDelete(s)}
-                              title="Deactivate"
-                              style={{
-                                background: "#fee2e2",
-                                border: "none",
-                                color: "#dc2626",
-                                borderRadius: 6,
-                                padding: "5px 8px",
-                                cursor: "pointer",
-                              }}
-                            >
-                              <Trash2 size={12} />
-                            </button>
+              {/* Mobile cards */}
+              {isMobile ? (
+                <div className="settings-card-list">
+                  {shifts.map((s, idx) => (
+                    <div key={s._id} className="settings-mini-card">
+                      <div className="settings-mini-card-head">
+                        <div>
+                          <div className="settings-mini-card-title">
+                            {idx + 1}. {s.name}
                           </div>
-                        </td>
+                        </div>
+                        <div className="settings-mini-card-actions">
+                          <button
+                            type="button"
+                            className="settings-icon-btn"
+                            onClick={() => openEditShift(s)}
+                            style={{ background: "#eef2ff", color: "#4f46e5" }}
+                          >
+                            <Pencil size={12} /> Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="settings-icon-btn"
+                            onClick={() => handleShiftDelete(s)}
+                            style={{ background: "#fee2e2", color: "#dc2626" }}
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="settings-mini-card-row">
+                        <span className="settings-mini-card-label">Start</span>
+                        <span className="settings-mini-card-value">
+                          {formatTime12(s.start_time)}
+                        </span>
+                      </div>
+                      <div className="settings-mini-card-row">
+                        <span className="settings-mini-card-label">End</span>
+                        <span className="settings-mini-card-value">
+                          {formatTime12(s.end_time)}
+                        </span>
+                      </div>
+                      <div className="settings-mini-card-row">
+                        <span className="settings-mini-card-label">
+                          Grace Period
+                        </span>
+                        <span className="settings-mini-card-value">
+                          {s.grace_period_minutes} min
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  {shifts.length === 0 && (
+                    <div
+                      className="text-center"
+                      style={{ color: "#9ca3af", padding: 20, fontSize: 13 }}
+                    >
+                      No shifts yet. Click "Add Shift".
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="table-responsive">
+                  <table
+                    className="table align-middle"
+                    style={{ fontSize: 13, marginBottom: 0 }}
+                  >
+                    <thead>
+                      <tr
+                        style={{
+                          background: "#f8fafc",
+                          fontSize: 11,
+                          color: "#64748b",
+                          textTransform: "uppercase",
+                          letterSpacing: 0.4,
+                        }}
+                      >
+                        <th style={{ width: 40 }}>#</th>
+                        <th>Shift Name</th>
+                        <th>Start Time</th>
+                        <th>End Time</th>
+                        <th>Grace (min)</th>
+                        <th style={{ width: 100 }}>Actions</th>
                       </tr>
-                    ))}
-                    {shifts.length === 0 && (
-                      <tr>
-                        <td
-                          colSpan={6}
-                          className="text-center"
-                          style={{ color: "#9ca3af", padding: 20 }}
-                        >
-                          No shifts yet. Click "Add Shift".
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {shifts.map((s, idx) => (
+                        <tr key={s._id}>
+                          <td style={{ color: "#94a3b8", fontWeight: 600 }}>
+                            {idx + 1}
+                          </td>
+                          <td style={{ fontWeight: 600 }}>{s.name}</td>
+                          <td style={{ fontWeight: 600, color: "#0f172a" }}>
+                            {formatTime12(s.start_time)}
+                          </td>
+                          <td style={{ fontWeight: 600, color: "#0f172a" }}>
+                            {formatTime12(s.end_time)}
+                          </td>
+                          <td>{s.grace_period_minutes}</td>
+                          <td>
+                            <div className="d-flex gap-1">
+                              <button
+                                type="button"
+                                onClick={() => openEditShift(s)}
+                                title="Edit"
+                                style={{
+                                  background: "#eef2ff",
+                                  border: "none",
+                                  color: "#4f46e5",
+                                  borderRadius: 6,
+                                  padding: "5px 8px",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                <Pencil size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleShiftDelete(s)}
+                                title="Deactivate"
+                                style={{
+                                  background: "#fee2e2",
+                                  border: "none",
+                                  color: "#dc2626",
+                                  borderRadius: 6,
+                                  padding: "5px 8px",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {shifts.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan={6}
+                            className="text-center"
+                            style={{ color: "#9ca3af", padding: 20 }}
+                          >
+                            No shifts yet. Click "Add Shift".
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
               <div className="d-flex justify-content-end mt-3">
                 <button
@@ -841,28 +1212,247 @@ const ManagerSettings = () => {
           )}
         </SectionCard>
 
-        {/* Payroll Structure */}
+        {/* INSURANCE MANAGEMENT */}
+        <SectionCard
+          icon={Shield}
+          title="Insurance Management"
+          subtitle="Define insurance types and assign to employees"
+        >
+          <InfoBanner tone="green">
+            <strong>How it works:</strong> Create insurance types with annual
+            amount. Assign insurance to employee when adding. Monthly premium
+            auto-calculated (Annual ÷ 12) and deducted in payroll.
+          </InfoBanner>
+
+          {insurancesLoading ? (
+            <div
+              className="text-center py-4"
+              style={{ color: "#6b7280", fontSize: 13 }}
+            >
+              <div className="spinner-border spinner-border-sm me-2" />
+              Loading insurances...
+            </div>
+          ) : (
+            <>
+              {isMobile ? (
+                <div className="settings-card-list">
+                  {insurances.map((ins, idx) => (
+                    <div key={ins._id} className="settings-mini-card">
+                      <div className="settings-mini-card-head">
+                        <div style={{ minWidth: 0 }}>
+                          <div className="settings-mini-card-title">
+                            {idx + 1}. {ins.name}
+                          </div>
+                          {ins.description && (
+                            <div className="settings-mini-card-sub">
+                              {ins.description}
+                            </div>
+                          )}
+                        </div>
+                        <div className="settings-mini-card-actions">
+                          <button
+                            type="button"
+                            className="settings-icon-btn"
+                            onClick={() => openEditInsurance(ins)}
+                            style={{ background: "#eef2ff", color: "#4f46e5" }}
+                          >
+                            <Pencil size={12} /> Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="settings-icon-btn"
+                            onClick={() => handleInsuranceDelete(ins)}
+                            style={{ background: "#fee2e2", color: "#dc2626" }}
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="settings-mini-card-row">
+                        <span className="settings-mini-card-label">
+                          Annual
+                        </span>
+                        <span className="settings-mini-card-value">
+                          ₹
+                          {Number(ins.annual_amount || 0).toLocaleString(
+                            "en-IN"
+                          )}
+                        </span>
+                      </div>
+                      <div className="settings-mini-card-row">
+                        <span className="settings-mini-card-label">
+                          Monthly
+                        </span>
+                        <span
+                          className="settings-mini-card-value"
+                          style={{ color: "#059669" }}
+                        >
+                          ₹
+                          {(Number(ins.annual_amount || 0) / 12).toLocaleString(
+                            "en-IN",
+                            { maximumFractionDigits: 2 }
+                          )}
+                        </span>
+                      </div>
+                      <div className="settings-mini-card-row">
+                        <span className="settings-mini-card-label">
+                          Employees
+                        </span>
+                        <span className="erp-badge erp-badge-blue">
+                          {ins.employee_count || 0}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  {insurances.length === 0 && (
+                    <div
+                      className="text-center"
+                      style={{ color: "#9ca3af", padding: 20, fontSize: 13 }}
+                    >
+                      No insurances yet. Click "Add Insurance".
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="table-responsive">
+                  <table
+                    className="table align-middle"
+                    style={{ fontSize: 13, marginBottom: 0 }}
+                  >
+                    <thead>
+                      <tr
+                        style={{
+                          background: "#f8fafc",
+                          fontSize: 11,
+                          color: "#64748b",
+                          textTransform: "uppercase",
+                          letterSpacing: 0.4,
+                        }}
+                      >
+                        <th style={{ width: 40 }}>#</th>
+                        <th>Name</th>
+                        <th>Annual Amount</th>
+                        <th>Monthly</th>
+                        <th>Employees</th>
+                        <th style={{ width: 100 }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {insurances.map((ins, idx) => (
+                        <tr key={ins._id}>
+                          <td style={{ color: "#94a3b8", fontWeight: 600 }}>
+                            {idx + 1}
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 600 }}>{ins.name}</div>
+                            {ins.description && (
+                              <div
+                                style={{
+                                  fontSize: 11.5,
+                                  color: "#94a3b8",
+                                  marginTop: 2,
+                                }}
+                              >
+                                {ins.description}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ fontWeight: 600, color: "#0f172a" }}>
+                            ₹
+                            {Number(ins.annual_amount || 0).toLocaleString(
+                              "en-IN"
+                            )}
+                          </td>
+                          <td style={{ fontWeight: 600, color: "#059669" }}>
+                            ₹
+                            {(
+                              Number(ins.annual_amount || 0) / 12
+                            ).toLocaleString("en-IN", {
+                              maximumFractionDigits: 2,
+                            })}
+                          </td>
+                          <td>
+                            <span className="erp-badge erp-badge-blue">
+                              {ins.employee_count || 0}
+                            </span>
+                          </td>
+                          <td>
+                            <div className="d-flex gap-1">
+                              <button
+                                type="button"
+                                onClick={() => openEditInsurance(ins)}
+                                title="Edit"
+                                style={{
+                                  background: "#eef2ff",
+                                  border: "none",
+                                  color: "#4f46e5",
+                                  borderRadius: 6,
+                                  padding: "5px 8px",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                <Pencil size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleInsuranceDelete(ins)}
+                                title="Delete"
+                                style={{
+                                  background: "#fee2e2",
+                                  border: "none",
+                                  color: "#dc2626",
+                                  borderRadius: 6,
+                                  padding: "5px 8px",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {insurances.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan={6}
+                            className="text-center"
+                            style={{ color: "#9ca3af", padding: 20 }}
+                          >
+                            No insurances yet. Click "Add Insurance".
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <div className="d-flex justify-content-end mt-3">
+                <button
+                  type="button"
+                  className="erp-btn erp-btn-primary"
+                  onClick={openAddInsurance}
+                >
+                  <Plus size={14} /> Add Insurance
+                </button>
+              </div>
+            </>
+          )}
+        </SectionCard>
+
+        {/* PAYROLL STRUCTURE */}
         <SectionCard
           icon={Wallet}
           title="Payroll Structure"
           subtitle="Salary breakup applied to all employees"
         >
-          <div
-            style={{
-              padding: 14,
-              background: "#eef2ff",
-              borderRadius: 10,
-              marginBottom: 16,
-              border: "1px solid #c7d2fe",
-            }}
-          >
-            <div style={{ fontSize: 12.5, color: "#3730a3", lineHeight: 1.55 }}>
-              <strong>How it works:</strong> When you add an employee, enter
-              only their <strong>Total Monthly Salary</strong>. The system
-              auto-calculates Basic, HRA, Special Allowance, and Professional
-              Tax using these settings.
-            </div>
-          </div>
+          <InfoBanner tone="blue">
+            <strong>How it works:</strong> When you add an employee, enter only
+            their <strong>Total Monthly Salary</strong>. The system
+            auto-calculates Basic, HRA, Special Allowance, and Professional Tax
+            using these settings.
+          </InfoBanner>
 
           <div className="row g-3">
             <div className="col-6 col-md-3">
@@ -950,6 +1540,87 @@ const ManagerSettings = () => {
                 }
               />
             </div>
+
+            {/* PT DEDUCTION MONTHS */}
+            <div className="col-12">
+              <div
+                style={{
+                  marginTop: 8,
+                  padding: 14,
+                  background: "#f0f9ff",
+                  borderRadius: 10,
+                  border: "1px solid #bae6fd",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: "#0369a1",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                    marginBottom: 6,
+                  }}
+                >
+                  📅 PT Deduction Months
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "#0c4a6e",
+                    marginBottom: 12,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Professional Tax will be deducted{" "}
+                  <strong>only in these months</strong> (6-month cycle).
+                  Default: <strong>April</strong> and <strong>October</strong>.
+                </div>
+
+                <div className="settings-month-grid">
+                  {MONTHS_SHORT.map((label, idx) => {
+                    const monthNum = idx + 1;
+                    const active = (
+                      company.pt_deduction_months || []
+                    ).includes(monthNum);
+                    return (
+                      <button
+                        key={monthNum}
+                        type="button"
+                        onClick={() => togglePTMonth(monthNum)}
+                        className="erp-btn settings-month-btn"
+                        style={{
+                          background: active ? "#0369a1" : "white",
+                          color: active ? "white" : "#0369a1",
+                          border: `1px solid ${
+                            active ? "#0369a1" : "#bae6fd"
+                          }`,
+                        }}
+                      >
+                        {active && "✓ "}
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {(company.pt_deduction_months || []).length === 0 && (
+                  <div
+                    style={{
+                      marginTop: 10,
+                      padding: 8,
+                      background: "#fef2f2",
+                      borderRadius: 6,
+                      border: "1px solid #fecaca",
+                      fontSize: 11.5,
+                      color: "#991b1b",
+                    }}
+                  >
+                    ⚠ At least one month must be selected for PT deduction.
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           <div
@@ -981,7 +1652,10 @@ const ManagerSettings = () => {
                 <MiniBox label="HRA" value={`₹${previewHra.toFixed(0)}`} />
               </div>
               <div className="col-6 col-md-3">
-                <MiniBox label="Special" value={`₹${previewSpecial.toFixed(0)}`} />
+                <MiniBox
+                  label="Special"
+                  value={`₹${previewSpecial.toFixed(0)}`}
+                />
               </div>
               <div className="col-6 col-md-3">
                 <MiniBox label="Total" value={`₹${previewTotal}`} highlight />
@@ -1001,30 +1675,18 @@ const ManagerSettings = () => {
           </div>
         </SectionCard>
 
-        {/* ================================================
-            NEW: Forgot Logout Settings
-            ================================================ */}
+        {/* FORGOT LOGOUT SETTINGS */}
         <SectionCard
           icon={ShieldAlert}
           title="Forgot Logout Settings"
           subtitle="Controls for employees who forget to logout"
         >
-          <div
-            style={{
-              padding: 14,
-              background: "#fef3c7",
-              borderRadius: 10,
-              marginBottom: 16,
-              border: "1px solid #fde68a",
-            }}
-          >
-            <div style={{ fontSize: 12.5, color: "#92400e", lineHeight: 1.55 }}>
-              <strong>How it works:</strong> If an employee forgets to logout,
-              they're blocked from next check-in. Employee must request
-              approval from their manager. If it exceeds the max allowed times
-              per month, a fine is applied to their next payroll.
-            </div>
-          </div>
+          <InfoBanner tone="amber">
+            <strong>How it works:</strong> If an employee forgets to logout,
+            they're blocked from next check-in. Employee must request approval
+            from their manager. If it exceeds the max allowed times per month, a
+            fine is applied to their next payroll.
+          </InfoBanner>
 
           <div className="row g-3">
             <div className="col-12">
@@ -1051,7 +1713,14 @@ const ManagerSettings = () => {
                 />
                 Enable Forgot-Logout Block
               </label>
-              <small style={{ color: "#9ca3af", fontSize: 11, marginLeft: 28 }}>
+              <small
+                style={{
+                  color: "#9ca3af",
+                  fontSize: 11,
+                  marginLeft: 28,
+                  display: "block",
+                }}
+              >
                 When disabled, employees can check-in freely without manager
                 approval
               </small>
@@ -1071,7 +1740,6 @@ const ManagerSettings = () => {
                     forgot_logout_max_per_month: parseInt(e.target.value) || 0,
                   })
                 }
-                style={{ fontFamily: FONT }}
               />
               <small style={{ color: "#9ca3af", fontSize: 11 }}>
                 e.g., 3 = first 3 times are free
@@ -1092,7 +1760,6 @@ const ManagerSettings = () => {
                     forgot_logout_fine_amount: parseFloat(e.target.value) || 0,
                   })
                 }
-                style={{ fontFamily: FONT }}
               />
               <small style={{ color: "#9ca3af", fontSize: 11 }}>
                 Per additional occurrence
@@ -1112,29 +1779,19 @@ const ManagerSettings = () => {
           </div>
         </SectionCard>
 
-        {/* PT Slabs */}
+        {/* PT SLABS */}
         <SectionCard
           icon={Receipt}
           title="Professional Tax Slabs"
           subtitle="6-month gross income based tax slabs (applied once per 6-month period)"
         >
-          <div
-            style={{
-              padding: 14,
-              background: "#fef3c7",
-              borderRadius: 10,
-              marginBottom: 16,
-              border: "1px solid #fde68a",
-            }}
-          >
-            <div style={{ fontSize: 12.5, color: "#92400e", lineHeight: 1.55 }}>
-              <strong>How it works:</strong> The employee's 6-month gross
-              income (Monthly Salary × 6) is matched to one of these slabs.
-              The corresponding <strong>Tax Amount</strong> is deducted{" "}
-              <strong>once per 6-month period</strong> (Apr & Oct by default).
-              Leave <strong>Max Salary</strong> blank for the highest slab.
-            </div>
-          </div>
+          <InfoBanner tone="amber">
+            <strong>How it works:</strong> The employee's 6-month gross income
+            (Monthly Salary × 6) is matched to one of these slabs. The
+            corresponding <strong>Tax Amount</strong> is deducted{" "}
+            <strong>once per 6-month period</strong> (Apr & Oct by default).
+            Leave <strong>Max Salary</strong> blank for the highest slab.
+          </InfoBanner>
 
           {ptSlabsLoading ? (
             <div
@@ -1146,119 +1803,215 @@ const ManagerSettings = () => {
             </div>
           ) : (
             <>
-              <div className="table-responsive">
-                <table
-                  className="table align-middle"
-                  style={{ fontSize: 13, marginBottom: 0 }}
-                >
-                  <thead>
-                    <tr
-                      style={{
-                        background: "#f8fafc",
-                        fontSize: 11,
-                        color: "#64748b",
-                        textTransform: "uppercase",
-                        letterSpacing: 0.4,
-                      }}
-                    >
-                      <th style={{ width: 40 }}>#</th>
-                      <th>Min Salary (₹)</th>
-                      <th>Max Salary (₹)</th>
-                      <th>Tax Amount (₹)</th>
-                      <th style={{ width: 60 }}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ptSlabs.map((slab, idx) => (
-                      <tr key={idx}>
-                        <td style={{ color: "#94a3b8", fontWeight: 600 }}>
-                          {idx + 1}
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            className="erp-input"
-                            style={{ padding: "6px 10px", fontSize: 13 }}
-                            value={slab.min_salary ?? ""}
-                            onChange={(e) =>
-                              handlePtSlabChange(idx, "min_salary", e.target.value)
-                            }
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            className="erp-input"
-                            style={{ padding: "6px 10px", fontSize: 13 }}
-                            placeholder="Above (no limit)"
-                            value={
-                              slab.max_salary === null ||
-                              slab.max_salary === undefined
-                                ? ""
-                                : slab.max_salary
-                            }
-                            onChange={(e) =>
-                              handlePtSlabChange(idx, "max_salary", e.target.value)
-                            }
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            className="erp-input"
-                            style={{
-                              padding: "6px 10px",
-                              fontSize: 13,
-                              fontWeight: 700,
-                              color: "#4f46e5",
-                            }}
-                            value={slab.tax_amount ?? 0}
-                            onChange={(e) =>
-                              handlePtSlabChange(idx, "tax_amount", e.target.value)
-                            }
-                          />
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            onClick={() => handleRemovePtSlab(idx)}
-                            title="Remove slab"
-                            style={{
-                              background: "#fee2e2",
-                              border: "none",
-                              color: "#dc2626",
-                              borderRadius: 8,
-                              padding: "6px 10px",
-                              cursor: "pointer",
-                              display: "flex",
-                              alignItems: "center",
-                            }}
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                    {ptSlabs.length === 0 && (
-                      <tr>
-                        <td
-                          colSpan={5}
-                          className="text-center"
-                          style={{ color: "#9ca3af", padding: 20 }}
+              {isMobile ? (
+                <div className="settings-card-list">
+                  {ptSlabs.map((slab, idx) => (
+                    <div key={idx} className="settings-mini-card">
+                      <div className="settings-mini-card-head">
+                        <div className="settings-mini-card-title">
+                          Slab {idx + 1}
+                        </div>
+                        <button
+                          type="button"
+                          className="settings-icon-btn"
+                          onClick={() => handleRemovePtSlab(idx)}
+                          style={{ background: "#fee2e2", color: "#dc2626" }}
                         >
-                          No slabs configured. Click "Add Slab" below.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
 
-              <div className="d-flex justify-content-between mt-3" style={{ gap: 10 }}>
+                      <div className="mb-2">
+                        <label className="erp-label">Min Salary (₹)</label>
+                        <input
+                          type="number"
+                          className="erp-input"
+                          style={{ padding: "6px 10px", fontSize: 13 }}
+                          value={slab.min_salary ?? ""}
+                          onChange={(e) =>
+                            handlePtSlabChange(idx, "min_salary", e.target.value)
+                          }
+                        />
+                      </div>
+
+                      <div className="mb-2">
+                        <label className="erp-label">Max Salary (₹)</label>
+                        <input
+                          type="number"
+                          className="erp-input"
+                          style={{ padding: "6px 10px", fontSize: 13 }}
+                          placeholder="Above (no limit)"
+                          value={
+                            slab.max_salary === null ||
+                            slab.max_salary === undefined
+                              ? ""
+                              : slab.max_salary
+                          }
+                          onChange={(e) =>
+                            handlePtSlabChange(idx, "max_salary", e.target.value)
+                          }
+                        />
+                      </div>
+
+                      <div>
+                        <label className="erp-label">Tax Amount (₹)</label>
+                        <input
+                          type="number"
+                          className="erp-input"
+                          style={{
+                            padding: "6px 10px",
+                            fontSize: 13,
+                            fontWeight: 700,
+                            color: "#4f46e5",
+                          }}
+                          value={slab.tax_amount ?? 0}
+                          onChange={(e) =>
+                            handlePtSlabChange(idx, "tax_amount", e.target.value)
+                          }
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  {ptSlabs.length === 0 && (
+                    <div
+                      className="text-center"
+                      style={{ color: "#9ca3af", padding: 20, fontSize: 13 }}
+                    >
+                      No slabs configured. Click "Add Slab" below.
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="table-responsive">
+                  <table
+                    className="table align-middle"
+                    style={{ fontSize: 13, marginBottom: 0 }}
+                  >
+                    <thead>
+                      <tr
+                        style={{
+                          background: "#f8fafc",
+                          fontSize: 11,
+                          color: "#64748b",
+                          textTransform: "uppercase",
+                          letterSpacing: 0.4,
+                        }}
+                      >
+                        <th style={{ width: 40 }}>#</th>
+                        <th>Min Salary (₹)</th>
+                        <th>Max Salary (₹)</th>
+                        <th>Tax Amount (₹)</th>
+                        <th style={{ width: 60 }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ptSlabs.map((slab, idx) => (
+                        <tr key={idx}>
+                          <td style={{ color: "#94a3b8", fontWeight: 600 }}>
+                            {idx + 1}
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              className="erp-input"
+                              style={{ padding: "6px 10px", fontSize: 13 }}
+                              value={slab.min_salary ?? ""}
+                              onChange={(e) =>
+                                handlePtSlabChange(
+                                  idx,
+                                  "min_salary",
+                                  e.target.value
+                                )
+                              }
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              className="erp-input"
+                              style={{ padding: "6px 10px", fontSize: 13 }}
+                              placeholder="Above (no limit)"
+                              value={
+                                slab.max_salary === null ||
+                                slab.max_salary === undefined
+                                  ? ""
+                                  : slab.max_salary
+                              }
+                              onChange={(e) =>
+                                handlePtSlabChange(
+                                  idx,
+                                  "max_salary",
+                                  e.target.value
+                                )
+                              }
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              className="erp-input"
+                              style={{
+                                padding: "6px 10px",
+                                fontSize: 13,
+                                fontWeight: 700,
+                                color: "#4f46e5",
+                              }}
+                              value={slab.tax_amount ?? 0}
+                              onChange={(e) =>
+                                handlePtSlabChange(
+                                  idx,
+                                  "tax_amount",
+                                  e.target.value
+                                )
+                              }
+                            />
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              onClick={() => handleRemovePtSlab(idx)}
+                              title="Remove slab"
+                              style={{
+                                background: "#fee2e2",
+                                border: "none",
+                                color: "#dc2626",
+                                borderRadius: 8,
+                                padding: "6px 10px",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                              }}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {ptSlabs.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan={5}
+                            className="text-center"
+                            style={{ color: "#9ca3af", padding: 20 }}
+                          >
+                            No slabs configured. Click "Add Slab" below.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <div
+                className="d-flex justify-content-between mt-3 flex-wrap"
+                style={{ gap: 10 }}
+              >
                 <button
                   type="button"
                   className="erp-btn erp-btn-outline"
                   onClick={handleAddPtSlab}
+                  style={{ flex: isMobile ? "1 1 100%" : "0 0 auto" }}
                 >
                   <Plus size={14} /> Add Slab
                 </button>
@@ -1267,6 +2020,7 @@ const ManagerSettings = () => {
                   className="erp-btn erp-btn-primary"
                   onClick={handlePtSlabsSave}
                   disabled={ptSlabsSaving}
+                  style={{ flex: isMobile ? "1 1 100%" : "0 0 auto" }}
                 >
                   <Save size={14} />
                   {ptSlabsSaving ? "Saving..." : "Save PT Slabs"}
@@ -1276,7 +2030,7 @@ const ManagerSettings = () => {
           )}
         </SectionCard>
 
-        {/* Personal Account */}
+        {/* PERSONAL ACCOUNT */}
         <SectionCard
           icon={User}
           title="Personal Account"
@@ -1480,108 +2234,165 @@ const ManagerSettings = () => {
         )}
       </div>
 
-      {/* Shift Add/Edit Modal */}
-      {shiftModalOpen && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0,0,0,0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 9999,
-          }}
-          onClick={() => setShiftModalOpen(false)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: "white",
-              borderRadius: 14,
-              padding: 24,
-              maxWidth: 480,
-              width: "90%",
-              fontFamily: FONT,
-            }}
-          >
-            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>
-              {editShift ? "Edit Shift" : "Add Shift"}
-            </h3>
+      {/* SHIFT MODAL */}
+      <Modal
+        open={shiftModalOpen}
+        onClose={() => setShiftModalOpen(false)}
+        title={editShift ? "Edit Shift" : "Add Shift"}
+        footer={
+          <>
+            <button
+              className="erp-btn erp-btn-outline"
+              onClick={() => setShiftModalOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="erp-btn erp-btn-primary"
+              onClick={handleShiftSave}
+              disabled={shiftSaving}
+            >
+              {shiftSaving ? "Saving..." : editShift ? "Update" : "Create"}
+            </button>
+          </>
+        }
+      >
+        <div className="mb-3">
+          <label className="erp-label">Shift Name *</label>
+          <input
+            className="erp-input"
+            value={shiftForm.name}
+            onChange={(e) => setShiftForm({ ...shiftForm, name: e.target.value })}
+            placeholder="e.g., Morning Shift"
+          />
+        </div>
 
-            <div className="mb-3">
-              <label className="erp-label">Shift Name *</label>
-              <input
-                className="erp-input"
-                value={shiftForm.name}
-                onChange={(e) =>
-                  setShiftForm({ ...shiftForm, name: e.target.value })
-                }
-                placeholder="e.g., Morning Shift"
-              />
-            </div>
-
-            <div className="row g-3 mb-3">
-              <div className="col-6">
-                <label className="erp-label">Start Time *</label>
-                <input
-                  type="time"
-                  className="erp-input"
-                  value={shiftForm.start_time}
-                  onChange={(e) =>
-                    setShiftForm({ ...shiftForm, start_time: e.target.value })
-                  }
-                />
-              </div>
-              <div className="col-6">
-                <label className="erp-label">End Time *</label>
-                <input
-                  type="time"
-                  className="erp-input"
-                  value={shiftForm.end_time}
-                  onChange={(e) =>
-                    setShiftForm({ ...shiftForm, end_time: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="mb-3">
-              <label className="erp-label">Grace Period (Minutes)</label>
-              <input
-                type="number"
-                className="erp-input"
-                value={shiftForm.grace_period_minutes}
-                onChange={(e) =>
-                  setShiftForm({
-                    ...shiftForm,
-                    grace_period_minutes: parseInt(e.target.value) || 0,
-                  })
-                }
-              />
-            </div>
-
-            <div className="d-flex justify-content-end gap-2">
-              <button
-                className="erp-btn erp-btn-outline"
-                onClick={() => setShiftModalOpen(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="erp-btn erp-btn-primary"
-                onClick={handleShiftSave}
-                disabled={shiftSaving}
-              >
-                {shiftSaving ? "Saving..." : editShift ? "Update" : "Create"}
-              </button>
-            </div>
+        <div className="row g-3 mb-3">
+          <div className="col-6">
+            <label className="erp-label">Start Time *</label>
+            <input
+              type="time"
+              className="erp-input"
+              value={shiftForm.start_time}
+              onChange={(e) =>
+                setShiftForm({ ...shiftForm, start_time: e.target.value })
+              }
+            />
+          </div>
+          <div className="col-6">
+            <label className="erp-label">End Time *</label>
+            <input
+              type="time"
+              className="erp-input"
+              value={shiftForm.end_time}
+              onChange={(e) =>
+                setShiftForm({ ...shiftForm, end_time: e.target.value })
+              }
+            />
           </div>
         </div>
-      )}
+
+        <div className="mb-3">
+          <label className="erp-label">Grace Period (Minutes)</label>
+          <input
+            type="number"
+            className="erp-input"
+            value={shiftForm.grace_period_minutes}
+            onChange={(e) =>
+              setShiftForm({
+                ...shiftForm,
+                grace_period_minutes: parseInt(e.target.value) || 0,
+              })
+            }
+          />
+        </div>
+      </Modal>
+
+      {/* INSURANCE MODAL */}
+      <Modal
+        open={insuranceModalOpen}
+        onClose={() => setInsuranceModalOpen(false)}
+        title={editInsurance ? "Edit Insurance" : "Add Insurance"}
+        footer={
+          <>
+            <button
+              className="erp-btn erp-btn-outline"
+              onClick={() => setInsuranceModalOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="erp-btn erp-btn-primary"
+              onClick={handleInsuranceSave}
+              disabled={insuranceSaving}
+            >
+              {insuranceSaving
+                ? "Saving..."
+                : editInsurance
+                ? "Update"
+                : "Create"}
+            </button>
+          </>
+        }
+      >
+        <div className="mb-3">
+          <label className="erp-label">Insurance Name *</label>
+          <input
+            className="erp-input"
+            value={insuranceForm.name}
+            onChange={(e) =>
+              setInsuranceForm({ ...insuranceForm, name: e.target.value })
+            }
+            placeholder="e.g., Health Insurance"
+          />
+        </div>
+
+        <div className="mb-3">
+          <label className="erp-label">Annual Amount (₹) *</label>
+          <input
+            type="number"
+            className="erp-input"
+            value={insuranceForm.annual_amount}
+            onChange={(e) =>
+              setInsuranceForm({
+                ...insuranceForm,
+                annual_amount: e.target.value,
+              })
+            }
+            placeholder="e.g., 12000"
+          />
+          {insuranceForm.annual_amount > 0 && (
+            <small
+              style={{
+                color: "#059669",
+                fontSize: 11,
+                display: "block",
+                marginTop: 4,
+              }}
+            >
+              Monthly deduction: ₹
+              {(parseFloat(insuranceForm.annual_amount) / 12).toFixed(2)}
+            </small>
+          )}
+        </div>
+
+        <div className="mb-3">
+          <label className="erp-label">Description (Optional)</label>
+          <textarea
+            className="erp-input"
+            rows={2}
+            value={insuranceForm.description}
+            onChange={(e) =>
+              setInsuranceForm({
+                ...insuranceForm,
+                description: e.target.value,
+              })
+            }
+            placeholder="Short description"
+            style={{ resize: "vertical" }}
+          />
+        </div>
+      </Modal>
     </Layout>
   );
 };

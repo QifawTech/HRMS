@@ -1,9 +1,16 @@
 from flask import Blueprint, request, jsonify
 from app.middleware.auth_middleware import token_required, role_required
 from app.services import report_service as svc
+from datetime import datetime
 
+
+# ✅ STEP 1: Blueprint FIRST (top la)
 report_bp = Blueprint("reports", __name__)
 
+
+# ============================================
+# EXISTING ROUTES
+# ============================================
 
 @report_bp.route("/summary", methods=["GET"])
 @token_required
@@ -59,6 +66,7 @@ def leaves_report():
 def departments_report():
     return jsonify(svc.department_report()), 200
 
+
 @report_bp.route("/employee/<emp_id>/full", methods=["GET"])
 @token_required
 @role_required("MANAGER")
@@ -67,3 +75,28 @@ def employee_full_report(emp_id):
     if not data:
         return jsonify({"error": "Employee not found"}), 404
     return jsonify(data), 200
+
+
+# ============================================
+# ✅ NEW: MONTHLY SUMMARY (bottom la — blueprint ku apuram)
+# ============================================
+
+@report_bp.route("/monthly-summary", methods=["GET"])
+@token_required
+@role_required("MANAGER")
+def monthly_summary():
+    """
+    GET /api/reports/monthly-summary?year=2026&month=10
+    """
+    try:
+        year = int(request.args.get("year", datetime.utcnow().year))
+        month = int(request.args.get("month", datetime.utcnow().month))
+
+        from app.services.report_service import get_monthly_working_summary
+        data = get_monthly_working_summary(year, month)
+        return jsonify(data), 200
+
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 422
+    except Exception as e:
+        return jsonify({"error": f"Failed: {str(e)}"}), 500

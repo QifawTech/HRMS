@@ -17,7 +17,7 @@ import Toast from "../../components/common/Toast";
 import * as api from "../../api/leaveApi";
 import { formatDate, formatDateTime } from "../../utils/dateUtils";
 
-const FONT = "'Calibri', 'Segoe UI', -apple-system, sans-serif";
+const FONT = "'Inter', 'Segoe UI', -apple-system, sans-serif";
 
 const statusBadge = (status) => {
   switch (status) {
@@ -136,7 +136,79 @@ const LeaveManagement = () => {
 
   return (
     <Layout>
-      <div style={{ fontFamily: FONT }}>
+      <style>{`
+        .lm-page * { font-family: ${FONT}; }
+        .lm-page { font-family: ${FONT}; }
+
+        .lm-mobile-card {
+          padding: 14px;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          background: #fff;
+          margin-bottom: 10px;
+          font-family: ${FONT};
+        }
+        .lm-mobile-head {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 10px;
+          margin-bottom: 10px;
+        }
+        .lm-mobile-name {
+          font-weight: 700;
+          font-size: 14.5px;
+          color: #0f172a;
+        }
+        .lm-mobile-code {
+          font-size: 11.5px;
+          color: #6b7280;
+          margin-top: 2px;
+        }
+        .lm-mobile-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px 12px;
+          font-size: 12.5px;
+          padding-top: 10px;
+          border-top: 1px dashed #f1f5f9;
+        }
+        .lm-field-label {
+          font-size: 10px;
+          color: #94a3b8;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
+        }
+        .lm-field-value {
+          font-weight: 600;
+          margin-top: 2px;
+          color: #0f172a;
+        }
+        .lm-mobile-actions {
+          display: flex;
+          gap: 8px;
+          margin-top: 12px;
+          padding-top: 12px;
+          border-top: 1px dashed #f1f5f9;
+        }
+        .lm-mobile-actions .erp-btn {
+          flex: 1;
+          justify-content: center;
+          font-family: ${FONT};
+          font-size: 13px;
+          padding: 9px;
+        }
+
+        @media (max-width: 767px) {
+          .lm-page .erp-page-title { font-size: 22px; }
+          .lm-page .erp-page-subtitle { font-size: 12.5px; }
+          .lm-page .erp-stat-value { font-size: 20px; }
+          .lm-page .erp-stat-label { font-size: 10.5px; }
+        }
+      `}</style>
+
+      <div className="lm-page">
         <div className="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
           <div>
             <h1 className="erp-page-title">Leave Management</h1>
@@ -224,7 +296,7 @@ const LeaveManagement = () => {
           </div>
         </div>
 
-        {/* Table */}
+        {/* List */}
         {loading ? (
           <div
             className="erp-card text-center py-5"
@@ -248,148 +320,290 @@ const LeaveManagement = () => {
             </p>
           </div>
         ) : (
-          <div className="erp-card" style={{ padding: 0, overflow: "hidden" }}>
-            <div className="table-responsive">
-              <table className="erp-table">
-                <thead>
-                  <tr>
-                    <th>Employee</th>
-                    <th>Type</th>
-                    <th>Dates</th>
-                    <th>Days</th>
-                    <th>Reason</th>
-                    <th>Status / Reviewed By</th>
-                    <th style={{ width: 100 }}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {leaves.map((l) => (
-                    <tr key={l._id}>
-                      <td>
-                        <div style={{ fontWeight: 600 }}>
-                          {l.employee_name}
-                        </div>
-                        <div style={{ fontSize: 12, color: "#6b7280" }}>
-                          {l.employee_code}
-                        </div>
-                      </td>
-                      <td>
-                        <strong>{l.leave_type_name}</strong>
+          <>
+            {/* Desktop Table */}
+            <div
+              className="erp-card d-none d-lg-block"
+              style={{ padding: 0, overflow: "hidden" }}
+            >
+              <div className="table-responsive">
+                <table className="erp-table">
+                  <thead>
+                    <tr>
+                      <th>Employee</th>
+                      <th>Type</th>
+                      <th>Dates</th>
+                      <th>Days</th>
+                      <th>Reason</th>
+                      <th>Status / Reviewed By</th>
+                      <th style={{ width: 100 }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaves.map((l) => (
+                      <tr key={l._id}>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>
+                            {l.employee_name}
+                          </div>
+                          <div style={{ fontSize: 12, color: "#6b7280" }}>
+                            {l.employee_code}
+                          </div>
+                        </td>
+                        <td>
+                          <strong>{l.leave_type_name}</strong>
+                          {l.is_same_day && (
+                            <div
+                              style={{
+                                fontSize: 10,
+                                marginTop: 4,
+                                background: "#fef3c7",
+                                color: "#92400e",
+                                padding: "1px 6px",
+                                borderRadius: 4,
+                                display: "inline-block",
+                                fontWeight: 700,
+                              }}
+                            >
+                              SAME DAY
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ fontSize: 12.5 }}>
+                          {formatDate(l.start_date)}
+                          <br />
+                          <span style={{ color: "#9ca3af" }}>to</span>{" "}
+                          {formatDate(l.end_date)}
+                        </td>
+                        <td>
+                          <span className="erp-badge erp-badge-blue">
+                            {l.total_days}d
+                          </span>
+                        </td>
+                        <td
+                          style={{
+                            fontSize: 12.5,
+                            color: "#6b7280",
+                            maxWidth: 200,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {l.reason || "—"}
+                        </td>
+                        <td>
+                          {statusBadge(l.status)}
+                          {l.status !== "Pending" &&
+                            l.status !== "Cancelled" && (
+                              <>
+                                {l.reviewer_name && (
+                                  <div
+                                    style={{
+                                      fontSize: 11,
+                                      color: "#6b7280",
+                                      marginTop: 4,
+                                    }}
+                                  >
+                                    by <strong>{l.reviewer_name}</strong>
+                                  </div>
+                                )}
+                                {l.reviewed_at && (
+                                  <div
+                                    style={{
+                                      fontSize: 10.5,
+                                      color: "#9ca3af",
+                                    }}
+                                  >
+                                    {formatDateTime(l.reviewed_at)}
+                                  </div>
+                                )}
+                                {l.manager_comment && (
+                                  <div
+                                    style={{
+                                      fontSize: 11,
+                                      color: "#6b7280",
+                                      marginTop: 4,
+                                      fontStyle: "italic",
+                                      maxWidth: 200,
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    "{l.manager_comment}"
+                                  </div>
+                                )}
+                              </>
+                            )}
+                        </td>
+                        <td>
+                          {l.status === "Pending" ? (
+                            <div className="d-flex gap-1">
+                              <button
+                                className="erp-icon-btn"
+                                onClick={() => openReview(l, "Approved")}
+                                title="Approve"
+                                style={{ color: "#059669" }}
+                              >
+                                <Check size={14} />
+                              </button>
+                              <button
+                                className="erp-icon-btn erp-icon-btn-danger"
+                                onClick={() => openReview(l, "Rejected")}
+                                title="Reject"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: 11, color: "#9ca3af" }}>
+                              —
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Mobile / Tablet Cards */}
+            <div className="d-lg-none">
+              {leaves.map((l) => (
+                <div key={l._id} className="lm-mobile-card">
+                  <div className="lm-mobile-head">
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div className="lm-mobile-name">{l.employee_name}</div>
+                      <div className="lm-mobile-code">{l.employee_code}</div>
+                    </div>
+                    <div style={{ flexShrink: 0 }}>
+                      {statusBadge(l.status)}
+                    </div>
+                  </div>
+
+                  <div className="lm-mobile-grid">
+                    <div>
+                      <div className="lm-field-label">Leave Type</div>
+                      <div className="lm-field-value">
+                        {l.leave_type_name || "—"}
                         {l.is_same_day && (
-                          <div
+                          <span
                             style={{
-                              fontSize: 10,
-                              marginTop: 4,
+                              marginLeft: 6,
+                              fontSize: 9.5,
                               background: "#fef3c7",
                               color: "#92400e",
-                              padding: "1px 6px",
+                              padding: "1px 5px",
                               borderRadius: 4,
-                              display: "inline-block",
                               fontWeight: 700,
                             }}
                           >
                             SAME DAY
-                          </div>
-                        )}
-                      </td>
-                      <td style={{ fontSize: 12.5 }}>
-                        {formatDate(l.start_date)}
-                        <br />
-                        <span style={{ color: "#9ca3af" }}>to</span>{" "}
-                        {formatDate(l.end_date)}
-                      </td>
-                      <td>
-                        <span className="erp-badge erp-badge-blue">
-                          {l.total_days}d
-                        </span>
-                      </td>
-                      <td
-                        style={{
-                          fontSize: 12.5,
-                          color: "#6b7280",
-                          maxWidth: 200,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {l.reason || "—"}
-                      </td>
-                      <td>
-                        {statusBadge(l.status)}
-                        {l.status !== "Pending" && l.status !== "Cancelled" && (
-                          <>
-                            {l.reviewer_name && (
-                              <div
-                                style={{
-                                  fontSize: 11,
-                                  color: "#6b7280",
-                                  marginTop: 4,
-                                }}
-                              >
-                                by <strong>{l.reviewer_name}</strong>
-                              </div>
-                            )}
-                            {l.reviewed_at && (
-                              <div
-                                style={{
-                                  fontSize: 10.5,
-                                  color: "#9ca3af",
-                                }}
-                              >
-                                {formatDateTime(l.reviewed_at)}
-                              </div>
-                            )}
-                            {l.manager_comment && (
-                              <div
-                                style={{
-                                  fontSize: 11,
-                                  color: "#6b7280",
-                                  marginTop: 4,
-                                  fontStyle: "italic",
-                                  maxWidth: 200,
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                "{l.manager_comment}"
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </td>
-                      <td>
-                        {l.status === "Pending" ? (
-                          <div className="d-flex gap-1">
-                            <button
-                              className="erp-icon-btn"
-                              onClick={() => openReview(l, "Approved")}
-                              title="Approve"
-                              style={{ color: "#059669" }}
-                            >
-                              <Check size={14} />
-                            </button>
-                            <button
-                              className="erp-icon-btn erp-icon-btn-danger"
-                              onClick={() => openReview(l, "Rejected")}
-                              title="Reject"
-                            >
-                              <X size={14} />
-                            </button>
-                          </div>
-                        ) : (
-                          <span style={{ fontSize: 11, color: "#9ca3af" }}>
-                            —
                           </span>
                         )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="lm-field-label">Total Days</div>
+                      <div className="lm-field-value">{l.total_days}d</div>
+                    </div>
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <div className="lm-field-label">Dates</div>
+                      <div className="lm-field-value">
+                        {formatDate(l.start_date)}{" "}
+                        <span style={{ color: "#9ca3af", fontWeight: 400 }}>
+                          to
+                        </span>{" "}
+                        {formatDate(l.end_date)}
+                      </div>
+                    </div>
+
+                    {l.reason && (
+                      <div style={{ gridColumn: "1 / -1" }}>
+                        <div className="lm-field-label">Reason</div>
+                        <div
+                          className="lm-field-value"
+                          style={{
+                            fontWeight: 500,
+                            color: "#475569",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {l.reason}
+                        </div>
+                      </div>
+                    )}
+
+                    {l.status !== "Pending" &&
+                      l.status !== "Cancelled" &&
+                      l.reviewer_name && (
+                        <div style={{ gridColumn: "1 / -1" }}>
+                          <div className="lm-field-label">Reviewed By</div>
+                          <div className="lm-field-value">
+                            {l.reviewer_name}
+                            {l.reviewed_at && (
+                              <span
+                                style={{
+                                  fontSize: 11,
+                                  color: "#94a3b8",
+                                  marginLeft: 6,
+                                  fontWeight: 500,
+                                }}
+                              >
+                                · {formatDateTime(l.reviewed_at)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                    {l.manager_comment && (
+                      <div style={{ gridColumn: "1 / -1" }}>
+                        <div className="lm-field-label">Manager Comment</div>
+                        <div
+                          className="lm-field-value"
+                          style={{
+                            fontWeight: 500,
+                            fontStyle: "italic",
+                            color: "#475569",
+                          }}
+                        >
+                          "{l.manager_comment}"
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {l.status === "Pending" && (
+                    <div className="lm-mobile-actions">
+                      <button
+                        className="erp-btn"
+                        onClick={() => openReview(l, "Approved")}
+                        style={{
+                          background: "#dcfce7",
+                          color: "#166534",
+                          border: "1px solid #86efac",
+                        }}
+                      >
+                        <Check size={14} /> Approve
+                      </button>
+                      <button
+                        className="erp-btn erp-btn-danger"
+                        onClick={() => openReview(l, "Rejected")}
+                      >
+                        <X size={14} /> Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
-          </div>
+          </>
         )}
 
         {/* Review Modal */}
