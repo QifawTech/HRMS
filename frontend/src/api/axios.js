@@ -1,7 +1,8 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "/api",
+  // Intha edathula thaan AWS IP add pannirukkom
+  baseURL: "http://13.127.26.179:5000/api", 
   timeout: 10000,
 });
 
