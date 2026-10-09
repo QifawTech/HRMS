@@ -248,7 +248,7 @@ const ManagerSettings = () => {
   const getLogoUrl = (url) => {
     if (!url) return null;
     if (url.startsWith("http")) return url;
-    return `http://localhost:5000${url}`;
+    return `${url}`;
   };
 
   const handleCompanySave = async () => {

@@ -38,7 +38,7 @@ const formatTime = (iso) => {
 const getProfilePicUrl = (url) => {
   if (!url) return null;
   if (url.startsWith("http")) return url;
-  return `http://localhost:5000${url}`;
+  return `${url}`;
 };
 
 const formatHours = (h) => {

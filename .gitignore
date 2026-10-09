@@ -1,12 +1,14 @@
 # Environment
 .env
 .env.local
+.env.*.local
 *.env
 
 # Python
 venv/
+.venv/
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
 *.pyd
 .Python
@@ -18,7 +20,10 @@ node_modules/
 dist/
 build/
 npm-debug.log*
+npm-debug.log
+yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
 # IDE
 .vscode/
@@ -29,6 +34,7 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Project specific
 backups/
@@ -39,3 +45,14 @@ uploads/
 # Database dumps
 *.bson
 *.json.gz
+
+# Python test / coverage
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak

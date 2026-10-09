@@ -252,11 +252,20 @@ const EmployeeProfile = () => {
   const initials = `${profile.first_name?.[0] || ""}${profile.last_name?.[0] || ""}`;
   const fullName = `${profile.first_name} ${profile.last_name}`;
 
+<<<<<<< HEAD
   const getImageUrl = (url) => {
     if (!url) return null;
     if (url.startsWith("http")) return url;
     return `http://localhost:5000${url}`;
   };
+=======
+// Build full URL for profile picture
+const getImageUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith("http")) return url;
+  return `${url}`;
+};
+>>>>>>> b7852cbfcf247cdbe8e106939c74a6d311ae458f
 
   const profilePicUrl = getImageUrl(profile.profile_picture_url);
   const hasPicture = !!profilePicUrl;
