@@ -7,7 +7,9 @@ import os
 def create_app():
     """Flask application factory."""
     app = Flask(__name__)
-    CORS(app, origins=[Config.CORS_ORIGIN], supports_credentials=True)
+    
+    # CORS API calls-a veliya irunthu allow panna puthu code
+    CORS(app, resources={r"/*": {"origins": "*"}})
 
     app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
 
@@ -47,7 +49,6 @@ def create_app():
     from app.routes.settings_routes import settings_bp
     from app.routes.payroll_routes import payroll_bp
     from app.routes.shift_routes import shift_bp
-    from app.routes.forgot_logout_routes import forgot_logout_bp
 
     # ============================================
     # Register blueprints
