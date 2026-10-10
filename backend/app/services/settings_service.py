@@ -4,6 +4,7 @@ from bson.errors import InvalidId
 from app.db import company_settings, employees, users
 import bcrypt
 import re
+from app.utils.time_utils import now_ist
 
 
 def _oid(s):
@@ -14,7 +15,7 @@ def _oid(s):
 
 
 def _now():
-    return datetime.utcnow()
+    return now_ist()
 
 
 DEFAULTS = {
@@ -35,19 +36,20 @@ DEFAULTS = {
     "esi_percent": 0.75,
     "pt_amount": 200,
     "tds_percent": 0,
-    # NEW: PT deduction months (Apr & Oct by default)
     "pt_deduction_months": [4, 10],
-    # Forgot logout settings
-    "forgot_logout_enabled": True,
-    "forgot_logout_max_per_month": 3,
-    "forgot_logout_fine_amount": 200,
+    "notice_period_days": 15,   # ✅ NEW
 }
 
 
 def get_settings():
     doc = company_settings().find_one({"_id": "company_config"})
     if not doc:
-        doc = {"_id": "company_config", **DEFAULTS, "updated_by": None, "updated_at": _now()}
+        doc = {
+            "_id": "company_config",
+            **DEFAULTS,
+            "updated_by": None,
+            "updated_at": _now(),
+        }
         company_settings().insert_one(doc)
 
     return {
@@ -68,12 +70,9 @@ def get_settings():
         "esi_percent": doc.get("esi_percent", 0.75),
         "pt_amount": doc.get("pt_amount", 200),
         "tds_percent": doc.get("tds_percent", 0),
-        # NEW: PT deduction months
         "pt_deduction_months": doc.get("pt_deduction_months", [4, 10]),
-        # Forgot logout
-        "forgot_logout_enabled": doc.get("forgot_logout_enabled", True),
-        "forgot_logout_max_per_month": doc.get("forgot_logout_max_per_month", 3),
-        "forgot_logout_fine_amount": doc.get("forgot_logout_fine_amount", 200),
+        # ✅ FIX: Read from DB instead of hardcoded 15
+        "notice_period_days": doc.get("notice_period_days", 15),
     }
 
 
@@ -87,8 +86,12 @@ def update_settings(data, manager_user_id):
         update_fields["company_name"] = cn
 
     for field in [
-        "company_address", "company_tagline", "company_footer",
-        "company_logo_url", "signatory_name", "signatory_title",
+        "company_address",
+        "company_tagline",
+        "company_footer",
+        "company_logo_url",
+        "signatory_name",
+        "signatory_title",
     ]:
         if field in data:
             update_fields[field] = (data[field] or "").strip()
@@ -139,7 +142,7 @@ def update_settings(data, manager_user_id):
             except (ValueError, TypeError):
                 raise ValueError(f"Invalid value for {field}")
 
-    # NEW: PT deduction months
+    # PT deduction months
     if "pt_deduction_months" in data:
         months = data["pt_deduction_months"]
         if not isinstance(months, list):
@@ -157,27 +160,15 @@ def update_settings(data, manager_user_id):
             raise ValueError("At least one PT deduction month is required")
         update_fields["pt_deduction_months"] = sorted(set(cleaned))
 
-    # Forgot logout settings
-    if "forgot_logout_enabled" in data:
-        update_fields["forgot_logout_enabled"] = bool(data["forgot_logout_enabled"])
-
-    if "forgot_logout_max_per_month" in data:
+    # ✅ NEW: Notice Period (Days) — 1 to 180
+    if "notice_period_days" in data:
         try:
-            v = int(data["forgot_logout_max_per_month"])
-            if v < 0 or v > 10:
-                raise ValueError("Max per month must be 0-10")
-            update_fields["forgot_logout_max_per_month"] = v
+            v = int(data["notice_period_days"])
+            if v < 1 or v > 180:
+                raise ValueError("Notice period must be between 1 and 180 days")
+            update_fields["notice_period_days"] = v
         except (ValueError, TypeError):
-            raise ValueError("Invalid max forgot-logout value")
-
-    if "forgot_logout_fine_amount" in data:
-        try:
-            v = float(data["forgot_logout_fine_amount"])
-            if v < 0 or v > 100000:
-                raise ValueError("Fine amount must be 0-100000")
-            update_fields["forgot_logout_fine_amount"] = v
-        except (ValueError, TypeError):
-            raise ValueError("Invalid fine amount")
+            raise ValueError("Invalid notice period value")
 
     mgr_oid = _oid(manager_user_id)
     mgr_emp = employees().find_one({"user_id": mgr_oid}) if mgr_oid else None
@@ -196,7 +187,8 @@ def _valid_time(t):
         return False
     try:
         h, m = t.split(":")
-        h = int(h); m = int(m)
+        h = int(h)
+        m = int(m)
         return 0 <= h <= 23 and 0 <= m <= 59
     except Exception:
         return False

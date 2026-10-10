@@ -20,8 +20,9 @@ import ManagerReports from "./pages/manager/Reports";
 import ManagerSettings from "./pages/manager/Settings";
 import ManagerTasks from "./pages/manager/Tasks";
 import ManagerResignations from "./pages/manager/Resignations";
-import ManagerForgotLogout from "./pages/manager/ForgotLogoutRequests";
 import ManagerHolidays from "./pages/manager/Holidays";   // ← lowercase ✅
+import ManagerProjects from "./pages/manager/Projects";
+import ManagerComplaints from "./pages/manager/Complaints";
 
 // ============================================
 // Employee Pages
@@ -37,7 +38,9 @@ import EmployeeNotifications from "./pages/employee/Notifications";
 import EmployeeSettings from "./pages/employee/Settings";
 import EmployeeTasks from "./pages/employee/Tasks";
 import EmployeeResignation from "./pages/employee/Resignation";
-
+import EmployeeHolidays from "./pages/employee/Holidays";
+import EmployeeProjects from "./pages/employee/Projects";
+import EmployeeComplaints from "./pages/employee/Complaints";
 // ============================================
 // Route Wrappers
 // ============================================
@@ -77,10 +80,12 @@ function App() {
       <Route path="/manager/settings" element={withManager(ManagerSettings)} />
       <Route path="/manager/tasks" element={withManager(ManagerTasks)} />
       <Route path="/manager/resignations" element={withManager(ManagerResignations)} />
+      <Route path="/manager/complaints" element={withManager(ManagerComplaints)} />
       
       {/* ✅ FIXED — with wrapper */}
-      <Route path="/manager/forgot-logout" element={withManager(ManagerForgotLogout)} />
+  
       <Route path="/manager/holidays" element={withManager(ManagerHolidays)} />
+      <Route path="/manager/projects" element={withManager(ManagerProjects)} />
 
       {/* ============================================
           Employee Routes
@@ -96,6 +101,9 @@ function App() {
       <Route path="/employee/settings" element={withEmployee(EmployeeSettings)} />
       <Route path="/employee/tasks" element={withEmployee(EmployeeTasks)} />
       <Route path="/employee/resignation" element={withEmployee(EmployeeResignation)} />
+      <Route path="/employee/holidays" element={withEmployee(EmployeeHolidays)} />
+      <Route path="/employee/projects" element={withEmployee(EmployeeProjects)} />
+      <Route path="/employee/complaints" element={withEmployee(EmployeeComplaints)} />
 
       {/* Defaults */}
       <Route path="/" element={<Navigate to="/login" replace />} />

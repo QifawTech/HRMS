@@ -16,7 +16,6 @@ import {
   Receipt,
   Clock,
   Pencil,
-  ShieldAlert,
   Shield,
 } from "lucide-react";
 import Layout from "../../components/layout/Layout";
@@ -34,7 +33,6 @@ const MONTHS_SHORT = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
-// Format "06:00" → "06:00 AM", "14:00" → "02:00 PM"
 const formatTime12 = (t) => {
   if (!t) return "—";
   const [h, m] = t.split(":").map(Number);
@@ -43,7 +41,6 @@ const formatTime12 = (t) => {
   return `${String(h12).padStart(2, "0")}:${String(m).padStart(2, "0")} ${ampm}`;
 };
 
-// Simple mobile detection hook
 const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" ? window.innerWidth < 768 : false
@@ -138,9 +135,7 @@ const ManagerSettings = () => {
     esi_percent: 0.75,
     tds_percent: 0,
     pt_deduction_months: [4, 10],
-    forgot_logout_enabled: true,
-    forgot_logout_max_per_month: 3,
-    forgot_logout_fine_amount: 200,
+    notice_period_days: 15, 
   });
   const [companyLoading, setCompanyLoading] = useState(true);
   const [companySaving, setCompanySaving] = useState(false);
@@ -565,7 +560,6 @@ const ManagerSettings = () => {
 
   return (
     <Layout>
-      {/* Global Inter font + responsive styles */}
       <style>{`
         .settings-page * { font-family: ${FONT}; }
         .settings-page {
@@ -668,7 +662,6 @@ const ManagerSettings = () => {
           margin-top: 8px;
         }
 
-        /* --- Mobile responsive --- */
         @media (max-width: 767px) {
           .settings-section-card { padding: 16px; margin-bottom: 14px; }
           .settings-section-icon { width: 36px; height: 36px; border-radius: 10px; }
@@ -684,7 +677,6 @@ const ManagerSettings = () => {
           .settings-page .erp-btn { justify-content: center; }
         }
 
-        /* Mobile card list */
         .settings-card-list { display: flex; flex-direction: column; gap: 10px; }
         .settings-mini-card {
           padding: 12px;
@@ -743,7 +735,6 @@ const ManagerSettings = () => {
           font-weight: 600;
         }
 
-        /* PT Month buttons */
         .settings-month-grid {
           display: flex;
           flex-wrap: wrap;
@@ -765,7 +756,6 @@ const ManagerSettings = () => {
           }
         }
 
-        /* Working days buttons */
         .settings-day-grid { display: flex; flex-wrap: wrap; gap: 8px; }
         .settings-day-btn {
           padding: 8px 16px;
@@ -782,7 +772,6 @@ const ManagerSettings = () => {
           }
         }
 
-        /* Page title responsive */
         @media (max-width: 767px) {
           .settings-page .erp-page-title { font-size: 22px; }
           .settings-page .erp-page-subtitle { font-size: 12.5px; }
@@ -985,6 +974,40 @@ const ManagerSettings = () => {
                 Extra minutes allowed before marking as late
               </small>
             </div>
+            <div className="col-12 col-md-6">
+  <label className="erp-label">Notice Period (Days)</label>
+  <input
+    type="number"
+    className="erp-input"
+    min={1}
+    max={180}
+    value={company.notice_period_days || 15}
+    onChange={(e) =>
+      setCompany({
+        ...company,
+        notice_period_days: parseInt(e.target.value) || 15,
+      })
+    }
+    style={{ fontFamily: FONT }}
+  />
+  <small style={{ color: "#9ca3af", fontSize: 11 }}>
+    Minimum notice period for employee resignations
+  </small>
+  {company.notice_period_days > 0 && (
+    <div
+      style={{
+        marginTop: 6,
+        fontSize: 11,
+        color: "#4f46e5",
+        fontWeight: 600,
+        fontFamily: FONT,
+      }}
+    >
+      ℹ️ Employees must serve {company.notice_period_days} days from
+      resignation date
+    </div>
+  )}
+</div>
 
             <div className="col-12">
               <label className="erp-label">Working Days</label>
@@ -1048,7 +1071,6 @@ const ManagerSettings = () => {
             </div>
           ) : (
             <>
-              {/* Mobile cards */}
               {isMobile ? (
                 <div className="settings-card-list">
                   {shifts.map((s, idx) => (
@@ -1671,110 +1693,6 @@ const ManagerSettings = () => {
             >
               <Save size={14} />
               {companySaving ? "Saving..." : "Save Payroll Settings"}
-            </button>
-          </div>
-        </SectionCard>
-
-        {/* FORGOT LOGOUT SETTINGS */}
-        <SectionCard
-          icon={ShieldAlert}
-          title="Forgot Logout Settings"
-          subtitle="Controls for employees who forget to logout"
-        >
-          <InfoBanner tone="amber">
-            <strong>How it works:</strong> If an employee forgets to logout,
-            they're blocked from next check-in. Employee must request approval
-            from their manager. If it exceeds the max allowed times per month, a
-            fine is applied to their next payroll.
-          </InfoBanner>
-
-          <div className="row g-3">
-            <div className="col-12">
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  cursor: "pointer",
-                  fontSize: 13,
-                  fontWeight: 600,
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={company.forgot_logout_enabled}
-                  onChange={(e) =>
-                    setCompany({
-                      ...company,
-                      forgot_logout_enabled: e.target.checked,
-                    })
-                  }
-                  style={{ width: 18, height: 18, cursor: "pointer" }}
-                />
-                Enable Forgot-Logout Block
-              </label>
-              <small
-                style={{
-                  color: "#9ca3af",
-                  fontSize: 11,
-                  marginLeft: 28,
-                  display: "block",
-                }}
-              >
-                When disabled, employees can check-in freely without manager
-                approval
-              </small>
-            </div>
-
-            <div className="col-6 col-md-4">
-              <label className="erp-label">Max Per Month (Free)</label>
-              <input
-                type="number"
-                className="erp-input"
-                min={0}
-                max={10}
-                value={company.forgot_logout_max_per_month}
-                onChange={(e) =>
-                  setCompany({
-                    ...company,
-                    forgot_logout_max_per_month: parseInt(e.target.value) || 0,
-                  })
-                }
-              />
-              <small style={{ color: "#9ca3af", fontSize: 11 }}>
-                e.g., 3 = first 3 times are free
-              </small>
-            </div>
-
-            <div className="col-6 col-md-4">
-              <label className="erp-label">Fine Amount (₹)</label>
-              <input
-                type="number"
-                className="erp-input"
-                min={0}
-                step="50"
-                value={company.forgot_logout_fine_amount}
-                onChange={(e) =>
-                  setCompany({
-                    ...company,
-                    forgot_logout_fine_amount: parseFloat(e.target.value) || 0,
-                  })
-                }
-              />
-              <small style={{ color: "#9ca3af", fontSize: 11 }}>
-                Per additional occurrence
-              </small>
-            </div>
-          </div>
-
-          <div className="col-12 d-flex justify-content-end mt-3">
-            <button
-              className="erp-btn erp-btn-primary"
-              onClick={handleCompanySave}
-              disabled={companySaving}
-            >
-              <Save size={14} />
-              {companySaving ? "Saving..." : "Save Settings"}
             </button>
           </div>
         </SectionCard>

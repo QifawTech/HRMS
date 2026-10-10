@@ -2,6 +2,7 @@ from datetime import datetime
 from bson import ObjectId
 from bson.errors import InvalidId
 from app.db import holidays
+from app.utils.time_utils import now_ist
 
 
 def _oid(s):
@@ -33,8 +34,8 @@ def create_holiday(data):
         "type": data.get("type", "National"),
         "description": (data.get("description") or "").strip(),
         "is_optional": bool(data.get("is_optional", False)),
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "created_at": now_ist(),
+        "updated_at": now_ist(),
     }
     res = holidays().insert_one(doc)
     doc["_id"] = res.inserted_id
@@ -65,7 +66,7 @@ def update_holiday(holiday_id, data):
     if "date" in update and update["date"]:
         update["year"] = int(str(update["date"])[:4])
 
-    update["updated_at"] = datetime.utcnow()
+    update["updated_at"] = now_ist()
 
     res = holidays().update_one({"_id": oid}, {"$set": update})
     if res.matched_count == 0:
@@ -88,7 +89,7 @@ def get_available_years():
         set(d.get("year") for d in holidays().find({}, {"year": 1}) if d.get("year")),
         reverse=True,
     )
-    current = datetime.utcnow().year
+    current = now_ist().year
     if current not in years:
         years.insert(0, current)
     return years

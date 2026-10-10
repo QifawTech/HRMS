@@ -3,6 +3,7 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from app.db import leave_requests, leave_types, employees, notifications
 from app.utils.helpers import serialize, serialize_list
+from app.utils.time_utils import now_ist
 
 
 def _oid(s):
@@ -64,7 +65,7 @@ def ensure_default_leave_types():
         for lt in DEFAULT_LEAVE_TYPES:
             existing = leave_types().find_one({"name": lt["name"]})
             if not existing:
-                now = datetime.utcnow()
+                now = now_ist()
                 leave_types().insert_one({
                     "name": lt["name"],
                     "code": lt["code"],
@@ -81,7 +82,7 @@ def ensure_default_leave_types():
                         "is_active": True,
                         "max_days_per_year": lt["max_days_per_year"],
                         "code": lt.get("code", existing.get("code", "")),
-                        "updated_at": datetime.utcnow(),
+                        "updated_at": now_ist(),
                     }},
                 )
 
@@ -89,7 +90,7 @@ def ensure_default_leave_types():
         allowed_names = [lt["name"] for lt in DEFAULT_LEAVE_TYPES]
         leave_types().update_many(
             {"name": {"$nin": allowed_names}, "is_active": True},
-            {"$set": {"is_active": False, "updated_at": datetime.utcnow()}},
+            {"$set": {"is_active": False, "updated_at": now_ist()}},
         )
     except Exception as e:
         print(f"[Leave Types] Seed failed: {e}")
@@ -260,7 +261,7 @@ def apply_leave(employee_id, data):
     # ============================================
     # Insert leave request
     # ============================================
-    now = datetime.utcnow()
+    now = now_ist()
     result = leave_requests().insert_one({
         "employee_id": oid,
         "leave_type_id": leave_type_id,
@@ -351,7 +352,7 @@ def cancel_leave(employee_id, leave_id):
         {
             "$set": {
                 "status": "Cancelled",
-                "updated_at": datetime.utcnow(),
+                "updated_at": now_ist(),
             }
         },
     )
@@ -477,7 +478,7 @@ def review_leave(leave_id, manager_employee_id, action, comment=""):
     if leave["status"] != "Pending":
         raise ValueError(f"Leave already {leave['status']}")
 
-    now = datetime.utcnow()
+    now = now_ist()
     leave_requests().update_one(
         {"_id": leave_oid},
         {

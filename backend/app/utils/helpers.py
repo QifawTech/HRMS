@@ -2,8 +2,9 @@ from datetime import datetime
 from bson import ObjectId
 from bson.errors import InvalidId
 
+
 def to_oid(value):
-    """Convert string to ObjectId safely. Returns None if invalid."""
+    """Convert string to ObjectId safely."""
     if isinstance(value, ObjectId):
         return value
     try:
@@ -12,13 +13,10 @@ def to_oid(value):
         return None
 
 def serialize(doc):
-    """Convert MongoDB document to JSON-safe dict."""
     if doc is None:
         return None
-
     if isinstance(doc, list):
         return [serialize(d) for d in doc]
-
     if not isinstance(doc, dict):
         return doc
 
@@ -29,6 +27,8 @@ def serialize(doc):
         elif isinstance(v, ObjectId):
             out[k] = str(v)
         elif isinstance(v, datetime):
+            # DB stores IST (naive) — send as-is (no suffix)
+            # JS will treat naive as LOCAL time (which is IST for users)
             out[k] = v.isoformat()
         elif isinstance(v, dict):
             out[k] = serialize(v)
@@ -46,6 +46,9 @@ def serialize(doc):
         else:
             out[k] = v
     return out
+
+           
+
 
 def serialize_list(docs):
     return [serialize(d) for d in docs]

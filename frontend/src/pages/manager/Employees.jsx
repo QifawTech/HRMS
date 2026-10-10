@@ -36,7 +36,10 @@ const FONT = "'Inter', 'Segoe UI', -apple-system, sans-serif";
 const getProfilePicUrl = (url) => {
   if (!url) return null;
   if (url.startsWith("http")) return url;
-  return `${url}`;
+  // ✅ Prepend backend URL for relative paths
+  const backendUrl =
+    import.meta.env.VITE_API_URL || "http://localhost:5000";
+  return `${backendUrl}${url}`;
 };
 
 const MiniBox = ({ label, value, highlight }) => (
@@ -90,8 +93,8 @@ const emptyForm = {
   date_of_joining: new Date().toISOString().split("T")[0],
   end_date: "",
   total_salary: "",
-  employment_type: "PERMANENT",       // NEW
-  intern_end_date: "",                 // NEW
+  employment_type: "PERMANENT",
+  intern_end_date: "",
 };
 
 const Employees = () => {
@@ -105,7 +108,7 @@ const Employees = () => {
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("");
   const [filterStatus, setFilterStatus] = useState("ACTIVE");
-  const [filterType, setFilterType] = useState("");          // NEW
+  const [filterType, setFilterType] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
@@ -129,7 +132,6 @@ const Employees = () => {
   const [editLastDayReason, setEditLastDayReason] = useState("");
   const [editLastDaySaving, setEditLastDaySaving] = useState(false);
 
-  // NEW: Confirm modal state (INSIDE component ✅)
   const [confirmModal, setConfirmModal] = useState(false);
   const [confirmEmp, setConfirmEmp] = useState(null);
   const [confirmForm, setConfirmForm] = useState({
@@ -264,10 +266,12 @@ const Employees = () => {
     ? Number(selectedInsurance.annual_amount || 0) / 12
     : 0;
 
+  // ✅ FIXED handleSubmit — Empty salary fields remove pannum
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     if (!form.first_name.trim() || !form.last_name.trim()) return;
 
+    // Add mode validation
     if (!editing) {
       if (!form.email.trim() || !form.password.trim()) {
         setToast({ message: "Email and password required", type: "error" });
@@ -282,11 +286,68 @@ const Employees = () => {
       }
     }
 
+    // Edit mode validation
+    if (editing) {
+      if (!form.email.trim()) {
+        setToast({ message: "Email is required", type: "error" });
+        return;
+      }
+      if (
+        form.password &&
+        form.password.length > 0 &&
+        form.password.length < 6
+      ) {
+        setToast({
+          message: "New password must be at least 6 characters",
+          type: "error",
+        });
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       if (editing) {
-        const { email, password, employee_code, ...updateData } = form;
+        // ✅ Build payload — remove empty fields
+        const updateData = { ...form };
+        delete updateData.employee_code; // Don't change code
+
+        // Remove password if blank (no change)
+        if (!updateData.password || !updateData.password.trim()) {
+          delete updateData.password;
+        }
+
+        // ✅ Remove EMPTY salary fields — backend keep existing
+        if (
+          updateData.total_salary === "" ||
+          updateData.total_salary === null ||
+          updateData.total_salary === undefined
+        ) {
+          delete updateData.total_salary;
+        }
+
+        // ✅ Convert to number if present
+        if (updateData.total_salary !== undefined) {
+          const numSalary = parseFloat(updateData.total_salary);
+          if (isNaN(numSalary)) {
+            delete updateData.total_salary;
+          } else {
+            updateData.total_salary = numSalary;
+          }
+        }
+
+        // Remove empty intern_end_date
+        if (!updateData.intern_end_date) {
+          delete updateData.intern_end_date;
+        }
+
+        // Remove empty end_date (backend handles separately)
+        if (!updateData.end_date) {
+          delete updateData.end_date;
+        }
+
         await api.updateEmployee(editing._id, updateData);
+
         const endMsg = form.end_date
           ? " Employee will be marked INACTIVE after end date."
           : "";
@@ -404,7 +465,6 @@ const Employees = () => {
     }
   };
 
-  // NEW: Confirm handlers
   const openConfirmModal = (emp) => {
     setConfirmEmp(emp);
     const s = emp.salary || {};
@@ -964,9 +1024,7 @@ const Employees = () => {
                       </div>
                     </div>
 
-                    <div
-                      className="d-flex gap-2 align-items-center mb-3 flex-wrap"
-                    >
+                    <div className="d-flex gap-2 align-items-center mb-3 flex-wrap">
                       {emp.status === "ACTIVE" && (
                         <span className="erp-badge erp-badge-green">
                           ● Active
@@ -1290,13 +1348,12 @@ const Employees = () => {
                 placeholder="john@company.com"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                disabled={!!editing}
-                required={!editing}
+                required
                 style={{ fontFamily: FONT }}
               />
             </div>
 
-            {!editing && (
+            {!editing ? (
               <div className="col-12">
                 <label className="erp-label">Password *</label>
                 <input
@@ -1311,6 +1368,29 @@ const Employees = () => {
                   minLength={6}
                   style={{ fontFamily: FONT }}
                 />
+              </div>
+            ) : (
+              <div className="col-12">
+                <label className="erp-label">
+                  New Password{" "}
+                  <span style={{ color: "#9ca3af", fontWeight: 400 }}>
+                    (optional — leave blank to keep current)
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  className="erp-input"
+                  placeholder="Enter new password only if you want to change"
+                  value={form.password}
+                  onChange={(e) =>
+                    setForm({ ...form, password: e.target.value })
+                  }
+                  minLength={6}
+                  style={{ fontFamily: FONT }}
+                />
+                <small style={{ color: "#9ca3af", fontSize: 11 }}>
+                  Leave blank to keep the current password
+                </small>
               </div>
             )}
 
@@ -1331,7 +1411,6 @@ const Employees = () => {
               />
             </div>
 
-            {/* NEW: Employment Type */}
             <div className="col-12 col-sm-6">
               <label className="erp-label">Employment Type *</label>
               <select
@@ -1474,7 +1553,6 @@ const Employees = () => {
               />
             </div>
 
-            {/* NEW: Intern End Date (only if INTERN) */}
             {form.employment_type === "INTERN" && (
               <div className="col-12 col-sm-6">
                 <label className="erp-label">
@@ -1585,7 +1663,7 @@ const Employees = () => {
                 <div className="row g-3">
                   <div className="col-12 col-md-6">
                     <label className="erp-label">
-                      Total Monthly Salary (₹) *
+                      Total Monthly Salary (₹) {!editing && "*"}
                     </label>
                     <input
                       type="number"

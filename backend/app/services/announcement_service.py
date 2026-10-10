@@ -4,6 +4,7 @@ from bson.errors import InvalidId
 from app.db import announcements, employees, users, notifications
 from app.utils.helpers import serialize, serialize_list
 from app.utils.file_handler import delete_file
+from app.utils.time_utils import now_ist
 
 
 def _oid(s):
@@ -93,7 +94,7 @@ def create_announcement(data, manager_user_id):
             raise ValueError("Select at least one employee")
         recipients = list(employees().find({"_id": {"$in": target_ids}}))
 
-    now = datetime.utcnow()
+    now = now_ist()
 
     # Create announcement
     ann_doc = {
@@ -139,7 +140,7 @@ def update_announcement(ann_id, data):
     if not oid:
         return 0
 
-    update_fields = {"updated_at": datetime.utcnow()}
+    update_fields = {"updated_at": now_ist()}
 
     if "title" in data:
         update_fields["title"] = (data["title"] or "").strip()
@@ -171,7 +172,7 @@ def delete_announcement(ann_id):
     # Soft delete
     r = announcements().update_one(
         {"_id": oid},
-        {"$set": {"is_active": False, "updated_at": datetime.utcnow()}},
+        {"$set": {"is_active": False, "updated_at": now_ist()}},
     )
 
     # Delete related notifications
@@ -317,7 +318,7 @@ def mark_seen(ann_id, employee_id):
             "$push": {
                 "seen_by": {
                     "employee_id": emp_oid,
-                    "seen_at": datetime.utcnow(),
+                    "seen_at": now_ist(),
                 }
             },
             "$inc": {"seen_count": 1},
@@ -327,7 +328,7 @@ def mark_seen(ann_id, employee_id):
     # Also mark related notification as read
     notifications().update_many(
         {"announcement_id": ann_oid, "employee_id": emp_oid},
-        {"$set": {"is_read": True, "read_at": datetime.utcnow()}},
+        {"$set": {"is_read": True, "read_at": now_ist()}},
     )
 
     return r.modified_count

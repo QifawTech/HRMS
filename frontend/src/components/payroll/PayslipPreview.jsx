@@ -44,8 +44,6 @@ const PayslipPreview = ({ payslip, company, innerRef }) => {
   const logoUrl = getLogoUrl(company.company_logo_url);
   const hasLogo = !!logoUrl;
 
-  const forgotFine = d.forgot_logout_fine || 0;
-  const fineDetails = d.forgot_logout_fine_details || [];
 
   // Build deduction rows dynamically
     // NEW: Insurance
@@ -71,13 +69,6 @@ const PayslipPreview = ({ payslip, company, innerRef }) => {
     ]);
   }
 
-  if (forgotFine > 0) {
-    deductionRows.push([
-      "Forgot Logout Fine",
-      formatCurrency(forgotFine),
-      "fine",
-    ]);
-  }
 
   while (deductionRows.length < 6) {
     deductionRows.push(["", ""]);
@@ -259,113 +250,7 @@ const PayslipPreview = ({ payslip, company, innerRef }) => {
           />
         </div>
       </div>
-
-      {/* ============================================
-          FORGOT LOGOUT FINE BREAKDOWN (if any)
-          ============================================ */}
-      {fineDetails.length > 0 && (
-        <div
-          style={{
-            background: "#fef2f2",
-            border: "1px solid #fecaca",
-            borderRadius: 8,
-            padding: "14px 18px",
-            marginBottom: 20,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 10,
-            }}
-          >
-            <AlertTriangle size={16} color="#dc2626" />
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 700,
-                color: "#991b1b",
-                textTransform: "uppercase",
-                letterSpacing: 0.6,
-              }}
-            >
-              Forgot Logout Fine — Breakdown
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 6,
-            }}
-          >
-            {fineDetails.map((f, idx) => (
-              <div
-                key={idx}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  fontSize: 12,
-                  color: "#7f1d1d",
-                  padding: "5px 0",
-                  borderBottom:
-                    idx < fineDetails.length - 1
-                      ? "1px dashed #fecaca"
-                      : "none",
-                }}
-              >
-                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span
-                    style={{
-                      width: 5,
-                      height: 5,
-                      borderRadius: "50%",
-                      background: "#dc2626",
-                    }}
-                  />
-                  <strong>
-                    {new Date(f.date).toLocaleDateString("en-IN", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </strong>
-                  <span style={{ color: "#991b1b", fontWeight: 500 }}>
-                    — Forgot to logout
-                  </span>
-                </span>
-                <span
-                  style={{
-                    fontWeight: 700,
-                    fontVariantNumeric: "tabular-nums",
-                  }}
-                >
-                  ₹ {formatCurrency(f.amount)}
-                </span>
-              </div>
-            ))}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                paddingTop: 8,
-                marginTop: 4,
-                borderTop: "1.5px solid #fecaca",
-                fontSize: 12.5,
-                fontWeight: 800,
-                color: "#991b1b",
-              }}
-            >
-              <span>Total Fine</span>
-              <span>₹ {formatCurrency(forgotFine)}</span>
-            </div>
-          </div>
-        </div>
-      )}
+            
 
       {/* NET SALARY */}
       <div

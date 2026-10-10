@@ -17,7 +17,7 @@ import Toast from "../../components/common/Toast";
 import * as api from "../../api/resignationApi";
 import { formatDateTime } from "../../utils/dateUtils";
 
-const FONT = "'Calibri', 'Segoe UI', -apple-system, sans-serif";
+const FONT = "'Inter', 'Segoe UI', -apple-system, sans-serif";
 
 const statusStyles = {
   None: {
@@ -61,11 +61,18 @@ const EmployeeResignation = () => {
   const [toast, setToast] = useState(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
 
+  // ✅ Dynamic notice period
+  const [noticePeriodDays, setNoticePeriodDays] = useState(15);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.getMyResignation();
       setData(res.data || {});
+      // ✅ Read notice period from backend response
+      if (res.data?.notice_period_days) {
+        setNoticePeriodDays(res.data.notice_period_days);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -77,12 +84,17 @@ const EmployeeResignation = () => {
     load();
   }, [load]);
 
-  const openApply = () => {
+  // Compute min last working day
+  const getMinDateStr = () => {
     const minDate = new Date();
-    minDate.setDate(minDate.getDate() + 15);
+    minDate.setDate(minDate.getDate() + noticePeriodDays);
+    return minDate.toISOString().split("T")[0];
+  };
+
+  const openApply = () => {
     setForm({
       reason: "",
-      last_working_day: minDate.toISOString().split("T")[0],
+      last_working_day: getMinDateStr(),
     });
     setModalOpen(true);
   };
@@ -97,6 +109,23 @@ const EmployeeResignation = () => {
     }
     if (!form.last_working_day) {
       setToast({ message: "Please select last working day", type: "error" });
+      return;
+    }
+
+    // ✅ Validate against dynamic notice period
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selected = new Date(form.last_working_day);
+    selected.setHours(0, 0, 0, 0);
+    const diffDays = Math.ceil(
+      (selected - today) / (1000 * 60 * 60 * 24)
+    );
+
+    if (diffDays < noticePeriodDays) {
+      setToast({
+        message: `Minimum ${noticePeriodDays} days notice required. You've selected ${diffDays} days.`,
+        type: "error",
+      });
       return;
     }
 
@@ -137,13 +166,24 @@ const EmployeeResignation = () => {
   const style = statusStyles[status] || statusStyles.None;
   const StatusIcon = style.Icon;
 
-  const minDate = new Date();
-  minDate.setDate(minDate.getDate() + 15);
-  const minDateStr = minDate.toISOString().split("T")[0];
-
   return (
     <Layout>
-      <div style={{ fontFamily: FONT }}>
+      <style>{`
+        .res-page * { font-family: ${FONT}; }
+        .res-page { font-family: ${FONT}; }
+
+        @media (max-width: 767px) {
+          .res-page .erp-page-title { font-size: 22px; }
+          .res-page .erp-page-subtitle { font-size: 12.5px; }
+          .res-page .res-apply-btn {
+            width: 100%;
+            justify-content: center;
+          }
+          .res-page .erp-card { padding: 16px !important; }
+        }
+      `}</style>
+
+      <div className="res-page">
         <div className="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
           <div>
             <h1 className="erp-page-title">Resignation</h1>
@@ -152,7 +192,11 @@ const EmployeeResignation = () => {
             </p>
           </div>
           {(status === "None" || status === "Rejected") && (
-            <button className="erp-btn erp-btn-danger" onClick={openApply}>
+            <button
+              className="erp-btn erp-btn-danger res-apply-btn"
+              onClick={openApply}
+              style={{ fontFamily: FONT }}
+            >
               <Send size={15} /> Apply for Resignation
             </button>
           )}
@@ -338,7 +382,8 @@ const EmployeeResignation = () => {
                       }`,
                       borderRadius: 8,
                       fontSize: 13,
-                      color: status === "Rejected" ? "#991b1b" : "#065f46",
+                      color:
+                        status === "Rejected" ? "#991b1b" : "#065f46",
                       fontStyle: "italic",
                     }}
                   >
@@ -438,6 +483,7 @@ const EmployeeResignation = () => {
             </>
           }
         >
+          {/* ✅ Dynamic notice warning */}
           <div
             style={{
               padding: 12,
@@ -453,10 +499,14 @@ const EmployeeResignation = () => {
               fontFamily: FONT,
             }}
           >
-            <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+            <AlertTriangle
+              size={16}
+              style={{ flexShrink: 0, marginTop: 1 }}
+            />
             <div>
-              <strong>Important:</strong> Please provide at least 15 days
-              notice. Your manager will review and confirm.
+              <strong>Important:</strong> Please provide at least{" "}
+              <strong>{noticePeriodDays} days</strong> notice. Your manager
+              will review and confirm.
             </div>
           </div>
 
@@ -467,7 +517,9 @@ const EmployeeResignation = () => {
               rows={4}
               placeholder="Please explain your reason in detail..."
               value={form.reason}
-              onChange={(e) => setForm({ ...form, reason: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, reason: e.target.value })
+              }
               style={{ resize: "vertical", fontFamily: FONT }}
               autoFocus
             />
@@ -477,19 +529,21 @@ const EmployeeResignation = () => {
           </div>
 
           <div className="mb-3">
-            <label className="erp-label">Preferred Last Working Day *</label>
+            <label className="erp-label">
+              Preferred Last Working Day *
+            </label>
             <input
               type="date"
               className="erp-input"
               value={form.last_working_day}
-              min={minDateStr}
+              min={getMinDateStr()}
               onChange={(e) =>
                 setForm({ ...form, last_working_day: e.target.value })
               }
               style={{ fontFamily: FONT }}
             />
             <small style={{ color: "#9ca3af", fontSize: 11 }}>
-              Minimum 15 days from today
+              Minimum {noticePeriodDays} days from today
             </small>
           </div>
         </Modal>

@@ -3,6 +3,7 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from app.db import departments, employees
 from app.utils.helpers import serialize, serialize_list
+from app.utils.time_utils import now_ist
 
 
 def _oid(s):
@@ -45,8 +46,8 @@ def create_department(name, description):
         "name": name.strip(),
         "description": (description or "").strip(),
         "is_active": True,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "created_at": now_ist(),
+        "updated_at": now_ist(),
     })
     return str(result.inserted_id)
 
@@ -61,7 +62,7 @@ def update_department(dept_id, name, description):
             "$set": {
                 "name": name.strip(),
                 "description": (description or "").strip(),
-                "updated_at": datetime.utcnow(),
+                "updated_at": now_ist(),
             }
         },
     )
@@ -74,6 +75,6 @@ def deactivate_department(dept_id):
         return 0
     r = departments().update_one(
         {"_id": oid},
-        {"$set": {"is_active": False, "updated_at": datetime.utcnow()}},
+        {"$set": {"is_active": False, "updated_at": now_ist()}},
     )
     return r.modified_count

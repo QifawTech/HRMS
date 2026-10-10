@@ -3,6 +3,7 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from app.db import shifts, employees
 from app.utils.helpers import serialize, serialize_list
+from app.utils.time_utils import now_ist
 
 
 def _oid(s):
@@ -13,7 +14,7 @@ def _oid(s):
 
 
 def _now():
-    return datetime.utcnow()
+    return now_ist()
 
 
 # ============================================

@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 from app.db import users, employees
 from app.config import Config
 from app.middleware.auth_middleware import token_required
-
 auth_bp = Blueprint("auth", __name__)
 
 

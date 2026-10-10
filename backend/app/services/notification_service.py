@@ -2,6 +2,7 @@ from datetime import datetime
 from bson import ObjectId
 from app.db import notifications, employees, users
 from app.utils.helpers import serialize_list
+from app.utils.time_utils import now_ist
 
 
 def create_notification(employee_id, title, message, notif_type="INFO", link=None, related_id=None, from_employee_id=None):
@@ -15,7 +16,7 @@ def create_notification(employee_id, title, message, notif_type="INFO", link=Non
         if emp:
             from_name = f"{emp.get('first_name', '')} {emp.get('last_name', '')}".strip()
 
-    now = datetime.utcnow()
+    now = now_ist()
     result = notifications().insert_one({
         "employee_id": employee_id,
         "title": title,
@@ -71,7 +72,7 @@ def mark_read(notification_id, employee_id):
         return 0
     r = notifications().update_one(
         {"_id": nid, "employee_id": eid},
-        {"$set": {"is_read": True, "read_at": datetime.utcnow()}},
+        {"$set": {"is_read": True, "read_at": now_ist()}},
     )
     return r.modified_count
 
@@ -82,7 +83,7 @@ def mark_all_read(employee_id):
         return 0
     r = notifications().update_many(
         {"employee_id": eid, "is_read": False},
-        {"$set": {"is_read": True, "read_at": datetime.utcnow()}},
+        {"$set": {"is_read": True, "read_at": now_ist()}},
     )
     return r.modified_count
 

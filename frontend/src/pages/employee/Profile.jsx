@@ -24,7 +24,7 @@ import Modal from "../../components/common/Modal";
 import AttendanceCalendar from "../../components/employees/AttendanceCalendar";
 import * as api from "../../api/employeeApi";
 import * as attApi from "../../api/attendanceApi";
-import * as holidayApi from "../../api/holidayApi";   // ✅ NEW
+import * as holidayApi from "../../api/holidayApi";
 
 const FONT = "'Inter', 'Segoe UI', -apple-system, sans-serif";
 
@@ -89,7 +89,6 @@ const EmployeeProfile = () => {
   const [reportLoading, setReportLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(null);
 
-  // ✅ NEW: holidays state
   const [holidays, setHolidays] = useState([]);
   const [upcomingHolidays, setUpcomingHolidays] = useState([]);
 
@@ -135,7 +134,6 @@ const EmployeeProfile = () => {
     loadReport();
   }, [loadReport]);
 
-  // ✅ NEW: Load holidays for current year
   useEffect(() => {
     holidayApi
       .listHolidays(year)
@@ -143,7 +141,6 @@ const EmployeeProfile = () => {
         const all = Array.isArray(res.data) ? res.data : [];
         setHolidays(all);
 
-        // Upcoming holidays (next 5 from today)
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const upcoming = all
@@ -155,7 +152,6 @@ const EmployeeProfile = () => {
       .catch(() => {});
   }, [year]);
 
-  // ✅ Filter holidays for current month
   const monthHolidays = holidays.filter((h) => {
     const d = new Date(h.date);
     return d.getFullYear() === year && d.getMonth() + 1 === month;
@@ -252,20 +248,12 @@ const EmployeeProfile = () => {
   const initials = `${profile.first_name?.[0] || ""}${profile.last_name?.[0] || ""}`;
   const fullName = `${profile.first_name} ${profile.last_name}`;
 
-<<<<<<< HEAD
+  // ✅ Single getImageUrl (conflict resolved)
   const getImageUrl = (url) => {
     if (!url) return null;
     if (url.startsWith("http")) return url;
     return `http://localhost:5000${url}`;
   };
-=======
-// Build full URL for profile picture
-const getImageUrl = (url) => {
-  if (!url) return null;
-  if (url.startsWith("http")) return url;
-  return `${url}`;
-};
->>>>>>> b7852cbfcf247cdbe8e106939c74a6d311ae458f
 
   const profilePicUrl = getImageUrl(profile.profile_picture_url);
   const hasPicture = !!profilePicUrl;
@@ -537,7 +525,7 @@ const getImageUrl = (url) => {
           </button>
         </div>
 
-        {/* ✅ Upcoming Holidays Strip */}
+        {/* Upcoming Holidays Strip */}
         {upcomingHolidays.length > 0 && (
           <div className="holiday-strip">
             <PartyPopper size={16} style={{ flexShrink: 0 }} />
@@ -632,7 +620,6 @@ const getImageUrl = (url) => {
             </span>
           </div>
 
-          {/* Holiday legend */}
           {monthHolidays.length > 0 && (
             <div
               style={{
@@ -673,7 +660,7 @@ const getImageUrl = (url) => {
               year={year}
               month={month}
               records={records}
-              holidays={monthHolidays}    // ✅ NEW
+              holidays={monthHolidays}
               onPrev={prevMonth}
               onNext={nextMonth}
               canGoNext={canGoNext()}

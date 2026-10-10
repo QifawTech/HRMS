@@ -7,6 +7,7 @@ from app.db import (
     confirmations,
 )
 from app.utils.helpers import serialize, serialize_list
+from app.utils.time_utils import now_ist
 from app.services.professional_tax_service import calculate_professional_tax
 
 
@@ -224,9 +225,9 @@ def create_employee(data):
         try:
             doj = datetime.fromisoformat(doj)
         except Exception:
-            doj = datetime.utcnow()
+            doj = now_ist()
     else:
-        doj = datetime.utcnow()
+        doj = now_ist()
 
     # Parse end_date
     end_dt = None
@@ -241,7 +242,7 @@ def create_employee(data):
     if end_dt and end_dt.date() <= date.today():
         initial_status = "INACTIVE"
 
-    # NEW: employment_type
+    # employment_type
     employment_type = (data.get("employment_type") or "PERMANENT").upper()
     intern_end_date = None
     if employment_type == "INTERN":
@@ -265,8 +266,8 @@ def create_employee(data):
             "password_hash": pw_hash,
             "role": "EMPLOYEE",
             "is_active": (initial_status == "ACTIVE"),
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow(),
+            "created_at": now_ist(),
+            "updated_at": now_ist(),
         }).inserted_id
 
         emp_id = employees().insert_one({
@@ -287,7 +288,7 @@ def create_employee(data):
             "status": initial_status,
             "salary": salary,
 
-            # NEW: Intern → Permanent tracking
+            # Intern → Permanent tracking
             "employment_type": employment_type,
             "intern_end_date": intern_end_date,
             "confirmation_status": (
@@ -300,8 +301,8 @@ def create_employee(data):
             "resignation_reason": None,
             "deactivated_at": None,
             "deactivated_by": None,
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow(),
+            "created_at": now_ist(),
+            "updated_at": now_ist(),
         }).inserted_id
 
         return str(emp_id)
@@ -321,8 +322,44 @@ def update_employee(emp_id, data):
     if not oid:
         return 0
 
-    update_fields = {"updated_at": datetime.utcnow()}
+    emp = employees().find_one({"_id": oid})
+    if not emp:
+        return 0
 
+    update_fields = {"updated_at": now_ist()}
+
+    # Email change handling
+    if "email" in data and data["email"]:
+        new_email = (data["email"] or "").strip().lower()
+        if not new_email:
+            raise ValueError("Email cannot be empty")
+
+        existing = users().find_one({
+            "email": new_email,
+            "_id": {"$ne": emp["user_id"]},
+        })
+        if existing:
+            raise ValueError("Email already exists")
+
+        users().update_one(
+            {"_id": emp["user_id"]},
+            {"$set": {"email": new_email, "updated_at": now_ist()}},
+        )
+
+    # Password change handling (only if provided)
+    if "password" in data and data["password"]:
+        new_pw = data["password"]
+        if len(new_pw) < 6:
+            raise ValueError("Password must be at least 6 characters")
+        pw_hash = bcrypt.hashpw(
+            new_pw.encode("utf-8"), bcrypt.gensalt()
+        ).decode("utf-8")
+        users().update_one(
+            {"_id": emp["user_id"]},
+            {"$set": {"password_hash": pw_hash, "updated_at": now_ist()}},
+        )
+
+    # Existing fields
     for field in ["first_name", "last_name", "phone", "address"]:
         if field in data:
             update_fields[field] = (data[field] or "").strip() or None
@@ -359,13 +396,13 @@ def update_employee(emp_id, data):
         else:
             update_fields["end_date"] = None
 
-    # employment_type change (manual edit)
+    # employment_type change
     if "employment_type" in data and data["employment_type"]:
         update_fields["employment_type"] = data["employment_type"].upper()
         if update_fields["employment_type"] == "INTERN":
             update_fields["confirmation_status"] = "PENDING"
         elif update_fields["employment_type"] == "PERMANENT":
-            pass  # don't auto-confirm on manual edit
+            pass
 
     # intern_end_date
     if "intern_end_date" in data:
@@ -379,30 +416,40 @@ def update_employee(emp_id, data):
         else:
             update_fields["intern_end_date"] = None
 
-    # Update insurance_id
+    # Insurance
     if "insurance_id" in data:
         update_fields["insurance_id"] = (
             _oid(data["insurance_id"]) if data["insurance_id"] else None
         )
 
-    # Salary — recalculate if any field changed
+    # Salary recalculate — SAFE (handles empty strings)
     if (
         "total_salary" in data
         or "annual_insurance" in data
         or "insurance_id" in data
     ):
-        emp = employees().find_one({"_id": oid})
         existing_salary = (emp or {}).get("salary", {})
 
-        total = float(
+        # Safe float conversion
+        def _safe_float(v, fallback=0):
+            if v is None or v == "":
+                return fallback
+            try:
+                return float(v)
+            except (ValueError, TypeError):
+                return fallback
+
+        total = _safe_float(
             data.get("total_salary")
             if "total_salary" in data
-            else existing_salary.get("total", 0) or 0
+            else existing_salary.get("total", 0),
+            fallback=existing_salary.get("total", 0) or 0,
         )
-        annual_insurance = float(
+        annual_insurance = _safe_float(
             data.get("annual_insurance")
             if "annual_insurance" in data
-            else existing_salary.get("annual_insurance", 0) or 0
+            else existing_salary.get("annual_insurance", 0),
+            fallback=existing_salary.get("annual_insurance", 0) or 0,
         )
         insurance_id = (
             _oid(data.get("insurance_id"))
@@ -422,10 +469,7 @@ def update_employee(emp_id, data):
 # ============================================
 
 def confirm_employee(employee_id, data):
-    """
-    Convert INTERN / PROBATION → PERMANENT.
-    Recalculates salary if new_salary given.
-    """
+    """Convert INTERN / PROBATION → PERMANENT."""
     oid = _oid(employee_id)
     if not oid:
         raise ValueError("Invalid employee id")
@@ -437,7 +481,7 @@ def confirm_employee(employee_id, data):
     new_type = (data.get("employment_type") or "PERMANENT").upper()
     confirmation_date = (
         data.get("confirmation_date")
-        or datetime.utcnow().strftime("%Y-%m-%d")
+        or now_ist().strftime("%Y-%m-%d")
     )
     notes = (data.get("notes") or "").strip()
     new_salary = data.get("new_salary")
@@ -448,10 +492,9 @@ def confirm_employee(employee_id, data):
         "confirmation_status": "CONFIRMED",
         "confirmation_date": confirmation_date,
         "previous_employment_type": emp.get("employment_type", "INTERN"),
-        "updated_at": datetime.utcnow(),
+        "updated_at": now_ist(),
     }
 
-    # If new salary → recalculate breakup
     if new_salary is not None and str(new_salary).strip() != "":
         total = float(new_salary)
         existing_salary = emp.get("salary", {}) or {}
@@ -466,7 +509,6 @@ def confirm_employee(employee_id, data):
 
     employees().update_one({"_id": oid}, {"$set": update})
 
-    # Log to confirmations collection
     confirmations().insert_one({
         "employee_id": oid,
         "from_type": emp.get("employment_type", "INTERN"),
@@ -475,7 +517,7 @@ def confirm_employee(employee_id, data):
         "notes": notes,
         "new_salary": new_salary,
         "new_designation_id": _oid(new_designation_id),
-        "created_at": datetime.utcnow(),
+        "created_at": now_ist(),
     })
 
     return {
@@ -503,16 +545,16 @@ def deactivate_employee(emp_id, reason=None, resignation_date=None, manager_id=N
         try:
             resign_date = datetime.fromisoformat(resignation_date)
         except Exception:
-            resign_date = datetime.utcnow()
+            resign_date = now_ist()
     else:
-        resign_date = datetime.utcnow()
+        resign_date = now_ist()
 
     update_data = {
         "status": "INACTIVE",
         "resignation_date": resign_date,
         "resignation_reason": (reason or "").strip() or None,
-        "deactivated_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "deactivated_at": now_ist(),
+        "updated_at": now_ist(),
     }
 
     if manager_id:
@@ -521,7 +563,7 @@ def deactivate_employee(emp_id, reason=None, resignation_date=None, manager_id=N
     employees().update_one({"_id": oid}, {"$set": update_data})
     users().update_one(
         {"_id": emp["user_id"]},
-        {"$set": {"is_active": False, "updated_at": datetime.utcnow()}},
+        {"$set": {"is_active": False, "updated_at": now_ist()}},
     )
     return 1
 
@@ -549,14 +591,14 @@ def reactivate_employee(emp_id):
                 "terminated_at": None,
                 "terminated_by": None,
                 "end_date": None,
-                "updated_at": datetime.utcnow(),
+                "updated_at": now_ist(),
             }
         },
     )
 
     users().update_one(
         {"_id": emp["user_id"]},
-        {"$set": {"is_active": True, "updated_at": datetime.utcnow()}},
+        {"$set": {"is_active": True, "updated_at": now_ist()}},
     )
     return 1
 
@@ -577,16 +619,16 @@ def terminate_employee(emp_id, terminate_date=None, reason=None, manager_id=None
         try:
             term_date = datetime.fromisoformat(terminate_date)
         except Exception:
-            term_date = datetime.utcnow()
+            term_date = now_ist()
     else:
-        term_date = datetime.utcnow()
+        term_date = now_ist()
 
     update_data = {
         "status": "TERMINATED",
         "termination_date": term_date,
         "termination_reason": reason.strip(),
-        "terminated_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "terminated_at": now_ist(),
+        "updated_at": now_ist(),
     }
 
     if manager_id:
@@ -595,7 +637,7 @@ def terminate_employee(emp_id, terminate_date=None, reason=None, manager_id=None
     employees().update_one({"_id": oid}, {"$set": update_data})
     users().update_one(
         {"_id": emp["user_id"]},
-        {"$set": {"is_active": False, "updated_at": datetime.utcnow()}},
+        {"$set": {"is_active": False, "updated_at": now_ist()}},
     )
     return 1
 
@@ -642,7 +684,7 @@ def update_profile_picture(employee_id, picture_data):
             "$set": {
                 "profile_picture_path": picture_data.get("picture_path"),
                 "profile_picture_url": picture_data.get("picture_url"),
-                "updated_at": datetime.utcnow(),
+                "updated_at": now_ist(),
             }
         },
     )

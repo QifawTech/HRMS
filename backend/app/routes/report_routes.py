@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from app.middleware.auth_middleware import token_required, role_required
 from app.services import report_service as svc
 from datetime import datetime
+from app.utils.time_utils import now_ist
 
 
 # ✅ STEP 1: Blueprint FIRST (top la)
@@ -89,8 +90,8 @@ def monthly_summary():
     GET /api/reports/monthly-summary?year=2026&month=10
     """
     try:
-        year = int(request.args.get("year", datetime.utcnow().year))
-        month = int(request.args.get("month", datetime.utcnow().month))
+        year = int(request.args.get("year", now_ist().year))
+        month = int(request.args.get("month", now_ist().month))
 
         from app.services.report_service import get_monthly_working_summary
         data = get_monthly_working_summary(year, month)

@@ -3,6 +3,7 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from app.db import employees, notifications
 from app.utils.helpers import serialize, serialize_list
+from app.utils.time_utils import now_ist
 
 
 def _oid(s):
@@ -13,7 +14,7 @@ def _oid(s):
 
 
 def _now():
-    return datetime.utcnow()
+    return now_ist()
 
 
 def _parse_date(s):
@@ -23,6 +24,16 @@ def _parse_date(s):
         return datetime.strptime(s, "%Y-%m-%d").date()
     except Exception:
         return None
+
+
+def _get_notice_period_days():
+    """Read notice period from settings. Default 15."""
+    try:
+        from app.services.settings_service import get_settings
+        settings = get_settings()
+        return int(settings.get("notice_period_days", 15))
+    except Exception:
+        return 15
 
 
 # ============================================
@@ -60,14 +71,17 @@ def apply_resignation(employee_id, data):
     if not last_day:
         raise ValueError("Valid last working day required")
 
-    today = datetime.utcnow().date()
+    today = now_ist().date()
     if last_day <= today:
         raise ValueError("Last working day must be in the future")
 
+    # ✅ Read notice period from settings
+    required_notice = _get_notice_period_days()
     notice_days = (last_day - today).days
-    if notice_days < 15:
+    if notice_days < required_notice:
         raise ValueError(
-            f"Minimum 15 days notice required. You've given {notice_days} days."
+            f"Minimum {required_notice} days notice required. "
+            f"You've given {notice_days} days."
         )
 
     now = _now()
@@ -142,6 +156,7 @@ def my_resignation(employee_id):
         if emp.get("resignation_completed_at")
         else None,
         "status": emp.get("status"),
+        "notice_period_days": _get_notice_period_days(),   # ✅ Send to frontend
     }
 
 
@@ -257,14 +272,10 @@ def review_resignation(emp_id, manager_emp_id, action, comment="", notice_end=No
         if not notice_date:
             raise ValueError("Invalid notice end date")
 
-        today = datetime.utcnow().date()
+        today = now_ist().date()
         if notice_date < today:
             raise ValueError("Notice end date cannot be in the past")
 
-        # ============================================
-        # FIX: Employee status becomes "RESIGNED" immediately on accept
-        # (was "NOTICE_PERIOD" before)
-        # ============================================
         employees().update_one(
             {"_id": oid},
             {
@@ -338,10 +349,7 @@ def review_resignation(emp_id, manager_emp_id, action, comment="", notice_end=No
 # ============================================
 
 def edit_resignation_notice(emp_id, manager_emp_id, new_last_day, reason=None):
-    """
-    Manager edits the last working day (notice end) after acceptance.
-    Only works if resignation_status == "Accepted".
-    """
+    """Manager edits last working day after acceptance."""
     oid = _oid(emp_id)
     mgr_oid = _oid(manager_emp_id)
     if not oid or not mgr_oid:
@@ -361,7 +369,7 @@ def edit_resignation_notice(emp_id, manager_emp_id, new_last_day, reason=None):
     if not notice_date:
         raise ValueError("Valid last working day required")
 
-    today = datetime.utcnow().date()
+    today = now_ist().date()
     if notice_date < today:
         raise ValueError("Last working day cannot be in the past")
 
@@ -384,7 +392,6 @@ def edit_resignation_notice(emp_id, manager_emp_id, new_last_day, reason=None):
 
     employees().update_one({"_id": oid}, {"$set": update_data})
 
-    # Notify employee
     notifications().insert_one({
         "employee_id": oid,
         "title": "Last Working Day Updated",

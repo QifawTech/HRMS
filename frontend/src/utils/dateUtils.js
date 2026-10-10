@@ -2,12 +2,21 @@
  * Date/Time utility functions
  */
 
-export const formatDateTime = (value) => {
-  if (!value) return "—";
+export const formatDateTime = (iso) => {
+  if (!iso) return "—";
   try {
-    const date = new Date(value);
-    if (isNaN(date.getTime())) return "—";
-    return date.toLocaleString("en-IN", {
+    // ✅ If ISO has no timezone, treat as IST (backend already sends IST)
+    // If has 'Z' or offset, JS auto-converts to local
+    let normalized = iso;
+    if (
+      typeof iso === "string" &&
+      !/[Zz]$/.test(iso) &&
+      !/[+\-]\d{2}:?\d{2}$/.test(iso)
+    ) {
+      // No timezone info — treat as local (IST)
+      normalized = iso;
+    }
+    return new Date(normalized).toLocaleString("en-IN", {
       day: "2-digit",
       month: "short",
       year: "numeric",
@@ -16,7 +25,7 @@ export const formatDateTime = (value) => {
       hour12: true,
     });
   } catch {
-    return "—";
+    return iso;
   }
 };
 

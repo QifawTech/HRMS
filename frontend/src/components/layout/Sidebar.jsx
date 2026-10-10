@@ -19,10 +19,10 @@ import {
   FolderOpen,
   ClipboardList,
   UserMinus,
-  ShieldAlert,
+  FolderKanban,
+  MessageSquareWarning,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
-import * as flApi from "../../api/forgotLogoutApi";
 import * as resignApi from "../../api/resignationApi";
 import * as leaveApi from "../../api/leaveApi";
 
@@ -40,7 +40,6 @@ const managerLinks = [
     Icon: CalendarDays,
     badgeKey: "leaves",
   },
-  // ✅ HOLIDAYS MENU — ADDED HERE
   { to: "/manager/holidays", label: "Holidays", Icon: Calendar },
   { to: "/manager/payroll", label: "Payroll", Icon: Wallet },
   { to: "/manager/documents", label: "Documents", Icon: FileText },
@@ -49,17 +48,13 @@ const managerLinks = [
   { to: "/manager/reports", label: "Reports", Icon: BarChart3 },
   { to: "/manager/settings", label: "Settings", Icon: SettingsIcon },
   { to: "/manager/tasks", label: "Tasks", Icon: ClipboardList },
+  { to: "/manager/projects", label: "Projects", Icon: FolderKanban },
+  { to: "/manager/complaints", label: "Complaints", Icon: MessageSquareWarning },
   {
     to: "/manager/resignations",
     label: "Resignations",
     Icon: UserMinus,
     badgeKey: "resignations",
-  },
-  {
-    to: "/manager/forgot-logout",
-    label: "Forgot Logout",
-    Icon: ShieldAlert,
-    badgeKey: "forgotLogout",
   },
 ];
 
@@ -68,8 +63,6 @@ const employeeLinks = [
   { to: "/employee/profile", label: "My Profile", Icon: User },
   { to: "/employee/attendance", label: "My Attendance", Icon: Clock },
   { to: "/employee/leaves", label: "My Leave", Icon: Calendar },
-  // ✅ Employee side Holidays view (optional — feature later)
-  { to: "/employee/holidays", label: "Holidays", Icon: CalendarDays },
   { to: "/employee/payslips", label: "My Payslips", Icon: Receipt },
   { to: "/employee/documents", label: "My Documents", Icon: FolderOpen },
   { to: "/employee/announcements", label: "Announcements", Icon: Megaphone },
@@ -77,15 +70,15 @@ const employeeLinks = [
   { to: "/employee/settings", label: "Settings", Icon: SettingsIcon },
   { to: "/employee/tasks", label: "My Tasks", Icon: ClipboardList },
   { to: "/employee/resignation", label: "Resignation", Icon: UserMinus },
+  { to: "/employee/projects", label: "My Projects", Icon: FolderKanban },
+  { to: "/employee/complaints", label: "My Complaints", Icon: MessageSquareWarning },
 ];
 
 const Sidebar = ({ open, role, onClose }) => {
   const { user } = useAuth();
   const links = role === "MANAGER" ? managerLinks : employeeLinks;
 
-  // Badge counts (manager only)
   const [badges, setBadges] = useState({
-    forgotLogout: 0,
     resignations: 0,
     leaves: 0,
   });
@@ -94,9 +87,7 @@ const Sidebar = ({ open, role, onClose }) => {
     if (role !== "MANAGER") return;
 
     const fetchBadges = async () => {
-      // Fetch all in parallel — even if one fails, others continue
-      const [flRes, resignRes, leaveRes] = await Promise.allSettled([
-        flApi.getStats(),
+      const [resignRes, leaveRes] = await Promise.allSettled([
         resignApi.getResignationStats(),
         leaveApi.getLeaveStats
           ? leaveApi.getLeaveStats()
@@ -104,8 +95,6 @@ const Sidebar = ({ open, role, onClose }) => {
       ]);
 
       setBadges({
-        forgotLogout:
-          flRes.status === "fulfilled" ? flRes.value.data?.pending || 0 : 0,
         resignations:
           resignRes.status === "fulfilled"
             ? resignRes.value.data?.pending || 0
@@ -118,7 +107,7 @@ const Sidebar = ({ open, role, onClose }) => {
     };
 
     fetchBadges();
-    const t = setInterval(fetchBadges, 30000); // every 30s
+    const t = setInterval(fetchBadges, 30000);
     return () => clearInterval(t);
   }, [role]);
 

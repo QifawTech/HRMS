@@ -45,9 +45,10 @@ def company_settings():         return get_db()["company_settings"]
 def audit_logs():               return get_db()["audit_logs"]
 def tasks():                    return get_db()["tasks"]
 def shifts():                   return get_db()["shifts"]
-def forgot_logout_requests():   return get_db()["forgot_logout_requests"]
 def insurances():               return get_db()["insurances"]
 
 # NEW: Holidays + Confirmations
 def holidays():                 return get_db()["holidays"]
 def confirmations():            return get_db()["employee_confirmations"]
+def projects():                 return get_db()["projects"]
+def complaints():               return get_db()["complaints"]

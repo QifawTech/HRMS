@@ -4,6 +4,7 @@ from bson.errors import InvalidId
 from app.db import documents, employees
 from app.utils.helpers import serialize, serialize_list
 from app.utils.file_handler import delete_file
+from app.utils.time_utils import now_ist
 
 
 def _oid(s):
@@ -122,7 +123,7 @@ def create_document(data, uploader_user_id, uploader_role):
         else "User"
     )
 
-    now = datetime.utcnow()
+    now = now_ist()
 
     result = documents().insert_one({
         "employee_id": employee_id,

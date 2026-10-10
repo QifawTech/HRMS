@@ -4,6 +4,7 @@ from app.services import employee_service as svc
 from app.services.professional_tax_service import calculate_professional_tax
 from app.utils.file_handler import save_profile_picture
 from app.services.employee_service import confirm_employee
+from app.utils.time_utils import now_ist
 
 
 employee_bp = Blueprint("employees", __name__)
@@ -242,7 +243,7 @@ def update_my_profile():
     except Exception:
         return jsonify({"error": "Invalid ID"}), 400
 
-    allowed["updated_at"] = datetime.utcnow()
+    allowed["updated_at"] = now_ist()
     employees().update_one({"_id": oid}, {"$set": allowed})
 
     return jsonify({"message": "Profile updated"}), 200

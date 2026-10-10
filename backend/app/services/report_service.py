@@ -6,6 +6,7 @@ from app.db import (
     leave_requests, leave_types, tasks,
     holidays as holidays_col,      # ✅ NEW
 )
+from app.utils.time_utils import now_ist
 
 
 def _oid(s):
@@ -25,7 +26,7 @@ def _parse_date(s):
 
 
 def _default_range():
-    today = datetime.utcnow()
+    today = now_ist()
     start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     return start, today
 
@@ -302,7 +303,7 @@ def department_report():
         emp_ids = [e["_id"] for e in employees().find({"department_id": d["_id"]})]
         avg_hours = 0
         if emp_ids:
-            cutoff = (datetime.utcnow() - timedelta(days=30)).date().isoformat()
+            cutoff = (now_ist() - timedelta(days=30)).date().isoformat()
             att_docs = list(attendance().find({
                 "employee_id": {"$in": emp_ids},
                 "date": {"$gte": cutoff},
@@ -549,7 +550,7 @@ def employee_full_report(emp_id):
         if a.get("is_early_logout"):
             total_early += 1
 
-    today = datetime.utcnow()
+    today = now_ist()
     month_start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     month_att = [a for a in all_att if _parse_date(a["date"]) and _parse_date(a["date"]) >= month_start]
 
@@ -613,7 +614,7 @@ def employee_full_report(emp_id):
         for t in emp_tasks
         if t.get("status") not in ("Completed", "Cancelled")
         and t.get("due_date")
-        and t["due_date"] < datetime.utcnow()
+        and t["due_date"] < now_ist()
     )
 
     recent_tasks = []

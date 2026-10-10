@@ -1,6 +1,7 @@
 import os
 import uuid
 from werkzeug.utils import secure_filename
+from flask import request
 
 UPLOAD_BASE = "uploads"
 ANNOUNCEMENT_FOLDER = os.path.join(UPLOAD_BASE, "announcements")
@@ -17,6 +18,16 @@ ALLOWED_EXTENSIONS = {
 
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 MAX_FILES = 5
+
+
+def _get_base_url():
+    """Get backend base URL from current request."""
+    try:
+        # request.host_url = "http://localhost:5000/"
+        return request.host_url.rstrip("/")
+    except RuntimeError:
+        # Outside request context (fallback)
+        return "http://localhost:5000"
 
 
 def ensure_upload_dirs():
@@ -90,6 +101,7 @@ def get_file_full_path(relative_path):
     base = os.getcwd()
     return os.path.join(base, relative_path.replace("/", os.sep))
 
+
 def save_task_file(file):
     """Save task-related file."""
     ensure_upload_dirs()
@@ -123,6 +135,7 @@ def save_task_file(file):
         "file_size": size,
         "mime_type": file.content_type or "application/octet-stream",
     }
+
 
 def save_document_file(file):
     """Save employee document."""
@@ -158,8 +171,10 @@ def save_document_file(file):
         "mime_type": file.content_type or "application/octet-stream",
     }
 
+
 def save_profile_picture(file):
-    """Save profile picture. Only images allowed."""
+    """Save profile picture. Only images allowed.
+    Returns FULL URL for the picture."""
     ensure_upload_dirs()
 
     if not file or file.filename == "":
@@ -181,13 +196,19 @@ def save_profile_picture(file):
     file_path = os.path.join(PROFILE_FOLDER, unique_name)
     file.save(file_path)
 
+    # ✅ Build FULL URL: http://localhost:5000/uploads/profiles/xxx.jpg
+    base_url = _get_base_url()
+    full_url = f"{base_url}/uploads/profiles/{unique_name}"
+
     return {
         "picture_path": file_path.replace("\\", "/"),
-        "picture_url": f"/uploads/profiles/{unique_name}",
+        "picture_url": full_url,
     }
 
+
 def save_company_logo(file):
-    """Save company logo (image only)."""
+    """Save company logo (image only).
+    Returns FULL URL for the logo."""
     ensure_upload_dirs()
 
     if not file or file.filename == "":
@@ -209,7 +230,11 @@ def save_company_logo(file):
     file_path = os.path.join(LOGO_FOLDER, unique_name)
     file.save(file_path)
 
+    # ✅ Build FULL URL: http://localhost:5000/uploads/logos/xxx.jpg
+    base_url = _get_base_url()
+    full_url = f"{base_url}/uploads/logos/{unique_name}"
+
     return {
         "logo_path": file_path.replace("\\", "/"),
-        "logo_url": f"/uploads/logos/{unique_name}",
+        "logo_url": full_url,
     }

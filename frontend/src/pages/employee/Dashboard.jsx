@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   AlertTriangle,
   TrendingUp,
-  Send,
 } from "lucide-react";
 import Layout from "../../components/layout/Layout";
 import Modal from "../../components/common/Modal";
@@ -15,9 +14,8 @@ import { useAuth } from "../../hooks/useAuth";
 import * as api from "../../api/attendanceApi";
 import * as settingsApi from "../../api/settingsApi";
 import * as empApi from "../../api/employeeApi";
-import * as flApi from "../../api/forgotLogoutApi";
 
-const FONT = "'Calibri', 'Segoe UI', -apple-system, sans-serif";
+const FONT = "'Inter', 'Segoe UI', -apple-system, sans-serif";
 
 // ============================================
 // LIVE TIMER — Continuous, never auto-stops
@@ -126,7 +124,6 @@ const formatMinutes = (mins) => {
   return `${m}m`;
 };
 
-// Format ISO timestamp → "10:30 AM" (uppercase AM/PM)
 const formatTimeShort = (iso) => {
   if (!iso) return "—";
   const t = new Date(iso).toLocaleTimeString("en-US", {
@@ -137,23 +134,12 @@ const formatTimeShort = (iso) => {
   return t.toUpperCase();
 };
 
-// Format "09:30" → "09:30 AM"
 const formatTime12 = (t) => {
   if (!t) return "—";
   const [h, m] = t.split(":").map(Number);
   const ampm = h >= 12 ? "PM" : "AM";
   const h12 = h % 12 || 12;
   return `${String(h12).padStart(2, "0")}:${String(m).padStart(2, "0")} ${ampm}`;
-};
-
-// Format date → "04 Oct 2026"
-const formatDateShort = (iso) => {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
 };
 
 // ============================================
@@ -172,12 +158,6 @@ const EmployeeDashboard = () => {
   const [earlyReason, setEarlyReason] = useState("");
   const [earlyMinutes, setEarlyMinutes] = useState(0);
 
-  const [blockedInfo, setBlockedInfo] = useState(null);
-  const [forgotModal, setForgotModal] = useState(false);
-  const [forgotReason, setForgotReason] = useState("");
-  const [forgotSending, setForgotSending] = useState(false);
-  const [myUsage, setMyUsage] = useState(null);
-
   useEffect(() => {
     settingsApi
       .getCompanySettings()
@@ -186,10 +166,6 @@ const EmployeeDashboard = () => {
     empApi
       .getMyProfile()
       .then((res) => setMyProfile(res.data))
-      .catch(() => {});
-    flApi
-      .getMyUsage()
-      .then((res) => setMyUsage(res.data))
       .catch(() => {});
   }, []);
 
@@ -288,17 +264,10 @@ const EmployeeDashboard = () => {
       load();
     } catch (err) {
       const errMsg = err.response?.data?.error || "Failed";
-      if (errMsg.startsWith("FORGOT_LOGOUT|")) {
-        const parts = errMsg.split("|");
-        setBlockedInfo({
-          date: parts[1],
-          count: parseInt(parts[2]) || 1,
-        });
-        setForgotModal(true);
-      } else if (errMsg.startsWith("OPEN_SESSION|")) {
+      if (errMsg.startsWith("OPEN_SESSION|")) {
         const parts = errMsg.split("|");
         setToast({
-          message: `You have an open session from ${formatDateShort(parts[1])}. Please check out first.`,
+          message: `You have an open session. Please check out first.`,
           type: "error",
         });
         load();
@@ -307,31 +276,6 @@ const EmployeeDashboard = () => {
       }
     } finally {
       setBusy(false);
-    }
-  };
-
-  const submitForgotLogout = async () => {
-    if (!forgotReason.trim() || forgotReason.length < 10) {
-      setToast({
-        message: "Please provide a detailed reason (min 10 characters)",
-        type: "error",
-      });
-      return;
-    }
-    setForgotSending(true);
-    try {
-      await flApi.sendForgotLogoutRequest(forgotReason);
-      setToast({ message: "Request sent to manager", type: "success" });
-      setForgotModal(false);
-      setForgotReason("");
-      setBlockedInfo(null);
-    } catch (err) {
-      setToast({
-        message: err.response?.data?.error || "Failed",
-        type: "error",
-      });
-    } finally {
-      setForgotSending(false);
     }
   };
 
@@ -428,7 +372,6 @@ const EmployeeDashboard = () => {
       );
     }
 
-    // Open session exists (today or past) → CHECK OUT
     if (hasOpenSession && openSession) {
       const isPast = openSession.is_overnight;
       return (
@@ -442,13 +385,12 @@ const EmployeeDashboard = () => {
           {busy
             ? "Checking out..."
             : isPast
-            ? `Check Out (from ${formatDateShort(openSession.date)})`
+            ? `Check Out (from ${new Date(openSession.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })})`
             : "Check Out"}
         </button>
       );
     }
 
-    // No open session, not marked today → CHECK IN
     if (notMarked) {
       return (
         <button
@@ -463,7 +405,6 @@ const EmployeeDashboard = () => {
       );
     }
 
-    // Today completed
     return (
       <div
         style={{
@@ -577,7 +518,6 @@ const EmployeeDashboard = () => {
                 </div>
               </div>
 
-              {/* CONTINUOUS TIMER */}
               {hasOpenSession && openSession && (
                 <LiveTimer
                   startTime={openSession.check_in}
@@ -586,7 +526,6 @@ const EmployeeDashboard = () => {
                 />
               )}
 
-              {/* Check In / Check Out display */}
               <div
                 style={{
                   display: "grid",
@@ -596,7 +535,6 @@ const EmployeeDashboard = () => {
                   marginBottom: 16,
                 }}
               >
-                {/* CHECK IN BOX */}
                 <div
                   style={{
                     padding: 14,
@@ -654,7 +592,6 @@ const EmployeeDashboard = () => {
                   )}
                 </div>
 
-                {/* CHECK OUT BOX */}
                 <div
                   style={{
                     padding: 14,
@@ -817,7 +754,7 @@ const EmployeeDashboard = () => {
                   }}
                 >
                   {hasOpenSession && openSession?.is_overnight
-                    ? "Forgot Logout (Pending)"
+                    ? "Session Active"
                     : hasCheckedOut
                     ? isEarly
                       ? "Early Logout"
@@ -866,36 +803,6 @@ const EmployeeDashboard = () => {
                   {shiftStartText} — {shiftEndText}
                 </strong>
               </div>
-
-              {myUsage && myUsage.usage > 0 && (
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: 13.5,
-                    alignItems: "center",
-                    paddingTop: 12,
-                    borderTop: "1px solid #f1f5f9",
-                  }}
-                >
-                  <span style={{ color: "#6b7280", fontWeight: 600 }}>
-                    Forgot Logout (Month)
-                  </span>
-                  <strong
-                    style={{
-                      fontSize: 13,
-                      color:
-                        myUsage.usage > myUsage.max_allowed
-                          ? "#dc2626"
-                          : "#d97706",
-                    }}
-                  >
-                    {myUsage.usage} / {myUsage.max_allowed}
-                    {myUsage.total_fine > 0 &&
-                      ` (₹${myUsage.total_fine} fine)`}
-                  </strong>
-                </div>
-              )}
 
               {today && (hasCheckedIn || hasCheckedOut) && (
                 <div
@@ -1105,91 +1012,6 @@ const EmployeeDashboard = () => {
               <span style={{ fontWeight: 600 }}>{earlyReason.length}/10</span>
             </div>
           </div>
-        </Modal>
-
-        {/* Forgot Logout Modal (still available if blocked) */}
-        <Modal
-          open={forgotModal}
-          onClose={() => {
-            setForgotModal(false);
-            setForgotReason("");
-          }}
-          title="Forgot to Logout"
-          footer={
-            <>
-              <button
-                className="erp-btn erp-btn-outline"
-                onClick={() => {
-                  setForgotModal(false);
-                  setForgotReason("");
-                }}
-                style={{ fontFamily: FONT }}
-              >
-                Cancel
-              </button>
-              <button
-                className="erp-btn erp-btn-primary"
-                onClick={submitForgotLogout}
-                disabled={forgotSending || forgotReason.length < 10}
-                style={{ fontFamily: FONT }}
-              >
-                <Send size={14} />
-                {forgotSending ? "Sending..." : "Send Request"}
-              </button>
-            </>
-          }
-        >
-          {blockedInfo && (
-            <>
-              <div
-                style={{
-                  padding: 14,
-                  background: "#fef2f2",
-                  border: "1px solid #fecaca",
-                  borderRadius: 8,
-                  marginBottom: 16,
-                  display: "flex",
-                  gap: 10,
-                  alignItems: "flex-start",
-                  fontSize: 13,
-                  color: "#991b1b",
-                  fontFamily: FONT,
-                  lineHeight: 1.5,
-                }}
-              >
-                <AlertTriangle
-                  size={18}
-                  style={{ flexShrink: 0, marginTop: 2 }}
-                />
-                <div>
-                  <strong>Login Blocked!</strong>
-                  <br />
-                  You forgot to logout on{" "}
-                  <strong>{formatDateShort(blockedInfo.date)}</strong>.
-                  <br />
-                  Send a request to your manager to unlock.
-                </div>
-              </div>
-
-              <div className="mb-3">
-                <label className="erp-label">
-                  Reason for not logging out *
-                </label>
-                <textarea
-                  className="erp-input"
-                  rows={4}
-                  placeholder="Explain why you forgot to logout (min 10 characters)..."
-                  value={forgotReason}
-                  onChange={(e) => setForgotReason(e.target.value)}
-                  style={{ resize: "vertical", fontFamily: FONT }}
-                  autoFocus
-                />
-                <small style={{ color: "#9ca3af", fontSize: 11 }}>
-                  {forgotReason.length}/10 characters minimum
-                </small>
-              </div>
-            </>
-          )}
         </Modal>
 
         {toast && (
