@@ -1097,18 +1097,9 @@ const ManagerPayroll = () => {
                 lineHeight: 1.55,
               }}
             >
-              <strong>How it works:</strong>
-              <ul style={{ margin: "8px 0 0 0", paddingLeft: 20 }}>
-                <li>
-                  Ellaa <strong>ACTIVE</strong> employees ku payslip generate
-                  aagum
-                </li>
-                <li>Salary employee profile la irundhu auto-fill aagum</li>
-                <li>
-                  Already generate aana payslips <strong>skip</strong> aagum
-                </li>
-                <li>PT slab month check pannum (April/October)</li>
-              </ul>
+              <strong>⚠️ Warning:</strong> Existing payslips will be deleted and
+  new payslips will be generated. All changes must be reviewed and
+  approved by the manager before they are applied.
             </div>
 
             {/* Month */}
@@ -1150,7 +1141,7 @@ const ManagerPayroll = () => {
                   onChange={(e) => setBulkOverwrite(e.target.checked)}
                   style={{ width: 18, height: 18, cursor: "pointer" }}
                 />
-                Existing payslips ah <strong>overwrite</strong> pannunga
+                Overwrite Existing <strong>Payslips</strong>
               </label>
               <small
                 style={{
@@ -1161,7 +1152,7 @@ const ManagerPayroll = () => {
                   marginTop: 4,
                 }}
               >
-                Already generate aana payslips ah delete panni re-generate pannum
+                Existing payslips will be deleted and regenerated
               </small>
             </div>
 
@@ -1181,10 +1172,8 @@ const ManagerPayroll = () => {
               >
                 <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 2 }} />
                 <div>
-                  <strong>Warning:</strong> Existing payslips delete aagi, new
-                  generate aagum. Manager review pannirundha, andha changes
-                  ellame
-                  <strong> poagum</strong>!
+                  <strong>Warning:</strong> Existing payslips will be deleted and new payslips will be generated. All changes must be reviewed and approved by the manager before they are applied.
+                  
                 </div>
               </div>
             )}

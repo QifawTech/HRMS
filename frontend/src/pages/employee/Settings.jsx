@@ -12,6 +12,18 @@ import {
 import Layout from "../../components/layout/Layout";
 import Toast from "../../components/common/Toast";
 import * as api from "../../api/settingsApi";
+import * as empApi from "../../api/employeeApi";
+
+const FONT = "'Inter', 'Segoe UI', -apple-system, sans-serif";
+
+// ✅ 24-hour → 12-hour (AM/PM)
+const formatTime12 = (t) => {
+  if (!t) return "—";
+  const [h, m] = t.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 || 12;
+  return `${String(h12).padStart(2, "0")}:${String(m).padStart(2, "0")} ${ampm}`;
+};
 
 const Row = ({ Icon, label, value }) => (
   <div
@@ -23,14 +35,29 @@ const Row = ({ Icon, label, value }) => (
       background: "#f9fafb",
       borderRadius: 10,
       marginBottom: 8,
+      fontFamily: FONT,
     }}
   >
     <Icon size={16} color="#4f46e5" />
     <div style={{ flex: 1 }}>
-      <div style={{ fontSize: 11.5, color: "#6b7280", fontWeight: 600 }}>
+      <div
+        style={{
+          fontSize: 11.5,
+          color: "#6b7280",
+          fontWeight: 600,
+          fontFamily: FONT,
+        }}
+      >
         {label}
       </div>
-      <div style={{ fontSize: 13.5, fontWeight: 600, color: "#111827" }}>
+      <div
+        style={{
+          fontSize: 13.5,
+          fontWeight: 600,
+          color: "#111827",
+          fontFamily: FONT,
+        }}
+      >
         {value}
       </div>
     </div>
@@ -47,11 +74,18 @@ const EmployeeSettings = () => {
   const [showNewPwd, setShowNewPwd] = useState(false);
 
   const [company, setCompany] = useState(null);
+  const [myProfile, setMyProfile] = useState(null);
 
   useEffect(() => {
     api
       .getCompanySettings()
       .then((res) => setCompany(res.data))
+      .catch(() => {});
+
+    // ✅ Fetch employee's own profile for shift info
+    empApi
+      .getMyProfile()
+      .then((res) => setMyProfile(res.data))
       .catch(() => {});
   }, []);
 
@@ -92,14 +126,36 @@ const EmployeeSettings = () => {
     }
   };
 
+  // ✅ Compute shift display values
+  const hasShift =
+    myProfile?.shift_name &&
+    myProfile?.shift_start &&
+    myProfile?.shift_end;
+
+  const shiftName = hasShift
+    ? myProfile.shift_name
+    : "Default Shift";
+
+  const shiftStartText = hasShift
+    ? formatTime12(myProfile.shift_start)
+    : company
+    ? formatTime12(company.work_start_time)
+    : "—";
+
+  const shiftEndText = hasShift
+    ? formatTime12(myProfile.shift_end)
+    : company
+    ? formatTime12(company.work_end_time)
+    : "—";
+
   return (
     <Layout>
-      <div className="mb-4">
+      <div className="mb-4" style={{ fontFamily: FONT }}>
         <h1 className="erp-page-title">Settings</h1>
         <p className="erp-page-subtitle mb-0">Manage your account</p>
       </div>
 
-      <div className="row g-3">
+      <div className="row g-3" style={{ fontFamily: FONT }}>
         {/* Company Info (Read-only) */}
         {company && (
           <div className="col-12 col-lg-6">
@@ -129,10 +185,22 @@ const EmployeeSettings = () => {
                   <Building2 size={18} />
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 14 }}>
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: 14,
+                      fontFamily: FONT,
+                    }}
+                  >
                     Company Info
                   </div>
-                  <div style={{ fontSize: 12, color: "#6b7280" }}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#6b7280",
+                      fontFamily: FONT,
+                    }}
+                  >
                     Read-only · Set by manager
                   </div>
                 </div>
@@ -143,11 +211,20 @@ const EmployeeSettings = () => {
                 label="Company"
                 value={company.company_name}
               />
+
+              {/* ✅ Shift info — with name + 12-hour timing */}
               <Row
                 Icon={Clock}
-                label="Work Hours"
-                value={`${company.work_start_time} – ${company.work_end_time}`}
+                label="Your Shift"
+                value={shiftName}
               />
+
+              <Row
+                Icon={Clock}
+                label="Shift Hours"
+                value={`${shiftStartText} – ${shiftEndText}`}
+              />
+
               <Row
                 Icon={Calendar}
                 label="Working Days"
@@ -185,10 +262,22 @@ const EmployeeSettings = () => {
                 <Lock size={18} />
               </div>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>
+                <div
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 14,
+                    fontFamily: FONT,
+                  }}
+                >
                   Change Password
                 </div>
-                <div style={{ fontSize: 12, color: "#6b7280" }}>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "#6b7280",
+                    fontFamily: FONT,
+                  }}
+                >
                   Update your login password
                 </div>
               </div>
@@ -203,6 +292,7 @@ const EmployeeSettings = () => {
                   value={currentPwd}
                   onChange={(e) => setCurrentPwd(e.target.value)}
                   placeholder="Enter current password"
+                  style={{ fontFamily: FONT }}
                 />
                 <button
                   type="button"
@@ -232,6 +322,7 @@ const EmployeeSettings = () => {
                   value={newPwd}
                   onChange={(e) => setNewPwd(e.target.value)}
                   placeholder="Min 6 characters"
+                  style={{ fontFamily: FONT }}
                 />
                 <button
                   type="button"
@@ -260,6 +351,7 @@ const EmployeeSettings = () => {
                 value={confirmPwd}
                 onChange={(e) => setConfirmPwd(e.target.value)}
                 placeholder="Re-enter password"
+                style={{ fontFamily: FONT }}
               />
             </div>
 
@@ -267,7 +359,7 @@ const EmployeeSettings = () => {
               className="erp-btn erp-btn-primary w-100"
               onClick={handlePasswordSave}
               disabled={saving}
-              style={{ justifyContent: "center" }}
+              style={{ justifyContent: "center", fontFamily: FONT }}
             >
               <Lock size={14} />
               {saving ? "Updating..." : "Change Password"}
@@ -285,6 +377,7 @@ const EmployeeSettings = () => {
                 display: "flex",
                 gap: 8,
                 alignItems: "flex-start",
+                fontFamily: FONT,
               }}
             >
               <AlertCircle size={14} style={{ flexShrink: 0, marginTop: 1 }} />

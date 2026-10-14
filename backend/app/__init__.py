@@ -8,8 +8,23 @@ def create_app():
     """Flask application factory."""
     app = Flask(__name__)
 
-    # CORS API calls-a veliya irunthu allow panna
-    CORS(app, resources={r"/*": {"origins": "*"}})
+    # ============================================
+    # ✅ CORS — Only specific origins (SAFE)
+    # ============================================
+    ALLOWED_ORIGINS = os.getenv(
+        "ALLOWED_ORIGINS",
+        "http://localhost:3000,http://localhost:5173,"
+        "http://127.0.0.1:3000,http://127.0.0.1:5173,"
+        "http://13.127.26.179:3000"
+    ).split(",")
+
+    CORS(
+        app,
+        resources={r"/*": {"origins": ALLOWED_ORIGINS}},
+        supports_credentials=True,
+        allow_headers=["Content-Type", "Authorization"],
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    )
 
     app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
 
@@ -21,7 +36,6 @@ def create_app():
 
     @app.route("/uploads/<path:filepath>")
     def serve_upload(filepath):
-        # Security
         if ".." in filepath or filepath.startswith("/"):
             return jsonify({"error": "Invalid path"}), 400
 
@@ -87,6 +101,10 @@ def create_app():
             "message": "Employee ERP API is running",
             "status": "ok",
         }), 200
+
+    @app.route("/health")
+    def health():
+        return jsonify({"status": "ok"}), 200
 
     # ============================================
     # Error handlers

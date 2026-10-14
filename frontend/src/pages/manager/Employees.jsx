@@ -17,6 +17,7 @@ import {
   Trash2,
   CheckCircle2,
   GraduationCap,
+  XCircle,
 } from "lucide-react";
 import Layout from "../../components/layout/Layout";
 import Modal from "../../components/common/Modal";
@@ -36,10 +37,17 @@ const FONT = "'Inter', 'Segoe UI', -apple-system, sans-serif";
 const getProfilePicUrl = (url) => {
   if (!url) return null;
   if (url.startsWith("http")) return url;
-  // ✅ Prepend backend URL for relative paths
-  const backendUrl =
-    import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
   return `${backendUrl}${url}`;
+};
+
+// 24-hour → 12-hour (AM/PM)
+const formatTime12 = (t) => {
+  if (!t) return "—";
+  const [h, m] = t.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 || 12;
+  return `${String(h12).padStart(2, "0")}:${String(m).padStart(2, "0")} ${ampm}`;
 };
 
 const MiniBox = ({ label, value, highlight }) => (
@@ -115,17 +123,17 @@ const Employees = () => {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // ✅ NEW: Termination reason (when end_date set in edit mode)
+  const [terminateReason, setTerminateReason] = useState("");
+
   const [ptPreview, setPtPreview] = useState(null);
   const [ptLoading, setPtLoading] = useState(false);
 
   const [detailsTarget, setDetailsTarget] = useState(null);
 
-  const [terminateTarget, setTerminateTarget] = useState(null);
-  const [terminateForm, setTerminateForm] = useState({
-    terminate_date: new Date().toISOString().split("T")[0],
-    reason: "",
-  });
-  const [terminating, setTerminating] = useState(false);
+  // ✅ NEW: Permanent delete state
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [editLastDayTarget, setEditLastDayTarget] = useState(null);
   const [editLastDay, setEditLastDay] = useState("");
@@ -187,21 +195,34 @@ const Employees = () => {
   }, [form.total_salary, modalOpen]);
 
   const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await api.listEmployees(
-        search,
-        filterDept,
-        filterStatus,
-        filterType
-      );
+  setLoading(true);
+  try {
+    const res = await api.listEmployees(
+      search,
+      filterDept,
+      filterStatus,
+      filterType,
+      1,      // page
+      500     // limit (show up to 500; increase if needed)
+    );
+
+    // ✅ Handle paginated response
+    if (
+      res.data &&
+      typeof res.data === "object" &&
+      Array.isArray(res.data.data)
+    ) {
+      setItems(res.data.data);
+    } else {
+      // Fallback — old format (array)
       setItems(Array.isArray(res.data) ? res.data : []);
-    } catch (e) {
-      setToast({ message: "Failed to load employees", type: "error" });
-    } finally {
-      setLoading(false);
     }
-  }, [search, filterDept, filterStatus, filterType]);
+  } catch (e) {
+    setToast({ message: "Failed to load employees", type: "error" });
+  } finally {
+    setLoading(false);
+  }
+}, [search, filterDept, filterStatus, filterType]);
 
   useEffect(() => {
     const t = setTimeout(load, 300);
@@ -212,6 +233,7 @@ const Employees = () => {
     setEditing(null);
     setForm(emptyForm);
     setPtPreview(null);
+    setTerminateReason("");
     setModalOpen(true);
     try {
       const res = await api.getNextCode();
@@ -248,6 +270,7 @@ const Employees = () => {
         ? item.intern_end_date.split("T")[0]
         : "",
     });
+    setTerminateReason("");
     if (s.professional_tax !== undefined || s.six_month_gross !== undefined) {
       setPtPreview({
         six_month_gross: s.six_month_gross,
@@ -266,12 +289,11 @@ const Employees = () => {
     ? Number(selectedInsurance.annual_amount || 0) / 12
     : 0;
 
-  // ✅ FIXED handleSubmit — Empty salary fields remove pannum
+  // ✅ UPDATED: End date = termination
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     if (!form.first_name.trim() || !form.last_name.trim()) return;
 
-    // Add mode validation
     if (!editing) {
       if (!form.email.trim() || !form.password.trim()) {
         setToast({ message: "Email and password required", type: "error" });
@@ -286,7 +308,6 @@ const Employees = () => {
       }
     }
 
-    // Edit mode validation
     if (editing) {
       if (!form.email.trim()) {
         setToast({ message: "Email is required", type: "error" });
@@ -305,19 +326,43 @@ const Employees = () => {
       }
     }
 
+    // ✅ NEW: If editing and end_date is set → terminate with reason
+    if (editing && form.end_date) {
+      if (!terminateReason.trim() || terminateReason.length < 5) {
+        setToast({
+          message: "Termination reason required (min 5 characters)",
+          type: "error",
+        });
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       if (editing) {
-        // ✅ Build payload — remove empty fields
-        const updateData = { ...form };
-        delete updateData.employee_code; // Don't change code
+        // ✅ Step 1: If end_date set → TERMINATE first
+        if (form.end_date) {
+          await api.terminateEmployee(editing._id, {
+            terminate_date: form.end_date,
+            reason: terminateReason.trim(),
+          });
+        }
 
-        // Remove password if blank (no change)
+        // ✅ Step 2: Update other fields (without end_date if terminating)
+        const updateData = { ...form };
+        delete updateData.employee_code;
+
+        // Remove password if blank
         if (!updateData.password || !updateData.password.trim()) {
           delete updateData.password;
         }
 
-        // ✅ Remove EMPTY salary fields — backend keep existing
+        // ✅ If terminating, remove end_date from update (already handled)
+        if (form.end_date) {
+          delete updateData.end_date;
+        }
+
+        // Salary handling
         if (
           updateData.total_salary === "" ||
           updateData.total_salary === null ||
@@ -326,7 +371,6 @@ const Employees = () => {
           delete updateData.total_salary;
         }
 
-        // ✅ Convert to number if present
         if (updateData.total_salary !== undefined) {
           const numSalary = parseFloat(updateData.total_salary);
           if (isNaN(numSalary)) {
@@ -336,37 +380,32 @@ const Employees = () => {
           }
         }
 
-        // Remove empty intern_end_date
         if (!updateData.intern_end_date) {
           delete updateData.intern_end_date;
         }
 
-        // Remove empty end_date (backend handles separately)
-        if (!updateData.end_date) {
-          delete updateData.end_date;
+        // Only call updateEmployee if there are fields to update
+        if (Object.keys(updateData).length > 0) {
+          await api.updateEmployee(editing._id, updateData);
         }
 
-        await api.updateEmployee(editing._id, updateData);
+        const msg = form.end_date
+          ? `${editing.first_name} terminated successfully.`
+          : "Employee updated successfully.";
 
-        const endMsg = form.end_date
-          ? " Employee will be marked INACTIVE after end date."
-          : "";
-        setToast({
-          message: "Employee updated successfully." + endMsg,
-          type: "success",
-        });
+        setToast({ message: msg, type: "success" });
       } else {
+        // CREATE
         await api.createEmployee(form);
-        const endMsg = form.end_date
-          ? " Employee will be marked INACTIVE after end date."
-          : "";
         setToast({
-          message: `Employee created! Login: ${form.email} / ${form.password}${endMsg}`,
+          message: `Employee created! Login: ${form.email} / ${form.password}`,
           type: "success",
         });
       }
+
       setModalOpen(false);
       setPtPreview(null);
+      setTerminateReason("");
       load();
     } catch (err) {
       setToast({
@@ -378,43 +417,25 @@ const Employees = () => {
     }
   };
 
-  const openTerminateModal = (emp) => {
-    setTerminateTarget(emp);
-    setTerminateForm({
-      terminate_date: new Date().toISOString().split("T")[0],
-      reason: "",
-    });
-  };
-
-  const handleTerminate = async () => {
-    if (!terminateTarget) return;
-    if (!terminateForm.terminate_date) {
-      setToast({ message: "Termination date required", type: "error" });
-      return;
-    }
-    if (!terminateForm.reason.trim() || terminateForm.reason.length < 5) {
-      setToast({
-        message: "Please provide a reason (min 5 characters)",
-        type: "error",
-      });
-      return;
-    }
-    setTerminating(true);
+  // ✅ NEW: Permanent delete handler
+  const handlePermanentDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await api.terminateEmployee(terminateTarget._id, terminateForm);
+      await api.deleteEmployee(deleteTarget._id);
       setToast({
-        message: `${terminateTarget.first_name} terminated successfully.`,
+        message: `${deleteTarget.first_name} ${deleteTarget.last_name} permanently deleted.`,
         type: "success",
       });
-      setTerminateTarget(null);
+      setDeleteTarget(null);
       load();
     } catch (err) {
       setToast({
-        message: err.response?.data?.error || "Failed to terminate",
+        message: err.response?.data?.error || "Failed to delete",
         type: "error",
       });
     } finally {
-      setTerminating(false);
+      setDeleting(false);
     }
   };
 
@@ -648,7 +669,7 @@ const Employees = () => {
                       <th>Shift</th>
                       <th>Contact</th>
                       <th>Status</th>
-                      <th style={{ width: 160 }}>Actions</th>
+                      <th style={{ width: 130 }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -784,7 +805,8 @@ const Employees = () => {
                                       color: "#94a3b8",
                                     }}
                                   >
-                                    {emp.shift_start} – {emp.shift_end}
+                                    {formatTime12(emp.shift_start)} –{" "}
+                                    {formatTime12(emp.shift_end)}
                                   </div>
                                 )}
                               </div>
@@ -877,23 +899,27 @@ const Employees = () => {
                               )}
 
                               {emp.status === "ACTIVE" && (
-                                <>
-                                  <button
-                                    className="erp-icon-btn"
-                                    onClick={() => openEdit(emp)}
-                                    title="Edit"
-                                  >
-                                    <Edit2 size={14} />
-                                  </button>
-                                  <button
-                                    className="erp-icon-btn erp-icon-btn-danger"
-                                    onClick={() => openTerminateModal(emp)}
-                                    title="Terminate Employee"
-                                  >
-                                    <Trash2 size={14} />
-                                  </button>
-                                </>
+                                <button
+                                  className="erp-icon-btn"
+                                  onClick={() => openEdit(emp)}
+                                  title="Edit"
+                                >
+                                  <Edit2 size={14} />
+                                </button>
                               )}
+
+                              {/* Permanent Delete Button */}
+                              <button
+                                className="erp-icon-btn"
+                                onClick={() => setDeleteTarget(emp)}
+                                title="Permanently Delete (Data lost)"
+                                style={{
+                                  color: "#991b1b",
+                                  background: "#fecaca",
+                                }}
+                              >
+                                <XCircle size={14} />
+                              </button>
 
                               {isResigned && (
                                 <button
@@ -1209,33 +1235,36 @@ const Employees = () => {
                       )}
 
                       {emp.status === "ACTIVE" && (
-                        <>
-                          <button
-                            className="erp-btn erp-btn-outline flex-fill"
-                            onClick={() => openEdit(emp)}
-                            style={{
-                              fontFamily: FONT,
-                              fontSize: 13,
-                              padding: "8px",
-                              justifyContent: "center",
-                            }}
-                          >
-                            <Edit2 size={14} /> Edit
-                          </button>
-                          <button
-                            className="erp-btn erp-btn-danger flex-fill"
-                            onClick={() => openTerminateModal(emp)}
-                            style={{
-                              fontFamily: FONT,
-                              fontSize: 13,
-                              padding: "8px",
-                              justifyContent: "center",
-                            }}
-                          >
-                            <Trash2 size={14} /> Terminate
-                          </button>
-                        </>
+                        <button
+                          className="erp-btn erp-btn-outline flex-fill"
+                          onClick={() => openEdit(emp)}
+                          style={{
+                            fontFamily: FONT,
+                            fontSize: 13,
+                            padding: "8px",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <Edit2 size={14} /> Edit
+                        </button>
                       )}
+
+                      {/* Permanent Delete (mobile) */}
+                      <button
+                        className="erp-btn flex-fill"
+                        onClick={() => setDeleteTarget(emp)}
+                        style={{
+                          fontFamily: FONT,
+                          fontSize: 13,
+                          padding: "8px",
+                          justifyContent: "center",
+                          background: "#fecaca",
+                          color: "#991b1b",
+                          border: "1px solid #f87171",
+                        }}
+                      >
+                        <XCircle size={14} /> Delete
+                      </button>
 
                       {(isInactive || isTerminated) && (
                         <button
@@ -1303,7 +1332,13 @@ const Employees = () => {
               disabled={saving}
               style={{ fontFamily: FONT }}
             >
-              {saving ? "Saving..." : editing ? "Update" : "Create Employee"}
+              {saving
+                ? "Saving..."
+                : editing && form.end_date
+                ? "Terminate Employee"
+                : editing
+                ? "Update"
+                : "Create Employee"}
             </button>
           </>
         }
@@ -1489,7 +1524,8 @@ const Employees = () => {
                 <option value="">— Use company default —</option>
                 {shifts.map((s) => (
                   <option key={s._id} value={s._id}>
-                    {s.name} ({s.start_time} - {s.end_time})
+                    {s.name} ({formatTime12(s.start_time)} -{" "}
+                    {formatTime12(s.end_time)})
                   </option>
                 ))}
               </select>
@@ -1574,66 +1610,88 @@ const Employees = () => {
               </div>
             )}
 
-            <div className="col-12 col-sm-6">
-              <label className="erp-label">
-                End Date <span style={{ color: "#94a3b8" }}>(Optional)</span>
-              </label>
-              <input
-                type="date"
-                className="erp-input"
-                value={form.end_date}
-                onChange={(e) =>
-                  setForm({ ...form, end_date: e.target.value })
-                }
-                min={form.date_of_joining}
-                style={{ fontFamily: FONT }}
-              />
-              <small style={{ color: "#9ca3af", fontSize: 11 }}>
-                If set, employee will be marked INACTIVE
-              </small>
-            </div>
+            {/* ✅ End Date — Only in EDIT mode */}
+            {editing && (
+              <div className="col-12 col-sm-6">
+                <label className="erp-label">
+                  End Date{" "}
+                  <span style={{ color: "#dc2626", fontWeight: 600 }}>
+                    (= Terminate Employee)
+                  </span>
+                </label>
+                <input
+                  type="date"
+                  className="erp-input"
+                  value={form.end_date}
+                  onChange={(e) =>
+                    setForm({ ...form, end_date: e.target.value })
+                  }
+                  min={form.date_of_joining}
+                  style={{ fontFamily: FONT }}
+                />
+                <small style={{ color: "#9ca3af", fontSize: 11 }}>
+                  Setting a date will terminate this employee
+                </small>
+              </div>
+            )}
 
-            {form.end_date && (
+            {/* ✅ NEW: Termination Reason — only when end_date set */}
+            {editing && form.end_date && (
               <div className="col-12">
-                {(() => {
-                  const endDate = new Date(form.end_date);
-                  const today = new Date();
-                  today.setHours(0, 0, 0, 0);
-                  const isPast = endDate <= today;
-
-                  return (
-                    <div
-                      style={{
-                        padding: 10,
-                        background: isPast ? "#fef2f2" : "#fef3c7",
-                        border: `1px solid ${
-                          isPast ? "#fecaca" : "#fde68a"
-                        }`,
-                        borderRadius: 8,
-                        fontSize: 12,
-                        color: isPast ? "#991b1b" : "#92400e",
-                        fontFamily: FONT,
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      <AlertTriangle
-                        size={13}
-                        style={{ display: "inline", marginRight: 6 }}
-                      />
-                      <strong>{isPast ? "Warning:" : "Note:"}</strong>{" "}
-                      Employee will be marked <strong>INACTIVE</strong>{" "}
-                      {isPast ? "immediately" : "after"}{" "}
+                <div
+                  style={{
+                    padding: 14,
+                    background: "#fef2f2",
+                    border: "1px solid #fecaca",
+                    borderRadius: 10,
+                    marginBottom: 12,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 8,
+                      fontSize: 13,
+                      color: "#991b1b",
+                      fontFamily: FONT,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    <AlertTriangle
+                      size={16}
+                      style={{ flexShrink: 0, marginTop: 2 }}
+                    />
+                    <div>
+                      <strong>Termination:</strong> Employee will be marked{" "}
+                      <strong>TERMINATED</strong> on{" "}
                       <strong>
-                        {endDate.toLocaleDateString("en-IN", {
+                        {new Date(form.end_date).toLocaleDateString("en-IN", {
                           day: "2-digit",
                           month: "short",
                           year: "numeric",
                         })}
-                      </strong>
-                      {isPast && " and cannot login."}
+                      </strong>{" "}
+                      and cannot login.
                     </div>
-                  );
-                })()}
+                  </div>
+                </div>
+
+                <label className="erp-label">
+                  Reason for Termination <span style={{ color: "#dc2626" }}>*</span>
+                </label>
+                <textarea
+                  className="erp-input"
+                  rows={3}
+                  placeholder="e.g., Performance issues, Policy violation, End of project..."
+                  value={terminateReason}
+                  onChange={(e) => setTerminateReason(e.target.value)}
+                  style={{ resize: "vertical", fontFamily: FONT }}
+                  required
+                />
+                <small style={{ color: "#9ca3af", fontSize: 11 }}>
+                  Minimum 5 characters required
+                </small>
               </div>
             )}
 
@@ -2028,112 +2086,116 @@ const Employees = () => {
         )}
       </Modal>
 
-      {/* TERMINATE MODAL */}
+      {/* PERMANENT DELETE MODAL */}
       <Modal
-        open={!!terminateTarget}
-        onClose={() => setTerminateTarget(null)}
-        title="Terminate Employee"
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Permanently Delete Employee"
         footer={
           <>
             <button
               className="erp-btn erp-btn-outline"
-              onClick={() => setTerminateTarget(null)}
+              onClick={() => setDeleteTarget(null)}
               style={{ fontFamily: FONT }}
             >
               Cancel
             </button>
             <button
               className="erp-btn erp-btn-danger"
-              onClick={handleTerminate}
-              disabled={terminating}
-              style={{ fontFamily: FONT }}
+              onClick={handlePermanentDelete}
+              disabled={deleting}
+              style={{
+                fontFamily: FONT,
+                background: "#991b1b",
+                borderColor: "#991b1b",
+              }}
             >
-              <Trash2 size={14} />
-              {terminating ? "Terminating..." : "Confirm Terminate"}
+              <XCircle size={14} />
+              {deleting ? "Deleting..." : "Permanently Delete"}
             </button>
           </>
         }
       >
-        {terminateTarget && (
+        {deleteTarget && (
           <>
             <div
               style={{
-                background: "#fef2f2",
-                border: "1px solid #fecaca",
-                color: "#991b1b",
-                padding: 12,
-                borderRadius: 8,
+                background: "#7f1d1d",
+                border: "2px solid #dc2626",
+                color: "white",
+                padding: 14,
+                borderRadius: 10,
                 marginBottom: 16,
                 display: "flex",
-                gap: 8,
+                gap: 10,
                 fontFamily: FONT,
               }}
             >
               <AlertTriangle
-                size={16}
-                style={{ flexShrink: 0, marginTop: 2 }}
+                size={22}
+                style={{ flexShrink: 0, marginTop: 2, color: "#fca5a5" }}
               />
-              <div style={{ fontSize: 13 }}>
-                <strong>Warning:</strong> Employee will be marked as{" "}
-                <strong>TERMINATED</strong> and cannot login. Data will be{" "}
-                <strong>preserved</strong> in the system.
+              <div style={{ fontSize: 13, lineHeight: 1.6 }}>
+                <strong style={{ fontSize: 14 }}>
+                  ⚠️ DANGER — PERMANENT DELETE
+                </strong>
+                <br />
+                This action will <strong>permanently delete</strong> the
+                employee AND <strong>all associated data</strong> (attendance,
+                leaves, payroll, documents). <br />
+                <strong
+                  style={{ color: "#fca5a5", display: "block", marginTop: 6 }}
+                >
+                  This CANNOT be undone!
+                </strong>
               </div>
             </div>
 
             <div className="mb-3">
-              <label className="erp-label">Employee</label>
+              <label className="erp-label">Employee to be deleted</label>
               <div
                 style={{
-                  padding: "8px 12px",
-                  background: "#f9fafb",
+                  padding: "10px 14px",
+                  background: "#fef2f2",
                   borderRadius: 8,
-                  fontSize: 13.5,
-                  fontWeight: 600,
+                  fontSize: 14,
+                  fontWeight: 700,
                   fontFamily: FONT,
+                  color: "#991b1b",
+                  border: "1px solid #fecaca",
                 }}
               >
-                {terminateTarget.first_name} {terminateTarget.last_name} (
-                {terminateTarget.employee_code})
+                {deleteTarget.first_name} {deleteTarget.last_name} (
+                {deleteTarget.employee_code})
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 500,
+                    marginTop: 3,
+                    color: "#7f1d1d",
+                  }}
+                >
+                  {deleteTarget.email || "—"}
+                </div>
               </div>
             </div>
 
-            <div className="mb-3">
-              <label className="erp-label">Termination Date *</label>
-              <input
-                type="date"
-                className="erp-input"
-                value={terminateForm.terminate_date}
-                onChange={(e) =>
-                  setTerminateForm({
-                    ...terminateForm,
-                    terminate_date: e.target.value,
-                  })
-                }
-                style={{ fontFamily: FONT }}
-                required
-              />
-            </div>
-
-            <div className="mb-3">
-              <label className="erp-label">Reason for Termination *</label>
-              <textarea
-                className="erp-input"
-                rows={3}
-                placeholder="e.g., Performance issues, Policy violation..."
-                value={terminateForm.reason}
-                onChange={(e) =>
-                  setTerminateForm({
-                    ...terminateForm,
-                    reason: e.target.value,
-                  })
-                }
-                style={{ resize: "vertical", fontFamily: FONT }}
-                autoFocus
-                required
-              />
-              <small style={{ color: "#9ca3af", fontSize: 11 }}>
-                Minimum 5 characters required
-              </small>
+            <div
+              style={{
+                padding: 12,
+                background: "#fef3c7",
+                border: "1px solid #fde68a",
+                borderRadius: 8,
+                fontSize: 12.5,
+                color: "#92400e",
+                fontFamily: FONT,
+                lineHeight: 1.55,
+              }}
+            >
+              💡 <strong>Tip:</strong> If you just want to deactivate this
+              employee, use <strong>"Edit → End Date"</strong> instead. Data
+              will be preserved. Only use <strong>Permanent Delete</strong>{" "}
+              for testing/cleanup purposes.
             </div>
           </>
         )}

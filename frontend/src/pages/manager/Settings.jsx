@@ -53,6 +53,93 @@ const useIsMobile = () => {
   return isMobile;
 };
 
+// ============================================
+// 🕐 12-HOUR TIME PICKER — Railway Style
+// value format: "HH:MM" (24-hour) — auto-converts
+// ============================================
+const TimePicker12 = ({ value, onChange, label, required }) => {
+  const to12 = (time24) => {
+    if (!time24) return { hour: "12", minute: "00", ampm: "AM" };
+    const [h, m] = time24.split(":").map(Number);
+    const ampm = h >= 12 ? "PM" : "AM";
+    const h12 = h % 12 || 12;
+    return {
+      hour: String(h12).padStart(2, "0"),
+      minute: String(m).padStart(2, "0"),
+      ampm,
+    };
+  };
+
+  const to24 = (h12, minute, ampm) => {
+    let h = parseInt(h12, 10);
+    if (ampm === "PM" && h !== 12) h += 12;
+    if (ampm === "AM" && h === 12) h = 0;
+    return `${String(h).padStart(2, "0")}:${minute}`;
+  };
+
+  const { hour, minute, ampm } = to12(value);
+
+  return (
+    <div>
+      <label className="erp-label">
+        {label} {required && "*"}
+      </label>
+      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+        {/* Hour */}
+        <select
+          className="erp-input"
+          value={hour}
+          onChange={(e) => onChange(to24(e.target.value, minute, ampm))}
+          style={{ flex: 1, padding: "8px 10px", fontFamily: FONT }}
+        >
+          {Array.from({ length: 12 }, (_, i) => {
+            const h = String(i + 1).padStart(2, "0");
+            return (
+              <option key={h} value={h}>
+                {h}
+              </option>
+            );
+          })}
+        </select>
+
+        <span style={{ fontWeight: 700, color: "#6b7280" }}>:</span>
+
+        {/* Minute — 5-min increments */}
+        <select
+          className="erp-input"
+          value={minute}
+          onChange={(e) => onChange(to24(hour, e.target.value, ampm))}
+          style={{ flex: 1, padding: "8px 10px", fontFamily: FONT }}
+        >
+          {["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"].map(
+            (m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            )
+          )}
+        </select>
+
+        {/* AM/PM */}
+        <select
+          className="erp-input"
+          value={ampm}
+          onChange={(e) => onChange(to24(hour, minute, e.target.value))}
+          style={{
+            width: 85,
+            padding: "8px 10px",
+            fontFamily: FONT,
+            fontWeight: 700,
+          }}
+        >
+          <option value="AM">AM</option>
+          <option value="PM">PM</option>
+        </select>
+      </div>
+    </div>
+  );
+};
+
 const SectionCard = ({ icon: Icon, title, subtitle, children }) => (
   <div className="erp-card settings-section-card">
     <div className="settings-section-head">
@@ -135,7 +222,7 @@ const ManagerSettings = () => {
     esi_percent: 0.75,
     tds_percent: 0,
     pt_deduction_months: [4, 10],
-    notice_period_days: 15, 
+    notice_period_days: 15,
   });
   const [companyLoading, setCompanyLoading] = useState(true);
   const [companySaving, setCompanySaving] = useState(false);
@@ -975,39 +1062,39 @@ const ManagerSettings = () => {
               </small>
             </div>
             <div className="col-12 col-md-6">
-  <label className="erp-label">Notice Period (Days)</label>
-  <input
-    type="number"
-    className="erp-input"
-    min={1}
-    max={180}
-    value={company.notice_period_days || 15}
-    onChange={(e) =>
-      setCompany({
-        ...company,
-        notice_period_days: parseInt(e.target.value) || 15,
-      })
-    }
-    style={{ fontFamily: FONT }}
-  />
-  <small style={{ color: "#9ca3af", fontSize: 11 }}>
-    Minimum notice period for employee resignations
-  </small>
-  {company.notice_period_days > 0 && (
-    <div
-      style={{
-        marginTop: 6,
-        fontSize: 11,
-        color: "#4f46e5",
-        fontWeight: 600,
-        fontFamily: FONT,
-      }}
-    >
-      ℹ️ Employees must serve {company.notice_period_days} days from
-      resignation date
-    </div>
-  )}
-</div>
+              <label className="erp-label">Notice Period (Days)</label>
+              <input
+                type="number"
+                className="erp-input"
+                min={1}
+                max={180}
+                value={company.notice_period_days || 15}
+                onChange={(e) =>
+                  setCompany({
+                    ...company,
+                    notice_period_days: parseInt(e.target.value) || 15,
+                  })
+                }
+                style={{ fontFamily: FONT }}
+              />
+              <small style={{ color: "#9ca3af", fontSize: 11 }}>
+                Minimum notice period for employee resignations
+              </small>
+              {company.notice_period_days > 0 && (
+                <div
+                  style={{
+                    marginTop: 6,
+                    fontSize: 11,
+                    color: "#4f46e5",
+                    fontWeight: 600,
+                    fontFamily: FONT,
+                  }}
+                >
+                  ℹ️ Employees must serve {company.notice_period_days} days from
+                  resignation date
+                </div>
+              )}
+            </div>
 
             <div className="col-12">
               <label className="erp-label">Working Days</label>
@@ -2186,26 +2273,20 @@ const ManagerSettings = () => {
         </div>
 
         <div className="row g-3 mb-3">
-          <div className="col-6">
-            <label className="erp-label">Start Time *</label>
-            <input
-              type="time"
-              className="erp-input"
+          <div className="col-12 col-sm-6">
+            <TimePicker12
+              label="Start Time"
+              required
               value={shiftForm.start_time}
-              onChange={(e) =>
-                setShiftForm({ ...shiftForm, start_time: e.target.value })
-              }
+              onChange={(val) => setShiftForm({ ...shiftForm, start_time: val })}
             />
           </div>
-          <div className="col-6">
-            <label className="erp-label">End Time *</label>
-            <input
-              type="time"
-              className="erp-input"
+          <div className="col-12 col-sm-6">
+            <TimePicker12
+              label="End Time"
+              required
               value={shiftForm.end_time}
-              onChange={(e) =>
-                setShiftForm({ ...shiftForm, end_time: e.target.value })
-              }
+              onChange={(val) => setShiftForm({ ...shiftForm, end_time: val })}
             />
           </div>
         </div>

@@ -7,12 +7,27 @@ _db = None
 
 
 def get_db():
-    """Return a singleton MongoDB database object."""
+    """
+    Singleton MongoDB database with production-ready connection pool.
+    ✅ Pool: 50 connections (scales for ECS)
+    ✅ Keep-alive: 5 min pool, reduces cold start
+    ✅ Timeouts: Reasonable for Atlas network
+    """
     global _client, _db
     if _db is None:
         try:
-            _client = MongoClient(Config.MONGO_URI, serverSelectionTimeoutMS=5000)
-            _client.admin.command("ping")  # force connection check
+            _client = MongoClient(
+                Config.MONGO_URI,
+                serverSelectionTimeoutMS=5000,
+                connectTimeoutMS=10000,
+                socketTimeoutMS=30000,
+                maxPoolSize=50,              # ✅ Max connections
+                minPoolSize=5,               # ✅ Keep warm
+                maxIdleTimeMS=300000,        # ✅ 5 min idle
+                retryWrites=True,
+                retryReads=True,
+            )
+            _client.admin.command("ping")
             _db = _client[Config.MONGO_DB_NAME]
         except PyMongoError as e:
             raise RuntimeError(f"MongoDB connection failed: {e}")
@@ -25,6 +40,25 @@ def close_db():
         _client.close()
         _client = None
         _db = None
+
+
+def warmup():
+    """
+    Pre-establish connections at app start.
+    ✅ Reduces first-request latency.
+    """
+    try:
+        db = get_db()
+        # Warm up major collections
+        db["employees"].estimated_document_count()
+        db["users"].estimated_document_count()
+        db["departments"].estimated_document_count()
+        db["attendance"].estimated_document_count()
+        print("✅ MongoDB connections warmed up")
+        return True
+    except Exception as e:
+        print(f"⚠️  MongoDB warmup failed: {e}")
+        return False
 
 
 # ============================================
@@ -46,9 +80,9 @@ def audit_logs():               return get_db()["audit_logs"]
 def tasks():                    return get_db()["tasks"]
 def shifts():                   return get_db()["shifts"]
 def insurances():               return get_db()["insurances"]
-
-# NEW: Holidays + Confirmations
 def holidays():                 return get_db()["holidays"]
 def confirmations():            return get_db()["employee_confirmations"]
+def employee_confirmations():   return get_db()["employee_confirmations"]
 def projects():                 return get_db()["projects"]
 def complaints():               return get_db()["complaints"]
+def resignations():             return get_db()["resignations"]

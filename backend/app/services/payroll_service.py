@@ -24,10 +24,6 @@ def _now():
 # PT DEDUCTION MONTHS
 # ============================================
 def _should_apply_pt(month_str):
-    """
-    Check if PT should be deducted this month.
-    Reads pt_deduction_months from settings.
-    """
     try:
         _, month = month_str.split("-")
         month_num = int(month)
@@ -126,30 +122,22 @@ def calculate_payslip(employee, month, paid_days, lop_days, overrides=None):
     esi_percent = overrides.get("esi_percent", salary.get("esi_percent", 0.75))
     tds_amount = overrides.get("tds_amount", salary.get("tds_amount", 0))
 
-    # PF
     pf = round(basic * pf_percent / 100, 2) if pf_applicable else 0
-
-    # ESI
     esi = round(gross_earnings * esi_percent / 100, 2) if esi_applicable else 0
 
-    # PT (slab-based, once per 6-month period)
     pt_amount = salary.get("professional_tax", 0) or 0
     if pt_applicable and _should_apply_pt(month):
         pt = pt_amount
     else:
         pt = 0
 
-    # TDS
     tds = tds_amount if tds_applicable else 0
 
-    # LOP
     per_day = gross_earnings / 30 if gross_earnings > 0 else 0
     lop_amount = round(per_day * lop_days, 2)
 
-    # Other
     other = overrides.get("other_deduction", 0)
 
-    # Insurance (Monthly auto-split)
     insurance = float(salary.get("monthly_insurance", 0)) or 0
     annual_insurance = float(salary.get("annual_insurance", 0)) or 0
 
@@ -188,7 +176,7 @@ def calculate_payslip(employee, month, paid_days, lop_days, overrides=None):
 
 
 # ============================================
-# GENERATE
+# GENERATE — Single employee
 # ============================================
 
 def generate_payroll(employee_id, month, overrides, manager_user_id):
@@ -383,9 +371,13 @@ def stats(month=None):
     }
 
 
-def generate_bulk_payroll(month, overwrite=False):
+# ============================================
+# ✅ BULK GENERATE — FIXED
+# ============================================
+
+def generate_bulk_payroll(month, overwrite=False, manager_user_id=None):
     """Generate payslips for ALL active employees for a given month."""
-    from app.db import employees as emp_col, payroll as pr_col
+    from app.db import employees as emp_col, payroll as pr_col, users as users_coll
     from app.services.settings_service import get_settings
 
     if not month or "-" not in month:
@@ -402,7 +394,18 @@ def generate_bulk_payroll(month, overwrite=False):
 
     settings = get_settings()
 
-    active_employees = list(emp_col().find({"status": "ACTIVE"}))
+    # ✅ Exclude MANAGER / ADMIN from bulk generation
+    admin_users = list(users_coll().find(
+        {"role": {"$in": ["MANAGER", "ADMIN", "SUPER_ADMIN"]}},
+        {"_id": 1}
+    ))
+    admin_user_ids = [u["_id"] for u in admin_users]
+
+    emp_query = {"status": "ACTIVE"}
+    if admin_user_ids:
+        emp_query["user_id"] = {"$nin": admin_user_ids}
+
+    active_employees = list(emp_col().find(emp_query))
 
     if not active_employees:
         return {
@@ -449,9 +452,8 @@ def generate_bulk_payroll(month, overwrite=False):
                 })
                 continue
 
-            payload = {
-                "employee_id": str(emp_id),
-                "month": month,
+            # ✅ Build overrides
+            overrides = {
                 "paid_days": 30,
                 "lop_days": 0,
                 "basic": basic,
@@ -467,7 +469,13 @@ def generate_bulk_payroll(month, overwrite=False):
                 "other_deduction": 0,
             }
 
-            generate_payroll(payload)
+            # ✅ FIX: Correct arguments
+            generate_payroll(
+                employee_id=str(emp_id),
+                month=month,
+                overrides=overrides,
+                manager_user_id=manager_user_id,
+            )
             created += 1
 
         except Exception as e:
