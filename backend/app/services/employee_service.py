@@ -88,11 +88,16 @@ def _enrich_employee(emp, context=None):
             emp["shift_start"] = sh.get("start_time")
             emp["shift_end"] = sh.get("end_time")
             emp["shift_grace"] = sh.get("grace_period_minutes")
+            # ✅ 2nd Shift details
+            emp["shift_start_2"] = sh.get("start_time_2")
+            emp["shift_end_2"] = sh.get("end_time_2")
         else:
             emp["shift_name"] = None
             emp["shift_start"] = None
             emp["shift_end"] = None
             emp["shift_grace"] = None
+            emp["shift_start_2"] = None
+            emp["shift_end_2"] = None
 
         ins = context["insurances"].get(emp.get("insurance_id"))
         if ins:
@@ -135,16 +140,23 @@ def _enrich_employee(emp, context=None):
             emp["shift_start"] = sh.get("start_time")
             emp["shift_end"] = sh.get("end_time")
             emp["shift_grace"] = sh.get("grace_period_minutes")
+            # ✅ 2nd Shift details
+            emp["shift_start_2"] = sh.get("start_time_2")
+            emp["shift_end_2"] = sh.get("end_time_2")
         else:
             emp["shift_name"] = None
             emp["shift_start"] = None
             emp["shift_end"] = None
             emp["shift_grace"] = None
+            emp["shift_start_2"] = None
+            emp["shift_end_2"] = None
     else:
         emp["shift_name"] = None
         emp["shift_start"] = None
         emp["shift_end"] = None
         emp["shift_grace"] = None
+        emp["shift_start_2"] = None
+        emp["shift_end_2"] = None
 
     if emp.get("insurance_id"):
         ins = insurances().find_one({"_id": emp["insurance_id"]})
@@ -421,7 +433,15 @@ def create_employee(data):
             "last_name": last_name,
             "phone": (data.get("phone") or "").strip() or None,
             "address": (data.get("address") or "").strip() or None,
-            "date_of_birth": None,
+            "dob": (data.get("dob") or "").strip() or None,            # ✅ NEW
+            "gender": (data.get("gender") or "").strip() or None,      # ✅ NEW
+            "blood_group": (data.get("blood_group") or "").strip() or None, # ✅ NEW
+            "bank_account_no": (data.get("bank_account_no") or "").strip() or None, # ✅ NEW
+            "bank_name": (data.get("bank_name") or "").strip() or None, # ✅ NEW
+            "ifsc_code": (data.get("ifsc_code") or "").strip() or None, # ✅ NEW
+            "emergency_name": (data.get("emergency_name") or "").strip() or None, # ✅ NEW
+            "emergency_phone": (data.get("emergency_phone") or "").strip() or None, # ✅ NEW
+            "emergency_relation": (data.get("emergency_relation") or "").strip() or None, # ✅ NEW
             "date_of_joining": doj,
             "end_date": end_dt,
             "department_id": _oid(data.get("department_id")),
@@ -499,6 +519,16 @@ def update_employee(emp_id, data):
         )
 
     for field in ["first_name", "last_name", "phone", "address"]:
+        if field in data:
+            update_fields[field] = (data[field] or "").strip() or None
+
+    # ✅ NEW: Update new fields
+    new_fields = [
+        "dob", "gender", "blood_group", 
+        "bank_account_no", "bank_name", "ifsc_code",
+        "emergency_name", "emergency_phone", "emergency_relation"
+    ]
+    for field in new_fields:
         if field in data:
             update_fields[field] = (data[field] or "").strip() or None
 

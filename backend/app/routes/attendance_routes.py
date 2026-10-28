@@ -1,3 +1,59 @@
+# from flask import Blueprint, request, jsonify
+# from app.middleware.auth_middleware import token_required, role_required
+# from app.services import attendance_service as svc
+
+# attendance_bp = Blueprint("attendance", __name__)
+
+
+# # ============================================
+# # Employee routes
+# # ============================================
+
+# @attendance_bp.route("/today", methods=["GET"])
+# @token_required
+# def today_status():
+#     employee_id = request.user.get("employee_id")
+#     if not employee_id:
+#         return jsonify({"error": "Employee ID not found"}), 400
+#     return jsonify(svc.get_today_status(employee_id)), 200
+
+
+# @attendance_bp.route("/check-in", methods=["POST"])
+# @token_required
+# def check_in():
+#     employee_id = request.user.get("employee_id")
+#     if not employee_id:
+#         return jsonify({"error": "Employee ID not found"}), 400
+#     try:
+#         record_id = svc.check_in(employee_id)
+#         return jsonify({"message": "Checked in successfully", "record_id": record_id}), 201
+#     except ValueError as e:
+#         return jsonify({"error": str(e)}), 400
+#     except Exception as e:
+#         return jsonify({"error": f"Failed: {str(e)}"}), 500
+
+
+# @attendance_bp.route("/check-out", methods=["POST"])
+# @token_required
+# def check_out():
+#     employee_id = request.user.get("employee_id")
+#     if not employee_id:
+#         return jsonify({"error": "Employee ID not found"}), 400
+
+#     data = request.get_json() or {}
+#     early_reason = data.get("early_reason")
+
+#     try:
+#         result = svc.check_out(employee_id, early_reason)
+#         return jsonify({
+#             "message": "Checked out successfully",
+#             **result,
+#         }), 200
+#     except ValueError as e:
+#         return jsonify({"error": str(e)}), 400
+#     except Exception as e:
+#         return jsonify({"error": f"Failed: {str(e)}"}), 500
+
 from flask import Blueprint, request, jsonify
 from app.middleware.auth_middleware import token_required, role_required
 from app.services import attendance_service as svc
@@ -24,9 +80,14 @@ def check_in():
     employee_id = request.user.get("employee_id")
     if not employee_id:
         return jsonify({"error": "Employee ID not found"}), 400
+    
+    data = request.get_json() or {}
+    is_second_shift = data.get("is_second_shift", False)  # ✅ New
+    
     try:
-        record_id = svc.check_in(employee_id)
-        return jsonify({"message": "Checked in successfully", "record_id": record_id}), 201
+        # Service ku is_second_shift ah pass pandrom
+        result = svc.check_in(employee_id, is_second_shift=is_second_shift)
+        return jsonify({"message": "Checked in successfully", **result}), 201
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
     except Exception as e:
@@ -42,9 +103,10 @@ def check_out():
 
     data = request.get_json() or {}
     early_reason = data.get("early_reason")
+    is_second_shift = data.get("is_second_shift", False) # ✅ New
 
     try:
-        result = svc.check_out(employee_id, early_reason)
+        result = svc.check_out(employee_id, early_reason, is_second_shift=is_second_shift)
         return jsonify({
             "message": "Checked out successfully",
             **result,

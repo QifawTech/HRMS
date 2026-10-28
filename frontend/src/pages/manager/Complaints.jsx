@@ -138,10 +138,11 @@ const ManagerComplaints = () => {
     <Layout>
       <style>{`
         .mcmp-page * { font-family: ${FONT}; }
+        /* ✅ FIX: Max-width and margin auto ah remove panni, full width ah maathiiruken */
         .mcmp-page {
           font-family: ${FONT};
-          max-width: 1100px;
-          margin: 0 auto;
+          width: 100%;
+          padding: 0 20px;
           color: #0f172a;
         }
 

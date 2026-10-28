@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react"; // ✅ useRef add panniruken
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -78,6 +78,9 @@ const Sidebar = ({ open, role, onClose }) => {
   const { user } = useAuth();
   const links = role === "MANAGER" ? managerLinks : employeeLinks;
 
+  // ✅ Scroll Position ah Save panna Ref
+  const scrollRef = useRef(null);
+
   const [badges, setBadges] = useState({
     resignations: 0,
     leaves: 0,
@@ -111,33 +114,74 @@ const Sidebar = ({ open, role, onClose }) => {
     return () => clearInterval(t);
   }, [role]);
 
+  // ✅ Scroll Position ah restore panna function
+  const handleLinkClick = () => {
+    if (window.innerWidth <= 992 && onClose) {
+      onClose();
+    } else {
+      // Namma scroll position ah save pandrom
+      if (scrollRef.current) {
+        const scrollPos = scrollRef.current.scrollTop;
+        sessionStorage.setItem("sidebarScrollPos", scrollPos);
+      }
+    }
+  };
+
+  // ✅ Page load aagumbothu scroll position ah set pannum
+  useEffect(() => {
+    if (scrollRef.current) {
+      const savedPos = sessionStorage.getItem("sidebarScrollPos");
+      if (savedPos) {
+        scrollRef.current.scrollTop = parseInt(savedPos);
+      }
+    }
+  }, [links]); // Links maarum pothu (page load aagumbothu)
+
   return (
     <aside
       className={`erp-sidebar ${open ? "" : "closed"}`}
       style={{ fontFamily: FONT }}
+      ref={scrollRef} // ✅ Ref ah kuduthiruken
     >
-      <ul className="erp-sidebar-nav">
+      <ul className="erp-sidebar-nav" style={{ padding: 0, margin: 0, listStyle: "none" }}>
         {links.map(({ to, label, Icon, badgeKey }) => {
           const badgeCount = badgeKey ? badges[badgeKey] || 0 : 0;
           return (
-            <li key={to}>
+            <li key={to} style={{ margin: 0, padding: 0 }}>
               <NavLink
                 to={to}
                 className={({ isActive }) =>
                   `erp-sidebar-link ${isActive ? "active" : ""}`
                 }
-                onClick={() => {
-                  if (window.innerWidth <= 992 && onClose) onClose();
-                }}
+                onClick={handleLinkClick} // ✅ Ithu dhaan mukkiyam
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 10,
+                  gap: 12,
                   fontFamily: FONT,
+                  whiteSpace: "nowrap", 
+                  boxSizing: "border-box",
+                  height: 44,
+                  textDecoration: "none",
                 }}
               >
-                <Icon size={18} />
-                <span style={{ flex: 1 }}>{label}</span>
+                <div style={{ width: 20, display: "flex", justifyContent: "center", flexShrink: 0 }}>
+                  <Icon size={18} />
+                </div>
+                
+                <span 
+                  style={{ 
+                    flex: 1, 
+                    overflow: "hidden", 
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    display: "flex", 
+                    alignItems: "center"
+                  }}
+                >
+                  {label}
+                </span>
+                
                 {badgeCount > 0 && (
                   <span
                     style={{
@@ -150,6 +194,7 @@ const Sidebar = ({ open, role, onClose }) => {
                       minWidth: 18,
                       textAlign: "center",
                       lineHeight: 1.4,
+                      flexShrink: 0, 
                     }}
                   >
                     {badgeCount > 99 ? "99+" : badgeCount}

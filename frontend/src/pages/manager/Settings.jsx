@@ -55,7 +55,6 @@ const useIsMobile = () => {
 
 // ============================================
 // 🕐 12-HOUR TIME PICKER — Railway Style
-// value format: "HH:MM" (24-hour) — auto-converts
 // ============================================
 const TimePicker12 = ({ value, onChange, label, required }) => {
   const to12 = (time24) => {
@@ -84,13 +83,13 @@ const TimePicker12 = ({ value, onChange, label, required }) => {
       <label className="erp-label">
         {label} {required && "*"}
       </label>
-      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
         {/* Hour */}
         <select
           className="erp-input"
           value={hour}
           onChange={(e) => onChange(to24(e.target.value, minute, ampm))}
-          style={{ flex: 1, padding: "8px 10px", fontFamily: FONT }}
+          style={{ width: "65px", padding: "8px 4px", fontFamily: FONT, textAlign: "center" }}
         >
           {Array.from({ length: 12 }, (_, i) => {
             const h = String(i + 1).padStart(2, "0");
@@ -109,7 +108,7 @@ const TimePicker12 = ({ value, onChange, label, required }) => {
           className="erp-input"
           value={minute}
           onChange={(e) => onChange(to24(hour, e.target.value, ampm))}
-          style={{ flex: 1, padding: "8px 10px", fontFamily: FONT }}
+          style={{ width: "65px", padding: "8px 4px", fontFamily: FONT, textAlign: "center" }}
         >
           {["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"].map(
             (m) => (
@@ -126,10 +125,11 @@ const TimePicker12 = ({ value, onChange, label, required }) => {
           value={ampm}
           onChange={(e) => onChange(to24(hour, minute, e.target.value))}
           style={{
-            width: 85,
-            padding: "8px 10px",
+            width: "70px",
+            padding: "8px 4px",
             fontFamily: FONT,
             fontWeight: 700,
+            textAlign: "center",
           }}
         >
           <option value="AM">AM</option>
@@ -223,6 +223,10 @@ const ManagerSettings = () => {
     tds_percent: 0,
     pt_deduction_months: [4, 10],
     notice_period_days: 15,
+    // ✅ NEW: Location settings defaults
+    company_latitude: "10.794941",
+    company_longitude: "78.680983",
+    allowed_radius_meters: 200,
   });
   const [companyLoading, setCompanyLoading] = useState(true);
   const [companySaving, setCompanySaving] = useState(false);
@@ -237,12 +241,16 @@ const ManagerSettings = () => {
   const [shiftsLoading, setShiftsLoading] = useState(true);
   const [shiftModalOpen, setShiftModalOpen] = useState(false);
   const [editShift, setEditShift] = useState(null);
+  
   const [shiftForm, setShiftForm] = useState({
     name: "",
     start_time: "09:30",
     end_time: "17:30",
+    start_time_2: "",
+    end_time_2: "",
     grace_period_minutes: 15,
   });
+  
   const [shiftSaving, setShiftSaving] = useState(false);
 
   // Insurance
@@ -412,6 +420,8 @@ const ManagerSettings = () => {
       name: "",
       start_time: "09:30",
       end_time: "17:30",
+      start_time_2: "",
+      end_time_2: "",
       grace_period_minutes: 15,
     });
     setShiftModalOpen(true);
@@ -423,6 +433,8 @@ const ManagerSettings = () => {
       name: s.name,
       start_time: s.start_time,
       end_time: s.end_time,
+      start_time_2: s.start_time_2 || "",
+      end_time_2: s.end_time_2 || "",
       grace_period_minutes: s.grace_period_minutes || 15,
     });
     setShiftModalOpen(true);
@@ -645,15 +657,17 @@ const ManagerSettings = () => {
   const previewHra = (previewBasic * (company.hra_percent_of_basic || 0)) / 100;
   const previewSpecial = previewTotal - previewBasic - previewHra;
 
+  const isSplitShift = shiftForm.name.toLowerCase().includes("custom");
+
   return (
     <Layout>
       <style>{`
         .settings-page * { font-family: ${FONT}; }
+        /* ✅ FIX: Max-width and margin auto ah remove panni, full width ah maathiiruken */
         .settings-page {
           font-family: ${FONT};
-          max-width: 1100px;
-          margin: 0 auto;
-          padding: 0 4px;
+          width: 100%;
+          padding: 0 20px;
         }
         .settings-section-card {
           padding: 22px;
@@ -1094,6 +1108,84 @@ const ManagerSettings = () => {
                   resignation date
                 </div>
               )}
+            </div>
+
+            {/* ✅ NEW: Location Settings */}
+            <div className="col-12 mt-3">
+              <div
+                style={{
+                  padding: 14,
+                  background: "#f0f9ff",
+                  borderRadius: 10,
+                  border: "1px solid #bae6fd",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: "#0369a1",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                    marginBottom: 10,
+                  }}
+                >
+                  📍 Office Location (Geo-fencing)
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "#0c4a6e",
+                    marginBottom: 12,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Employees can only check-in from within this radius.
+                </div>
+                <div className="row g-3">
+                  <div className="col-12 col-md-4">
+                    <label className="erp-label">Company Latitude</label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      className="erp-input"
+                      value={company.company_latitude || ""}
+                      onChange={(e) =>
+                        setCompany({ ...company, company_latitude: e.target.value })
+                      }
+                      placeholder="e.g., 10.794941"
+                    />
+                  </div>
+                  <div className="col-12 col-md-4">
+                    <label className="erp-label">Company Longitude</label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      className="erp-input"
+                      value={company.company_longitude || ""}
+                      onChange={(e) =>
+                        setCompany({ ...company, company_longitude: e.target.value })
+                      }
+                      placeholder="e.g., 78.680983"
+                    />
+                  </div>
+                  <div className="col-12 col-md-4">
+                    <label className="erp-label">Allowed Radius (Meters)</label>
+                    <input
+                      type="number"
+                      className="erp-input"
+                      value={company.allowed_radius_meters || ""}
+                      onChange={(e) =>
+                        setCompany({
+                          ...company,
+                          allowed_radius_meters: parseInt(e.target.value) || 0,
+                        })
+                      }
+                      placeholder="e.g., 200"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="col-12">
@@ -2268,14 +2360,18 @@ const ManagerSettings = () => {
             className="erp-input"
             value={shiftForm.name}
             onChange={(e) => setShiftForm({ ...shiftForm, name: e.target.value })}
-            placeholder="e.g., Morning Shift"
+            placeholder="e.g., Morning Shift or Custom Shift"
           />
+          <small style={{ color: "#9ca3af", fontSize: 11, display: "block", marginTop: 4 }}>
+            Tip: Type "Custom Shift" to enable 2nd time slot (Split Shift).
+          </small>
         </div>
 
+        {/* ✅ 1st Time slot */}
         <div className="row g-3 mb-3">
           <div className="col-12 col-sm-6">
             <TimePicker12
-              label="Start Time"
+              label="Start Time 1"
               required
               value={shiftForm.start_time}
               onChange={(val) => setShiftForm({ ...shiftForm, start_time: val })}
@@ -2283,13 +2379,36 @@ const ManagerSettings = () => {
           </div>
           <div className="col-12 col-sm-6">
             <TimePicker12
-              label="End Time"
+              label="End Time 1"
               required
               value={shiftForm.end_time}
               onChange={(val) => setShiftForm({ ...shiftForm, end_time: val })}
             />
           </div>
         </div>
+
+        {/* ✅ 2nd Time slot (Only if Custom Shift) */}
+        {isSplitShift && (
+          <div className="row g-3 mb-3" style={{ padding: 12, background: "#eef2ff", borderRadius: 8, border: "1px dashed #c7d2fe" }}>
+            <div className="col-12" style={{ fontSize: 12, fontWeight: 700, color: "#3730a3", marginBottom: 4 }}>
+              ⏱️ Split Shift (2nd Time Slot)
+            </div>
+            <div className="col-12 col-sm-6">
+              <TimePicker12
+                label="Start Time 2"
+                value={shiftForm.start_time_2}
+                onChange={(val) => setShiftForm({ ...shiftForm, start_time_2: val })}
+              />
+            </div>
+            <div className="col-12 col-sm-6">
+              <TimePicker12
+                label="End Time 2"
+                value={shiftForm.end_time_2}
+                onChange={(val) => setShiftForm({ ...shiftForm, end_time_2: val })}
+              />
+            </div>
+          </div>
+        )}
 
         <div className="mb-3">
           <label className="erp-label">Grace Period (Minutes)</label>

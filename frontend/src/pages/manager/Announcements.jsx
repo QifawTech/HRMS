@@ -196,7 +196,12 @@ const ManagerAnnouncements = () => {
     <Layout>
       <style>{`
         .ann-page * { font-family: ${FONT}; }
-        .ann-page { font-family: ${FONT}; max-width: 1200px; margin: 0 auto; }
+        /* ✅ FIX: Max-width and margin auto ah remove panni, full width ah maathiiruken */
+        .ann-page { 
+          font-family: ${FONT}; 
+          width: 100%;
+          padding: 0 20px;
+        }
 
         .ann-header {
           display: flex;

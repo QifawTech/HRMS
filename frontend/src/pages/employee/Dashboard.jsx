@@ -6,6 +6,9 @@ import {
   CheckCircle2,
   AlertTriangle,
   TrendingUp,
+  PlayCircle,
+  StopCircle,
+  MapPin,
 } from "lucide-react";
 import Layout from "../../components/layout/Layout";
 import Modal from "../../components/common/Modal";
@@ -18,9 +21,30 @@ import * as empApi from "../../api/employeeApi";
 const FONT = "'Inter', 'Segoe UI', -apple-system, sans-serif";
 
 // ============================================
+// ✅ DISTANCE CALCULATION (Haversine Formula)
+// ============================================
+const getDistanceInMeters = (lat1, lon1, lat2, lon2) => {
+  const R = 6371e3; // Earth radius in meters
+  const toRadians = (deg) => (deg * Math.PI) / 180;
+
+  const phi1 = toRadians(lat1);
+  const phi2 = toRadians(lat2);
+  const deltaPhi = toRadians(lat2 - lat1);
+  const deltaLambda = toRadians(lon2 - lon1);
+
+  const a =
+    Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+    Math.cos(phi1) * Math.cos(phi2) *
+    Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // Distance in meters
+};
+
+// ============================================
 // LIVE TIMER — Continuous, never auto-stops
 // ============================================
-const LiveTimer = ({ startTime, isOvernight, sessionDate }) => {
+const LiveTimer = ({ startTime, isOvernight, sessionDate, baseSeconds = 0 }) => {
   const [elapsed, setElapsed] = useState("00:00:00");
 
   useEffect(() => {
@@ -29,9 +53,13 @@ const LiveTimer = ({ startTime, isOvernight, sessionDate }) => {
       const start = new Date(startTime);
       const now = new Date();
       const diff = Math.max(0, now - start);
-      const h = Math.floor(diff / (1000 * 60 * 60));
-      const m = Math.floor((diff / (1000 * 60)) % 60);
-      const s = Math.floor((diff / 1000) % 60);
+      
+      const totalSeconds = Math.floor(diff / 1000) + baseSeconds;
+
+      const h = Math.floor(totalSeconds / 3600);
+      const m = Math.floor((totalSeconds % 3600) / 60);
+      const s = totalSeconds % 60;
+      
       setElapsed(
         `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
       );
@@ -39,7 +67,7 @@ const LiveTimer = ({ startTime, isOvernight, sessionDate }) => {
     tick();
     const t = setInterval(tick, 1000);
     return () => clearInterval(t);
-  }, [startTime]);
+  }, [startTime, baseSeconds]);
 
   const formattedDate = sessionDate
     ? new Date(sessionDate).toLocaleDateString("en-IN", {
@@ -154,9 +182,13 @@ const EmployeeDashboard = () => {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // ✅ NEW: Location checking state
+  const [checkingLocation, setCheckingLocation] = useState(false);
+
   const [earlyModal, setEarlyModal] = useState(false);
   const [earlyReason, setEarlyReason] = useState("");
   const [earlyMinutes, setEarlyMinutes] = useState(0);
+  const [earlyShift2, setEarlyShift2] = useState(false);
 
   useEffect(() => {
     settingsApi
@@ -192,20 +224,22 @@ const EmployeeDashboard = () => {
   // ============================================
   // SHIFT-AWARE TIME CHECKS
   // ============================================
-  const getShiftEndTimeStr = () => {
+  const getShiftEndTimeStr = (isShift2 = false) => {
+    if (isShift2 && myProfile?.shift_end_2) return myProfile.shift_end_2;
     if (myProfile?.shift_end) return myProfile.shift_end;
     if (company?.work_end_time) return company.work_end_time;
     return null;
   };
 
-  const getShiftStartTimeStr = () => {
+  const getShiftStartTimeStr = (isShift2 = false) => {
+    if (isShift2 && myProfile?.shift_start_2) return myProfile.shift_start_2;
     if (myProfile?.shift_start) return myProfile.shift_start;
     if (company?.work_start_time) return company.work_start_time;
     return "09:30";
   };
 
-  const isBeforeWorkEnd = () => {
-    const endTimeStr = getShiftEndTimeStr();
+  const isBeforeWorkEnd = (isShift2 = false) => {
+    const endTimeStr = getShiftEndTimeStr(isShift2);
     if (!endTimeStr) return false;
 
     const [eh, em] = endTimeStr.split(":").map(Number);
@@ -213,7 +247,7 @@ const EmployeeDashboard = () => {
     const endTime = new Date();
     endTime.setHours(eh, em, 0, 0);
 
-    const [sh, sm] = getShiftStartTimeStr().split(":").map(Number);
+    const [sh, sm] = getShiftStartTimeStr(isShift2).split(":").map(Number);
 
     if (eh < sh || (eh === sh && em < sm)) {
       if (now.getHours() < 12) {
@@ -226,8 +260,8 @@ const EmployeeDashboard = () => {
     return now < endTime;
   };
 
-  const calculateEarlyMinutes = () => {
-    const endTimeStr = getShiftEndTimeStr();
+  const calculateEarlyMinutes = (isShift2 = false) => {
+    const endTimeStr = getShiftEndTimeStr(isShift2);
     if (!endTimeStr) return 0;
 
     const [eh, em] = endTimeStr.split(":").map(Number);
@@ -235,7 +269,7 @@ const EmployeeDashboard = () => {
     const endTime = new Date();
     endTime.setHours(eh, em, 0, 0);
 
-    const [sh, sm] = getShiftStartTimeStr().split(":").map(Number);
+    const [sh, sm] = getShiftStartTimeStr(isShift2).split(":").map(Number);
 
     if (eh < sh || (eh === sh && em < sm)) {
       if (now.getHours() >= 12) {
@@ -248,64 +282,115 @@ const EmployeeDashboard = () => {
   };
 
   // ============================================
+  // ✅ LOCATION VERIFICATION FUNCTION
+  // ============================================
+  const verifyLocation = () => {
+    return new Promise((resolve, reject) => {
+      if (!company?.company_latitude || !company?.company_longitude || !company?.allowed_radius_meters) {
+        // Settings ille na skip panrom
+        resolve(true); 
+        return;
+      }
+
+      if (!navigator.geolocation) {
+        setToast({ message: "Geolocation is not supported by your browser", type: "error" });
+        reject("No geolocation");
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const empLat = position.coords.latitude;
+          const empLng = position.coords.longitude;
+          const companyLat = parseFloat(company.company_latitude);
+          const companyLng = parseFloat(company.company_longitude);
+          const allowedRadius = parseInt(company.allowed_radius_meters);
+
+          const distance = getDistanceInMeters(empLat, empLng, companyLat, companyLng);
+
+          if (distance <= allowedRadius) {
+            resolve(true); // Allow
+          } else {
+            setToast({
+              message: `You are ${Math.round(distance)}m away from office. Allowed radius is ${allowedRadius}m.`,
+              type: "error",
+            });
+            reject("Out of range");
+          }
+        },
+        (error) => {
+          setToast({
+            message: "Please allow location access to check-in.",
+            type: "error",
+          });
+          reject(error.message);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    });
+  };
+
+  // ============================================
   // HANDLERS
   // ============================================
-  const handleCheckIn = async () => {
-    setBusy(true);
+  const handleCheckIn = async (isShift2 = false) => {
+    setCheckingLocation(true);
     try {
-      const res = await api.checkIn();
+      // ✅ Location Check pannurom
+      await verifyLocation();
+      
+      setBusy(true);
+      const res = await api.checkIn({ is_second_shift: isShift2 });
       const msg = res.data.is_late
-        ? `Checked in — Late by ${formatMinutes(res.data.late_minutes)}`
-        : "Checked in on time!";
+        ? `Checked in ${isShift2 ? '(Shift 2)' : ''} — Late by ${formatMinutes(res.data.late_minutes)}`
+        : `Checked in ${isShift2 ? '(Shift 2)' : ''} on time!`;
       setToast({
         message: msg,
         type: res.data.is_late ? "error" : "success",
       });
       load();
     } catch (err) {
+      // Location check fail aana, error handle panniten
       const errMsg = err.response?.data?.error || "Failed";
       if (errMsg.startsWith("OPEN_SESSION|")) {
-        const parts = errMsg.split("|");
         setToast({
           message: `You have an open session. Please check out first.`,
           type: "error",
         });
         load();
-      } else {
-        setToast({ message: errMsg, type: "error" });
       }
     } finally {
       setBusy(false);
+      setCheckingLocation(false);
     }
   };
 
-  const handleCheckOut = async () => {
-    // If past open session → checkout directly (no early reason)
-    if (openSession && openSession.is_overnight) {
-      await submitCheckOut(null);
+  const handleCheckOut = async (isShift2 = false) => {
+    if (!isShift2 && openSession && openSession.is_overnight) {
+      await submitCheckOut(null, false);
       return;
     }
 
-    // Today's session → check for early
-    if (isBeforeWorkEnd()) {
-      setEarlyMinutes(calculateEarlyMinutes());
+    if (isBeforeWorkEnd(isShift2)) {
+      setEarlyMinutes(calculateEarlyMinutes(isShift2));
+      setEarlyShift2(isShift2);
       setEarlyModal(true);
       return;
     }
-    await submitCheckOut(null);
+    await submitCheckOut(null, isShift2);
   };
 
-  const submitCheckOut = async (early_reason) => {
+  const submitCheckOut = async (early_reason, isShift2 = false) => {
     setBusy(true);
     try {
-      const res = await api.checkOut(early_reason);
+      const res = await api.checkOut({ early_reason, is_second_shift: isShift2 });
       let msg;
       if (res.data.is_forgotten) {
         msg = `Session closed. Total working time: ${formatHours(res.data.working_hours)}`;
       } else if (res.data.is_early) {
-        msg = `Early logout by ${formatMinutes(res.data.early_minutes)}. Worked ${formatHours(res.data.working_hours)}`;
+        msg = `Early logout ${isShift2 ? '(Shift 2)' : ''} by ${formatMinutes(res.data.early_minutes)}. Worked ${formatHours(res.data.working_hours)}`;
       } else {
-        msg = `Checked out — Worked ${formatHours(res.data.working_hours)}`;
+        msg = `Checked out ${isShift2 ? '(Shift 2)' : ''} — Total Worked ${formatHours(res.data.working_hours)}`;
       }
       setToast({
         message: msg,
@@ -330,6 +415,8 @@ const EmployeeDashboard = () => {
   // ============================================
   const hasCheckedIn = today?.checked_in;
   const hasCheckedOut = today?.checked_out;
+  const hasCheckedIn2 = today?.check_in_2;
+  const hasCheckedOut2 = today?.check_out_2;
   const isLate = today?.is_late;
   const isEarly = today?.is_early_logout;
   const notMarked = !hasCheckedIn && !hasCheckedOut;
@@ -341,6 +428,9 @@ const EmployeeDashboard = () => {
     myProfile?.shift_name && myProfile?.shift_start && myProfile?.shift_end;
 
   const shiftName = hasShift ? myProfile.shift_name : "Default Shift";
+  
+  const isSplitShift = myProfile?.shift_name?.toLowerCase().includes("custom");
+
   const shiftStartText = hasShift
     ? formatTime12(myProfile.shift_start)
     : company
@@ -351,6 +441,11 @@ const EmployeeDashboard = () => {
     : company
     ? formatTime12(company.work_end_time)
     : "05:30 PM";
+
+  const shiftStart2Text = myProfile?.shift_start_2 ? formatTime12(myProfile.shift_start_2) : "";
+  const shiftEnd2Text = myProfile?.shift_end_2 ? formatTime12(myProfile.shift_end_2) : "";
+
+  const hasShift2 = isSplitShift && shiftStart2Text && shiftEnd2Text;
 
   const todayDate = new Date().toLocaleDateString("en-IN", {
     weekday: "long",
@@ -377,7 +472,7 @@ const EmployeeDashboard = () => {
       return (
         <button
           className="erp-btn erp-btn-danger w-100 justify-content-center"
-          onClick={handleCheckOut}
+          onClick={() => handleCheckOut(false)}
           disabled={busy}
           style={{ padding: "12px", fontFamily: FONT, fontWeight: 700 }}
         >
@@ -386,7 +481,7 @@ const EmployeeDashboard = () => {
             ? "Checking out..."
             : isPast
             ? `Check Out (from ${new Date(openSession.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })})`
-            : "Check Out"}
+            : "Check Out (Shift 1)"}
         </button>
       );
     }
@@ -395,12 +490,40 @@ const EmployeeDashboard = () => {
       return (
         <button
           className="erp-btn erp-btn-primary w-100 justify-content-center"
-          onClick={handleCheckIn}
-          disabled={busy}
+          onClick={() => handleCheckIn(false)}
+          disabled={busy || checkingLocation}
           style={{ padding: "12px", fontFamily: FONT, fontWeight: 700 }}
         >
           <LogIn size={16} />
-          {busy ? "Checking in..." : "Check In"}
+          {checkingLocation ? "Verifying location..." : busy ? "Checking in..." : "Check In (Shift 1)"}
+        </button>
+      );
+    }
+
+    if (isSplitShift && hasCheckedOut && !hasCheckedIn2) {
+      return (
+        <button
+          className="erp-btn erp-btn-primary w-100 justify-content-center"
+          onClick={() => handleCheckIn(true)}
+          disabled={busy || checkingLocation}
+          style={{ padding: "12px", fontFamily: FONT, fontWeight: 700, background: "#0ea5e9" }}
+        >
+          <PlayCircle size={16} />
+          {checkingLocation ? "Verifying location..." : busy ? "Checking in..." : "Check In (Shift 2)"}
+        </button>
+      );
+    }
+
+    if (isSplitShift && hasCheckedIn2 && !hasCheckedOut2) {
+      return (
+        <button
+          className="erp-btn erp-btn-danger w-100 justify-content-center"
+          onClick={() => handleCheckOut(true)}
+          disabled={busy}
+          style={{ padding: "12px", fontFamily: FONT, fontWeight: 700 }}
+        >
+          <StopCircle size={16} />
+          {busy ? "Checking out..." : "Check Out (Shift 2)"}
         </button>
       );
     }
@@ -505,6 +628,7 @@ const EmployeeDashboard = () => {
                 >
                   {shiftName}
                 </div>
+                
                 <div
                   style={{
                     fontSize: 15,
@@ -516,13 +640,43 @@ const EmployeeDashboard = () => {
                 >
                   {shiftStartText} — {shiftEndText}
                 </div>
+                
+                {hasShift2 && (
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 700,
+                      color: "#0ea5e9",
+                      marginTop: 6,
+                      fontVariantNumeric: "tabular-nums",
+                      letterSpacing: "0.3px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <span style={{ fontSize: 12, color: "#64748b" }}>+ 2nd Shift:</span>
+                    {shiftStart2Text} — {shiftEnd2Text}
+                  </div>
+                )}
               </div>
 
-              {hasOpenSession && openSession && (
+              {/* LIVE TIMER LOGIC */}
+              {((hasOpenSession && openSession) || (hasCheckedIn2 && !hasCheckedOut2)) && (
                 <LiveTimer
-                  startTime={openSession.check_in}
-                  isOvernight={openSession.is_overnight}
-                  sessionDate={openSession.date}
+                  startTime={
+                    hasCheckedIn2 && !hasCheckedOut2 
+                      ? today.check_in_2 
+                      : openSession?.check_in || today?.check_in 
+                  }
+                  isOvernight={hasCheckedIn2 ? false : openSession?.is_overnight}
+                  sessionDate={openSession?.date || today?.date}
+                  baseSeconds={
+                    hasCheckedIn2 
+                      ? Math.floor((today.working_hours || 0) * 3600) 
+                      : 0
+                  }
                 />
               )}
 
@@ -535,6 +689,7 @@ const EmployeeDashboard = () => {
                   marginBottom: 16,
                 }}
               >
+                {/* 1st Shift Check In/Out Cards */}
                 <div
                   style={{
                     padding: 14,
@@ -559,7 +714,7 @@ const EmployeeDashboard = () => {
                       letterSpacing: 0.5,
                     }}
                   >
-                    Check In
+                    Check In (1)
                   </div>
                   <div
                     style={{
@@ -616,7 +771,7 @@ const EmployeeDashboard = () => {
                       letterSpacing: 0.5,
                     }}
                   >
-                    Check Out
+                    Check Out (1)
                   </div>
                   <div
                     style={{
@@ -650,23 +805,85 @@ const EmployeeDashboard = () => {
                 </div>
               </div>
 
-              {hasCheckedOut && isEarly && today?.early_logout_reason && (
+              {/* 2nd Shift Check In/Out Cards (Only if isSplitShift) */}
+              {isSplitShift && (
                 <div
                   style={{
-                    padding: 12,
-                    background: "#fef2f2",
-                    border: "1px solid #fecaca",
-                    borderRadius: 8,
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 12,
                     marginBottom: 16,
-                    fontSize: 12.5,
-                    color: "#991b1b",
                   }}
                 >
-                  <strong>Early logout reason:</strong>{" "}
-                  {today.early_logout_reason}
+                  <div
+                    style={{
+                      padding: 14,
+                      borderRadius: 10,
+                      background: hasCheckedIn2 ? "#e0f2fe" : "#f9fafb",
+                      textAlign: "center",
+                      border: hasCheckedIn2 ? "1px solid #bae6fd" : "1px solid #e5e7eb",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 10.5,
+                        color: "#6b7280",
+                        fontWeight: 700,
+                        textTransform: "uppercase",
+                        letterSpacing: 0.5,
+                      }}
+                    >
+                      Check In (2)
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 800,
+                        color: hasCheckedIn2 ? "#0284c7" : "#9ca3af",
+                        marginTop: 6,
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      {hasCheckedIn2 ? formatTimeShort(today.check_in_2) : "—"}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      padding: 14,
+                      borderRadius: 10,
+                      background: hasCheckedOut2 ? "#e0f2fe" : "#f9fafb",
+                      textAlign: "center",
+                      border: hasCheckedOut2 ? "1px solid #bae6fd" : "1px solid #e5e7eb",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 10.5,
+                        color: "#6b7280",
+                        fontWeight: 700,
+                        textTransform: "uppercase",
+                        letterSpacing: 0.5,
+                      }}
+                    >
+                      Check Out (2)
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 800,
+                        color: hasCheckedOut2 ? "#0284c7" : "#9ca3af",
+                        marginTop: 6,
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      {hasCheckedOut2 ? formatTimeShort(today.check_out_2) : "—"}
+                    </div>
+                  </div>
                 </div>
               )}
 
+              {/* Total Worked */}
               {hasCheckedIn && hasCheckedOut && (
                 <div
                   style={{
@@ -741,6 +958,10 @@ const EmployeeDashboard = () => {
                   style={{
                     color: hasOpenSession
                       ? "#dc2626"
+                      : hasCheckedOut2
+                      ? "#059669"
+                      : hasCheckedIn2
+                      ? "#0284c7"
                       : hasCheckedOut
                       ? isEarly
                         ? "#dc2626"
@@ -755,10 +976,14 @@ const EmployeeDashboard = () => {
                 >
                   {hasOpenSession && openSession?.is_overnight
                     ? "Session Active"
+                    : hasCheckedOut2
+                    ? "Day Completed"
+                    : hasCheckedIn2
+                    ? "Working (Shift 2)"
                     : hasCheckedOut
                     ? isEarly
                       ? "Early Logout"
-                      : "Day Completed"
+                      : isSplitShift ? "Break (Between Shifts)" : "Day Completed"
                     : hasCheckedIn
                     ? isLate
                       ? "Working (Late)"
@@ -799,9 +1024,16 @@ const EmployeeDashboard = () => {
                 <span style={{ color: "#6b7280", fontWeight: 600 }}>
                   Shift Hours
                 </span>
-                <strong style={{ fontSize: 13 }}>
-                  {shiftStartText} — {shiftEndText}
-                </strong>
+                <div style={{ textAlign: "right" }}>
+                  <strong style={{ fontSize: 13, display: "block" }}>
+                    {shiftStartText} — {shiftEndText}
+                  </strong>
+                  {hasShift2 && (
+                    <span style={{ fontSize: 12, color: "#0ea5e9", fontWeight: 600, display: "block", marginTop: 2 }}>
+                      2nd: {shiftStart2Text} — {shiftEnd2Text}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {today && (hasCheckedIn || hasCheckedOut) && (
@@ -924,7 +1156,7 @@ const EmployeeDashboard = () => {
               </button>
               <button
                 className="erp-btn erp-btn-danger"
-                onClick={() => submitCheckOut(earlyReason)}
+                onClick={() => submitCheckOut(earlyReason, earlyShift2)}
                 disabled={!earlyReason.trim() || earlyReason.length < 10 || busy}
                 style={{ fontFamily: FONT }}
               >
@@ -954,7 +1186,7 @@ const EmployeeDashboard = () => {
             <div>
               <strong>You're logging out before your shift ends.</strong>
               <br />
-              Shift ends at <strong>{shiftEndText}</strong>
+              Shift ends at <strong>{earlyShift2 ? shiftEnd2Text : shiftEndText}</strong>
               {earlyMinutes > 0 && (
                 <>
                   {" "}

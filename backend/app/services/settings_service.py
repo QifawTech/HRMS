@@ -37,7 +37,11 @@ DEFAULTS = {
     "pt_amount": 200,
     "tds_percent": 0,
     "pt_deduction_months": [4, 10],
-    "notice_period_days": 15,   # ✅ NEW
+    "notice_period_days": 15,
+    # ✅ NEW: Location Settings
+    "company_latitude": 10.794941,
+    "company_longitude": 78.680983,
+    "allowed_radius_meters": 200,
 }
 
 
@@ -71,8 +75,11 @@ def get_settings():
         "pt_amount": doc.get("pt_amount", 200),
         "tds_percent": doc.get("tds_percent", 0),
         "pt_deduction_months": doc.get("pt_deduction_months", [4, 10]),
-        # ✅ FIX: Read from DB instead of hardcoded 15
         "notice_period_days": doc.get("notice_period_days", 15),
+        # ✅ NEW: Return Location Settings
+        "company_latitude": doc.get("company_latitude", DEFAULTS["company_latitude"]),
+        "company_longitude": doc.get("company_longitude", DEFAULTS["company_longitude"]),
+        "allowed_radius_meters": doc.get("allowed_radius_meters", DEFAULTS["allowed_radius_meters"]),
     }
 
 
@@ -160,7 +167,7 @@ def update_settings(data, manager_user_id):
             raise ValueError("At least one PT deduction month is required")
         update_fields["pt_deduction_months"] = sorted(set(cleaned))
 
-    # ✅ NEW: Notice Period (Days) — 1 to 180
+    # Notice Period (Days) — 1 to 180
     if "notice_period_days" in data:
         try:
             v = int(data["notice_period_days"])
@@ -169,6 +176,34 @@ def update_settings(data, manager_user_id):
             update_fields["notice_period_days"] = v
         except (ValueError, TypeError):
             raise ValueError("Invalid notice period value")
+
+    # ✅ NEW: Location Settings Validation & Save
+    if "company_latitude" in data:
+        try:
+            lat = float(data["company_latitude"])
+            if lat < -90 or lat > 90:
+                raise ValueError("Latitude must be between -90 and 90")
+            update_fields["company_latitude"] = lat
+        except (ValueError, TypeError):
+            raise ValueError("Invalid latitude value")
+
+    if "company_longitude" in data:
+        try:
+            lng = float(data["company_longitude"])
+            if lng < -180 or lng > 180:
+                raise ValueError("Longitude must be between -180 and 180")
+            update_fields["company_longitude"] = lng
+        except (ValueError, TypeError):
+            raise ValueError("Invalid longitude value")
+
+    if "allowed_radius_meters" in data:
+        try:
+            radius = int(data["allowed_radius_meters"])
+            if radius < 10 or radius > 5000:
+                raise ValueError("Radius must be between 10 and 5000 meters")
+            update_fields["allowed_radius_meters"] = radius
+        except (ValueError, TypeError):
+            raise ValueError("Invalid radius value")
 
     mgr_oid = _oid(manager_user_id)
     mgr_emp = employees().find_one({"user_id": mgr_oid}) if mgr_oid else None

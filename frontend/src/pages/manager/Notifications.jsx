@@ -170,7 +170,8 @@ const ManagerNotifications = () => {
 
   return (
     <Layout>
-      <div style={{ fontFamily: FONT, maxWidth: 1100, margin: "0 auto" }}>
+      {/* ✅ FIX: Max-width and margin auto ah remove panni, full width ah maathiiruken */}
+      <div style={{ fontFamily: FONT, width: "100%", padding: "0 20px" }}>
         {/* ============================================
             Header
             ============================================ */}

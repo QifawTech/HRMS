@@ -41,6 +41,13 @@ export const startWork = (id) => api.post(`/tasks/${id}/start-work`);
 export const completeTask = (id, notes = "") =>
   api.post(`/tasks/${id}/complete`, { completion_notes: notes });
 
+// ✅ NEW: Transfer Task API
+export const transferTask = (taskId, newEmployeeId, note = "") =>
+  api.post(`/tasks/${taskId}/transfer`, {
+    new_employee_id: newEmployeeId,
+    note: note,
+  });
+
 // Direct URL for file download (endpoint is public)
 export const taskFileUrl = (fileId) =>
   `${api.defaults.baseURL}/tasks/files/${fileId}`;

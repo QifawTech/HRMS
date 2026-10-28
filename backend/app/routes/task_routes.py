@@ -184,6 +184,29 @@ def complete_task(task_id):
     except Exception as e:
         return jsonify({"error": f"Failed: {str(e)}"}), 500
 
+
+# ✅ NEW: Transfer Task Endpoint
+@task_bp.route("/<task_id>/transfer", methods=["POST"])
+@token_required
+def transfer_task(task_id):
+    """Employee transfers task to another employee."""
+    employee_id = request.user.get("employee_id")
+    data = request.get_json() or {}
+    new_employee_id = data.get("new_employee_id")
+    note = data.get("note", "")
+
+    if not new_employee_id:
+        return jsonify({"error": "New employee ID required"}), 400
+
+    try:
+        svc.transfer_task(task_id, employee_id, new_employee_id, note)
+        return jsonify({"message": "Task transferred successfully"}), 200
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": f"Failed: {str(e)}"}), 500
+
+
 import os
 from flask import send_file
 from app.utils.file_handler import get_file_full_path

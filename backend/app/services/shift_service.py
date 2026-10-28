@@ -36,6 +36,8 @@ def ensure_default_shifts():
             for s in DEFAULT_SHIFTS:
                 docs.append({
                     **s,
+                    "start_time_2": None,  # ✅ Default la split shift illa
+                    "end_time_2": None,    # ✅ Default la split shift illa
                     "is_active": True,
                     "created_at": _now(),
                     "updated_at": _now(),
@@ -86,6 +88,10 @@ def create_shift(data):
     end_time = (data.get("end_time") or "").strip()
     grace = int(data.get("grace_period_minutes", 15))
 
+    # ✅ Split Shift (Custom Shift ku mattum)
+    start_time_2 = (data.get("start_time_2") or "").strip()
+    end_time_2 = (data.get("end_time_2") or "").strip()
+
     if not name:
         raise ValueError("Shift name is required")
     if not _valid_time(start_time) or not _valid_time(end_time):
@@ -95,6 +101,16 @@ def create_shift(data):
     if grace < 0 or grace > 120:
         raise ValueError("Grace must be 0-120 minutes")
 
+    # ✅ Split Shift Validation
+    if start_time_2 or end_time_2:
+        if not _valid_time(start_time_2) or not _valid_time(end_time_2):
+            raise ValueError("Invalid 2nd time format (HH:MM)")
+        if start_time_2 == end_time_2:
+            raise ValueError("Start and end time (2nd) cannot be same")
+    else:
+        start_time_2 = None
+        end_time_2 = None
+
     if shifts().find_one({"name": name, "is_active": True}):
         raise ValueError("A shift with this name already exists")
 
@@ -103,6 +119,8 @@ def create_shift(data):
         "name": name,
         "start_time": start_time,
         "end_time": end_time,
+        "start_time_2": start_time_2,  # ✅ Save pannum
+        "end_time_2": end_time_2,      # ✅ Save pannum
         "grace_period_minutes": grace,
         "is_active": True,
         "created_at": now,
@@ -152,6 +170,25 @@ def update_shift(shift_id, data):
             update_fields["grace_period_minutes"] = g
         except (ValueError, TypeError):
             raise ValueError("Invalid grace period")
+
+    # ✅ Split Shift Update
+    if "start_time_2" in data:
+        t2 = (data["start_time_2"] or "").strip()
+        if t2:
+            if not _valid_time(t2):
+                raise ValueError("Invalid start time (2nd)")
+            update_fields["start_time_2"] = t2
+        else:
+            update_fields["start_time_2"] = None
+
+    if "end_time_2" in data:
+        t2 = (data["end_time_2"] or "").strip()
+        if t2:
+            if not _valid_time(t2):
+                raise ValueError("Invalid end time (2nd)")
+            update_fields["end_time_2"] = t2
+        else:
+            update_fields["end_time_2"] = None
 
     r = shifts().update_one({"_id": oid}, {"$set": update_fields})
     return r.modified_count

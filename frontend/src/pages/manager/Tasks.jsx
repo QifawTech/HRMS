@@ -306,7 +306,8 @@ const ManagerTasks = () => {
 
   return (
     <Layout>
-      <div style={{ fontFamily: FONT, maxWidth: 1200, margin: "0 auto" }}>
+      {/* ✅ FIX: Max-width and margin auto ah remove panni, full width ah maathiiruken */}
+      <div style={{ fontFamily: FONT, width: "100%", padding: "0 20px" }}>
         {/* ============================================
             Header
             ============================================ */}

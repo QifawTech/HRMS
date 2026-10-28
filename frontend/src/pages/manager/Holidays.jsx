@@ -258,12 +258,13 @@ const ManagerHolidays = () => {
           box-sizing: border-box;
         }
 
+        /* ✅ FIX: Max-width and auto margin ah remove panni, full width ah maathiiruken */
         .hol-page {
-          max-width: 1100px;
-          margin: 0 auto;
-          padding: 0 4px;
+          width: 100%;
+          padding: 0 20px; /* Konjam left/right padding kudukkirom */
         }
 
+        /* ✅ FIX: Header row ku mela extra gap varaama irukka */
         .hol-header-row {
           display: flex;
           justify-content: space-between;
@@ -271,6 +272,7 @@ const ManagerHolidays = () => {
           gap: 12px;
           flex-wrap: wrap;
           margin-bottom: 18px;
+          margin-top: 0;
         }
 
         .hol-header-controls {
@@ -513,7 +515,7 @@ const ManagerHolidays = () => {
 
       <div className="hol-page">
         {/* Header */}
-        <div className="hol-header-row">
+        <div className="hol-header-row" style={{ paddingTop: 0 }}>
           <div>
             <h1 className="erp-page-title">Holiday Calendar</h1>
             <p className="erp-page-subtitle mb-0">

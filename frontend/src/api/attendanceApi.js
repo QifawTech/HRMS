@@ -2,9 +2,15 @@ import api from "./axios";
 
 // Employee
 export const getTodayStatus = () => api.get("/attendance/today");
-export const checkIn = () => api.post("/attendance/check-in");
-export const checkOut = (early_reason = null) =>
-  api.post("/attendance/check-out", { early_reason });
+
+// ✅ UPDATED: Added data parameter to pass is_second_shift
+export const checkIn = (data = {}) => 
+  api.post("/attendance/check-in", data);
+
+// ✅ UPDATED: Added data parameter to pass is_second_shift & early_reason
+export const checkOut = (data = {}) =>
+  api.post("/attendance/check-out", data);
+
 export const getMyHistory = (days = 30) =>
   api.get("/attendance/my-history", { params: { days } });
 
@@ -22,6 +28,7 @@ export const getRecentDays = (days = 3, departmentId = "") => {
   if (departmentId) params.department_id = departmentId;
   return api.get("/attendance/recent", { params });
 };
+
 // Monthly report
 export const getMyMonthlyReport = (year, month) => {
   const params = {};

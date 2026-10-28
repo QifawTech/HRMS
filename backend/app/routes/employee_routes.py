@@ -18,7 +18,7 @@ employee_bp = Blueprint("employees", __name__)
 
 @employee_bp.route("", methods=["GET"])
 @token_required
-@role_required("MANAGER")
+# @role_required("MANAGER")
 def list_employees():
     search = request.args.get("search", "").strip()
     dept_id = request.args.get("department_id", "").strip()

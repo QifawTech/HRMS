@@ -103,6 +103,17 @@ const emptyForm = {
   total_salary: "",
   employment_type: "PERMANENT",
   intern_end_date: "",
+  
+  // ✅ NEW FIELDS
+  dob: "",
+  gender: "",
+  blood_group: "",
+  bank_account_no: "",
+  bank_name: "",
+  ifsc_code: "",
+  emergency_name: "",
+  emergency_phone: "",
+  emergency_relation: "",
 };
 
 const Employees = () => {
@@ -123,7 +134,14 @@ const Employees = () => {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
 
-  // ✅ NEW: Termination reason (when end_date set in edit mode)
+  // ✅ NEW: Deduction Toggles
+  const [deductionToggles, setDeductionToggles] = useState({
+    pf: true,
+    esi: true,
+    pt: true,
+    tds: true,
+  });
+
   const [terminateReason, setTerminateReason] = useState("");
 
   const [ptPreview, setPtPreview] = useState(null);
@@ -131,7 +149,6 @@ const Employees = () => {
 
   const [detailsTarget, setDetailsTarget] = useState(null);
 
-  // ✅ NEW: Permanent delete state
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -195,34 +212,32 @@ const Employees = () => {
   }, [form.total_salary, modalOpen]);
 
   const load = useCallback(async () => {
-  setLoading(true);
-  try {
-    const res = await api.listEmployees(
-      search,
-      filterDept,
-      filterStatus,
-      filterType,
-      1,      // page
-      500     // limit (show up to 500; increase if needed)
-    );
+    setLoading(true);
+    try {
+      const res = await api.listEmployees(
+        search,
+        filterDept,
+        filterStatus,
+        filterType,
+        1,
+        500
+      );
 
-    // ✅ Handle paginated response
-    if (
-      res.data &&
-      typeof res.data === "object" &&
-      Array.isArray(res.data.data)
-    ) {
-      setItems(res.data.data);
-    } else {
-      // Fallback — old format (array)
-      setItems(Array.isArray(res.data) ? res.data : []);
+      if (
+        res.data &&
+        typeof res.data === "object" &&
+        Array.isArray(res.data.data)
+      ) {
+        setItems(res.data.data);
+      } else {
+        setItems(Array.isArray(res.data) ? res.data : []);
+      }
+    } catch (e) {
+      setToast({ message: "Failed to load employees", type: "error" });
+    } finally {
+      setLoading(false);
     }
-  } catch (e) {
-    setToast({ message: "Failed to load employees", type: "error" });
-  } finally {
-    setLoading(false);
-  }
-}, [search, filterDept, filterStatus, filterType]);
+  }, [search, filterDept, filterStatus, filterType]);
 
   useEffect(() => {
     const t = setTimeout(load, 300);
@@ -234,6 +249,7 @@ const Employees = () => {
     setForm(emptyForm);
     setPtPreview(null);
     setTerminateReason("");
+    setDeductionToggles({ pf: true, esi: true, pt: true, tds: true });
     setModalOpen(true);
     try {
       const res = await api.getNextCode();
@@ -269,7 +285,26 @@ const Employees = () => {
       intern_end_date: item.intern_end_date
         ? item.intern_end_date.split("T")[0]
         : "",
+        
+      // ✅ Load NEW fields in Edit
+      dob: item.dob || "",
+      gender: item.gender || "",
+      blood_group: item.blood_group || "",
+      bank_account_no: item.bank_account_no || "",
+      bank_name: item.bank_name || "",
+      ifsc_code: item.ifsc_code || "",
+      emergency_name: item.emergency_name || "",
+      emergency_phone: item.emergency_phone || "",
+      emergency_relation: item.emergency_relation || "",
     });
+    
+    setDeductionToggles({
+      pf: s.pf_applicable !== false,
+      esi: s.esi_applicable !== false,
+      pt: s.pt_applicable !== false,
+      tds: s.tds_applicable !== false,
+    });
+
     setTerminateReason("");
     if (s.professional_tax !== undefined || s.six_month_gross !== undefined) {
       setPtPreview({
@@ -289,7 +324,6 @@ const Employees = () => {
     ? Number(selectedInsurance.annual_amount || 0) / 12
     : 0;
 
-  // ✅ UPDATED: End date = termination
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     if (!form.first_name.trim() || !form.last_name.trim()) return;
@@ -326,7 +360,6 @@ const Employees = () => {
       }
     }
 
-    // ✅ NEW: If editing and end_date is set → terminate with reason
     if (editing && form.end_date) {
       if (!terminateReason.trim() || terminateReason.length < 5) {
         setToast({
@@ -339,8 +372,15 @@ const Employees = () => {
 
     setSaving(true);
     try {
+      const finalForm = {
+        ...form,
+        pf_applicable: deductionToggles.pf,
+        esi_applicable: deductionToggles.esi,
+        pt_applicable: deductionToggles.pt,
+        tds_applicable: deductionToggles.tds,
+      };
+
       if (editing) {
-        // ✅ Step 1: If end_date set → TERMINATE first
         if (form.end_date) {
           await api.terminateEmployee(editing._id, {
             terminate_date: form.end_date,
@@ -348,21 +388,17 @@ const Employees = () => {
           });
         }
 
-        // ✅ Step 2: Update other fields (without end_date if terminating)
-        const updateData = { ...form };
+        const updateData = { ...finalForm };
         delete updateData.employee_code;
 
-        // Remove password if blank
         if (!updateData.password || !updateData.password.trim()) {
           delete updateData.password;
         }
 
-        // ✅ If terminating, remove end_date from update (already handled)
         if (form.end_date) {
           delete updateData.end_date;
         }
 
-        // Salary handling
         if (
           updateData.total_salary === "" ||
           updateData.total_salary === null ||
@@ -384,7 +420,6 @@ const Employees = () => {
           delete updateData.intern_end_date;
         }
 
-        // Only call updateEmployee if there are fields to update
         if (Object.keys(updateData).length > 0) {
           await api.updateEmployee(editing._id, updateData);
         }
@@ -395,8 +430,7 @@ const Employees = () => {
 
         setToast({ message: msg, type: "success" });
       } else {
-        // CREATE
-        await api.createEmployee(form);
+        await api.createEmployee(finalForm);
         setToast({
           message: `Employee created! Login: ${form.email} / ${form.password}`,
           type: "success",
@@ -417,7 +451,6 @@ const Employees = () => {
     }
   };
 
-  // ✅ NEW: Permanent delete handler
   const handlePermanentDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -817,7 +850,8 @@ const Employees = () => {
                             )}
                           </td>
 
-                          <td>
+                          {/* ✅ FIXED: Phone number ah oru line la kaatka style maathiiruken */}
+                          <td style={{ minWidth: 120 }}>
                             {emp.phone ? (
                               <span
                                 style={{
@@ -826,9 +860,10 @@ const Employees = () => {
                                   gap: 4,
                                   fontSize: 12.5,
                                   color: "#6b7280",
+                                  whiteSpace: "nowrap", // ✅ Ithu dhaan mukkiyam
                                 }}
                               >
-                                <Phone size={12} />
+                                <Phone size={12} style={{ flexShrink: 0 }} />
                                 {emp.phone}
                               </span>
                             ) : (
@@ -1576,6 +1611,140 @@ const Employees = () => {
               />
             </div>
 
+            {/* ✅ NEW: Personal Details Section */}
+            <div className="col-12 mt-3">
+              <h6 style={{ fontWeight: 700, color: "#4f46e5", marginBottom: 12 }}>Personal Details</h6>
+            </div>
+
+            <div className="col-12 col-md-4">
+              <label className="erp-label">Date of Birth</label>
+              <input
+                type="date"
+                className="erp-input"
+                value={form.dob}
+                onChange={(e) => setForm({ ...form, dob: e.target.value })}
+                style={{ fontFamily: FONT }}
+              />
+            </div>
+
+            <div className="col-12 col-md-4">
+              <label className="erp-label">Gender</label>
+              <select
+                className="erp-input"
+                value={form.gender}
+                onChange={(e) => setForm({ ...form, gender: e.target.value })}
+                style={{ fontFamily: FONT }}
+              >
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div className="col-12 col-md-4">
+              <label className="erp-label">Blood Group</label>
+              <select
+                className="erp-input"
+                value={form.blood_group}
+                onChange={(e) => setForm({ ...form, blood_group: e.target.value })}
+                style={{ fontFamily: FONT }}
+              >
+                <option value="">Select Blood Group</option>
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="O+">O+</option>
+                <option value="O-">O-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+              </select>
+            </div>
+
+            {/* ✅ NEW: Bank Details Section */}
+            <div className="col-12 mt-3">
+              <h6 style={{ fontWeight: 700, color: "#4f46e5", marginBottom: 12 }}>Bank Details</h6>
+            </div>
+
+            <div className="col-12 col-md-4">
+              <label className="erp-label">Bank Account No</label>
+              <input
+                className="erp-input"
+                value={form.bank_account_no}
+                onChange={(e) => setForm({ ...form, bank_account_no: e.target.value })}
+                placeholder="e.g., 1234567890"
+                style={{ fontFamily: FONT }}
+              />
+            </div>
+
+            <div className="col-12 col-md-4">
+              <label className="erp-label">Bank Name</label>
+              <input
+                className="erp-input"
+                value={form.bank_name}
+                onChange={(e) => setForm({ ...form, bank_name: e.target.value })}
+                placeholder="e.g., SBI, HDFC"
+                style={{ fontFamily: FONT }}
+              />
+            </div>
+
+            <div className="col-12 col-md-4">
+              <label className="erp-label">IFSC Code</label>
+              <input
+                className="erp-input"
+                value={form.ifsc_code}
+                onChange={(e) => setForm({ ...form, ifsc_code: e.target.value })}
+                placeholder="e.g., SBIN0001234"
+                style={{ fontFamily: FONT }}
+              />
+            </div>
+
+            {/* ✅ NEW: Emergency Contact Section */}
+            <div className="col-12 mt-3">
+              <h6 style={{ fontWeight: 700, color: "#4f46e5", marginBottom: 12 }}>Emergency Contact</h6>
+            </div>
+
+            <div className="col-12 col-md-4">
+              <label className="erp-label">Contact Name</label>
+              <input
+                className="erp-input"
+                value={form.emergency_name}
+                onChange={(e) => setForm({ ...form, emergency_name: e.target.value })}
+                placeholder="e.g., Jane Doe"
+                style={{ fontFamily: FONT }}
+              />
+            </div>
+
+            <div className="col-12 col-md-4">
+              <label className="erp-label">Contact Phone</label>
+              <input
+                className="erp-input"
+                value={form.emergency_phone}
+                onChange={(e) => setForm({ ...form, emergency_phone: e.target.value })}
+                placeholder="e.g., 9876543210"
+                style={{ fontFamily: FONT }}
+              />
+            </div>
+
+            <div className="col-12 col-md-4">
+              <label className="erp-label">Relationship</label>
+              <select
+                className="erp-input"
+                value={form.emergency_relation}
+                onChange={(e) => setForm({ ...form, emergency_relation: e.target.value })}
+                style={{ fontFamily: FONT }}
+              >
+                <option value="">Select Relation</option>
+                <option value="Father">Father</option>
+                <option value="Mother">Mother</option>
+                <option value="Spouse">Spouse</option>
+                <option value="Sibling">Sibling</option>
+                <option value="Friend">Friend</option>
+              </select>
+            </div>
+
+            {/* Date of Joining */}
             <div className="col-12 col-sm-6">
               <label className="erp-label">Date of Joining</label>
               <input
@@ -1778,7 +1947,12 @@ const Employees = () => {
                       const tds =
                         (total * (payrollSettings.tds_percent || 0)) / 100;
                       const insAmt = monthlyInsurance;
-                      const totalDed = pf + esi + pt + tds + insAmt;
+                      
+                      const activePF = deductionToggles.pf ? pf : 0;
+                      const activeESI = deductionToggles.esi ? esi : 0;
+                      const activePT = deductionToggles.pt ? pt : 0;
+                      const activeTDS = deductionToggles.tds ? tds : 0;
+                      const totalDed = activePF + activeESI + activePT + activeTDS + insAmt;
                       const net = total - totalDed;
 
                       return (
@@ -1888,39 +2062,97 @@ const Employees = () => {
                                 color: "#64748b",
                                 textTransform: "uppercase",
                                 letterSpacing: 0.4,
-                                marginBottom: 6,
+                                marginBottom: 8,
                               }}
                             >
-                              Monthly Deductions
+                              Monthly Deductions (Check to Apply)
                             </div>
+                            
+                            <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 12, color: "#64748b" }}>
+                              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                                <input 
+                                  type="checkbox" 
+                                  checked={deductionToggles.pf} 
+                                  onChange={(e) => setDeductionToggles(prev => ({ ...prev, pf: e.target.checked }))} 
+                                  style={{ accentColor: "#4f46e5", width: 15, height: 15 }} 
+                                />
+                                <span style={{ flex: 1 }}>PF</span>
+                                <span style={{ fontWeight: 700, color: deductionToggles.pf ? "#dc2626" : "#9ca3af" }}>
+                                  ₹{deductionToggles.pf ? pf.toFixed(0) : "0"}
+                                </span>
+                              </label>
+
+                              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                                <input 
+                                  type="checkbox" 
+                                  checked={deductionToggles.esi} 
+                                  onChange={(e) => setDeductionToggles(prev => ({ ...prev, esi: e.target.checked }))} 
+                                  style={{ accentColor: "#4f46e5", width: 15, height: 15 }} 
+                                />
+                                <span style={{ flex: 1 }}>ESI</span>
+                                <span style={{ fontWeight: 700, color: deductionToggles.esi ? "#dc2626" : "#9ca3af" }}>
+                                  ₹{deductionToggles.esi ? esi.toFixed(2) : "0"}
+                                </span>
+                              </label>
+
+                              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                                <input 
+                                  type="checkbox" 
+                                  checked={deductionToggles.pt} 
+                                  onChange={(e) => setDeductionToggles(prev => ({ ...prev, pt: e.target.checked }))} 
+                                  style={{ accentColor: "#4f46e5", width: 15, height: 15 }} 
+                                />
+                                <span style={{ flex: 1 }}>PT</span>
+                                <span style={{ fontWeight: 700, color: deductionToggles.pt ? "#dc2626" : "#9ca3af" }}>
+                                  ₹{deductionToggles.pt ? pt.toFixed(0) : "0"}
+                                </span>
+                              </label>
+
+                              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                                <input 
+                                  type="checkbox" 
+                                  checked={deductionToggles.tds} 
+                                  onChange={(e) => setDeductionToggles(prev => ({ ...prev, tds: e.target.checked }))} 
+                                  style={{ accentColor: "#4f46e5", width: 15, height: 15 }} 
+                                />
+                                <span style={{ flex: 1 }}>TDS</span>
+                                <span style={{ fontWeight: 700, color: deductionToggles.tds ? "#dc2626" : "#9ca3af" }}>
+                                  ₹{deductionToggles.tds ? tds.toFixed(0) : "0"}
+                                </span>
+                              </label>
+
+                              {insAmt > 0 && (
+                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                                  <span style={{ width: 15 }}></span>
+                                  <span style={{ flex: 1 }}>Insurance</span>
+                                  <span style={{ fontWeight: 700, color: "#dc2626" }}>
+                                    ₹{insAmt.toFixed(0)}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
                             <div
                               style={{
+                                marginTop: 12,
+                                paddingTop: 10,
+                                borderTop: "1px dashed #c7d2fe",
                                 display: "flex",
                                 justifyContent: "space-between",
-                                gap: 8,
-                                fontSize: 11.5,
-                                color: "#64748b",
-                                flexWrap: "wrap",
+                                alignItems: "center",
                               }}
                             >
-                              <span>PF: ₹{pf.toFixed(0)}</span>
-                              <span>ESI: ₹{esi.toFixed(2)}</span>
-                              <span>PT: ₹{pt.toFixed(0)}</span>
-                              <span>TDS: ₹{tds.toFixed(0)}</span>
-                              {insAmt > 0 && (
-                                <span>Insurance: ₹{insAmt.toFixed(0)}</span>
-                              )}
-                              <span
-                                style={{ fontWeight: 800, color: "#dc2626" }}
-                              >
-                                Total: ₹{totalDed.toFixed(2)}
+                              <span style={{ fontSize: 12, fontWeight: 700 }}>
+                                Total Deduction
+                              </span>
+                              <span style={{ fontSize: 14, fontWeight: 800, color: "#dc2626" }}>
+                                ₹{totalDed.toFixed(2)}
                               </span>
                             </div>
                             <div
                               style={{
-                                marginTop: 8,
-                                paddingTop: 8,
-                                borderTop: "1px dashed #c7d2fe",
+                                marginTop: 6,
+                                paddingTop: 6,
                                 display: "flex",
                                 justifyContent: "space-between",
                                 alignItems: "center",

@@ -599,3 +599,113 @@ def complete_task(task_id, employee_id, completion_notes=""):
         })
 
     return True
+
+
+# ============================================
+# ✅ NEW: TRANSFER TASK
+# ============================================
+
+def transfer_task(task_id, current_employee_id, new_employee_id, note=""):
+    """Transfer task to another employee and log history."""
+    t_oid = _oid(task_id)
+    c_oid = _oid(current_employee_id)
+    n_oid = _oid(new_employee_id)
+    
+    if not t_oid or not c_oid or not n_oid:
+        raise ValueError("Invalid IDs")
+
+    # Check if task exists and assigned to current employee
+    task = tasks().find_one({"_id": t_oid, "assigned_to": c_oid, "is_active": True})
+    if not task:
+        raise ValueError("Task not found or not assigned to you")
+
+    if task.get("status") in ("Completed", "Cancelled"):
+        raise ValueError(f"Cannot transfer a task in '{task.get('status')}' status")
+
+    # Get new employee details
+    new_emp = employees().find_one({"_id": n_oid, "status": "ACTIVE"})
+    if not new_emp:
+        raise ValueError("New employee not found or inactive")
+        
+    if n_oid == c_oid:
+        raise ValueError("Task is already assigned to this employee")
+
+    # Get current employee details
+    curr_emp = employees().find_one({"_id": c_oid})
+    curr_name = f"{curr_emp.get('first_name', '')} {curr_emp.get('last_name', '')}".strip()
+    new_name = f"{new_emp.get('first_name', '')} {new_emp.get('last_name', '')}".strip()
+
+    now = _now()
+
+    # Update task with new assignee
+    tasks().update_one(
+        {"_id": t_oid},
+        {
+            "$set": {
+                "assigned_to": n_oid,
+                "assigned_to_name": new_name,
+                "assigned_to_code": new_emp.get("employee_code"),
+                "status": "Pending", # Reset status to pending
+                "plan_status": "Not Submitted", # Reset plan
+                "workflow_plan": None,
+                "updated_at": now,
+            },
+            "$push": {
+                "workflow_history": {
+                    "action": "Task Transferred",
+                    "by": c_oid,
+                    "by_name": curr_name,
+                    "at": now,
+                    "comment": f"Transferred from {curr_name} to {new_name}." + (f" Note: {note}" if note else ""),
+                }
+            },
+        },
+    )
+
+    # Notify new employee
+    notifications().insert_one({
+        "employee_id": n_oid,
+        "title": "Task Transferred to You",
+        "message": f'Task "{task.get("title")}" transferred to you by {curr_name}.',
+        "type": "TASK_ASSIGNED",
+        "link": "/employee/tasks",
+        "related_id": t_oid,
+        "from_employee_id": c_oid,
+        "from_name": curr_name,
+        "is_read": False,
+        "read_at": None,
+        "created_at": now,
+    })
+
+    # Notify old employee
+    notifications().insert_one({
+        "employee_id": c_oid,
+        "title": "Task Transferred Successfully",
+        "message": f'You transferred "{task.get("title")}" to {new_name}.',
+        "type": "TASK_TRANSFERRED",
+        "link": "/employee/tasks",
+        "related_id": t_oid,
+        "from_employee_id": n_oid,
+        "from_name": new_name,
+        "is_read": False,
+        "read_at": None,
+        "created_at": now,
+    })
+    
+    # Notify Manager (optional)
+    if task.get("assigned_by"):
+        notifications().insert_one({
+            "employee_id": task["assigned_by"],
+            "title": "Task Transferred",
+            "message": f'{curr_name} transferred "{task.get("title")}" to {new_name}.',
+            "type": "TASK_TRANSFERRED",
+            "link": "/manager/tasks",
+            "related_id": t_oid,
+            "from_employee_id": c_oid,
+            "from_name": curr_name,
+            "is_read": False,
+            "read_at": None,
+            "created_at": now,
+        })
+
+    return True

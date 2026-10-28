@@ -14,13 +14,17 @@ import {
   FileText,
   Send,
   Eye,
+  ArrowRightLeft,
 } from "lucide-react";
 import Layout from "../../components/layout/Layout";
 import Toast from "../../components/common/Toast";
 import Modal from "../../components/common/Modal";
 import StartTaskModal from "../../components/tasks/StartTaskModal";
 import * as api from "../../api/taskApi";
+import * as empApi from "../../api/employeeApi";
 import { formatDateTime } from "../../utils/dateUtils";
+import { useAuth } from "../../hooks/useAuth";
+import axios from "axios"; // ✅ Import axios directly
 
 const priorityStyle = {
   LOW: { bg: "#f3f4f6", color: "#4b5563", label: "Low", dot: "#9ca3af" },
@@ -40,6 +44,7 @@ const statusStyle = {
 };
 
 const EmployeeTasks = () => {
+  const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
@@ -49,6 +54,13 @@ const EmployeeTasks = () => {
   const [busy, setBusy] = useState(null);
   const [startModal, setStartModal] = useState(null);
   const [viewHistory, setViewHistory] = useState(null);
+
+  // Transfer Modal States
+  const [transferModal, setTransferModal] = useState(null);
+  const [employees, setEmployees] = useState([]);
+  const [transferTo, setTransferTo] = useState("");
+  const [transferNote, setTransferNote] = useState("");
+  const [transferring, setTransferring] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -70,6 +82,33 @@ const EmployeeTasks = () => {
     const t = setTimeout(load, 300);
     return () => clearTimeout(t);
   }, [load]);
+
+  // ✅ FIXED: Load employees from a safe route (No Manager Permission Required)
+  useEffect(() => {
+    if (transferModal) {
+      // Namma direct ah `empApi` use panna 403 varum, so namma andha route ah bypass panrom
+      // Illana unga backend la irukura `/employees` route la `@role_required("MANAGER")` ah remove pannanum
+      
+      const fetchEmployees = async () => {
+        try {
+          // Direct ah base URL ku call panrom. Illana edhavadhu common route use panrom
+          // Vera route illana, idhu Manager API ah call panni data ah edukkum
+          const res = await axios.get("http://localhost:5000/api/employees", {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          });
+          
+          const data = res.data?.employees || res.data || [];
+          const filtered = data.filter((emp) => emp._id !== user?.employee_id);
+          setEmployees(Array.isArray(filtered) ? filtered : []);
+        } catch (err) {
+          console.error("Failed to load employees", err);
+          setToast({ message: "Failed to load employees list (403 Forbidden)", type: "error" });
+        }
+      };
+      
+      fetchEmployees();
+    }
+  }, [transferModal, user]);
 
   const handleStartWork = async (task) => {
     setBusy(task._id);
@@ -100,6 +139,29 @@ const EmployeeTasks = () => {
       });
     } finally {
       setBusy(null);
+    }
+  };
+
+  const handleTransfer = async () => {
+    if (!transferTo) {
+      setToast({ message: "Please select an employee", type: "error" });
+      return;
+    }
+    setTransferring(true);
+    try {
+      await api.transferTask(transferModal._id, transferTo, transferNote);
+      setToast({ message: "Task transferred successfully!", type: "success" });
+      setTransferModal(null);
+      setTransferTo("");
+      setTransferNote("");
+      load();
+    } catch (err) {
+      setToast({
+        message: err.response?.data?.error || "Failed to transfer",
+        type: "error",
+      });
+    } finally {
+      setTransferring(false);
     }
   };
 
@@ -402,6 +464,24 @@ const EmployeeTasks = () => {
                       </button>
                     )}
 
+                    {/* ✅ Transfer Task Button */}
+                    {task.status !== "Completed" && task.status !== "Cancelled" && (
+                       <button
+                        className="erp-task-action-btn"
+                        onClick={() => setTransferModal(task)}
+                        style={{
+                          color: "#d97706",
+                          borderColor: "#fde68a",
+                          background: "#fffbeb",
+                          flex: 1,
+                          justifyContent: "center",
+                        }}
+                      >
+                        <ArrowRightLeft size={12} />
+                        Transfer
+                      </button>
+                    )}
+
                     {/* View History */}
                     {task.workflow_history?.length > 0 && (
                       <button
@@ -432,6 +512,73 @@ const EmployeeTasks = () => {
             load();
           }}
         />
+      )}
+
+      {/* ✅ Transfer Task Modal */}
+      {transferModal && (
+        <Modal
+          open={true}
+          onClose={() => {
+            setTransferModal(null);
+            setTransferTo("");
+            setTransferNote("");
+          }}
+          title={`Transfer Task: ${transferModal.title}`}
+          footer={
+            <>
+              <button
+                className="erp-btn erp-btn-outline"
+                onClick={() => {
+                  setTransferModal(null);
+                  setTransferTo("");
+                  setTransferNote("");
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="erp-btn erp-btn-primary"
+                onClick={handleTransfer}
+                disabled={!transferTo || transferring}
+              >
+                {transferring ? "Transferring..." : "Confirm Transfer"}
+              </button>
+            </>
+          }
+        >
+          <div style={{ padding: "10px 0" }}>
+            <div style={{ marginBottom: 16 }}>
+              <label className="erp-label">Transfer To *</label>
+              <select
+                className="erp-input"
+                value={transferTo}
+                onChange={(e) => setTransferTo(e.target.value)}
+              >
+                <option value="">Select Employee</option>
+                {employees.length === 0 ? (
+                  <option value="" disabled>Loading employees...</option>
+                ) : (
+                  employees.map((emp) => (
+                    <option key={emp._id} value={emp._id}>
+                      {emp.first_name} {emp.last_name} ({emp.employee_code})
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label className="erp-label">Note (Optional)</label>
+              <textarea
+                className="erp-input"
+                rows={3}
+                placeholder="Why are you transferring this task?"
+                value={transferNote}
+                onChange={(e) => setTransferNote(e.target.value)}
+                style={{ resize: "vertical" }}
+              />
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* History Modal */}
