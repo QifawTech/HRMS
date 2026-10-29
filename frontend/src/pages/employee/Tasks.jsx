@@ -93,7 +93,7 @@ const EmployeeTasks = () => {
         try {
           // Direct ah base URL ku call panrom. Illana edhavadhu common route use panrom
           // Vera route illana, idhu Manager API ah call panni data ah edukkum
-          const res = await axios.get("http://localhost:5000/api/employees", {
+          const res = await axios.get("http://65.0.221.12:5000/api/employees", {
             headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
           });
           

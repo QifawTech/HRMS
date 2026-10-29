@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Plus,
   Search,
@@ -88,7 +88,7 @@ const ManagerPayroll = () => {
 
   const [ptMonths, setPtMonths] = useState([4, 10]);
 
-  // ✅ BULK STATES
+  // ? BULK STATES
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [bulkRunning, setBulkRunning] = useState(false);
   const [bulkResult, setBulkResult] = useState(null);
@@ -137,7 +137,7 @@ const ManagerPayroll = () => {
   }, []);
 
   // ============================================
-  // Employee select → auto-fill salary
+  // Employee select ? auto-fill salary
   // ============================================
   const onSelectEmployee = (empId) => {
     const emp = employees.find((e) => e._id === empId);
@@ -174,7 +174,7 @@ const ManagerPayroll = () => {
   };
 
   // ============================================
-  // Generate — Single
+  // Generate � Single
   // ============================================
   const handleSubmit = async () => {
     if (!form.employee_id)
@@ -216,7 +216,7 @@ const ManagerPayroll = () => {
   };
 
   // ============================================
-  // Generate — BULK (All Employees)
+  // Generate � BULK (All Employees)
   // ============================================
   const handleBulkGenerate = async () => {
     setBulkRunning(true);
@@ -225,7 +225,7 @@ const ManagerPayroll = () => {
       const res = await api.generateBulkPayroll(month, bulkOverwrite);
       setBulkResult(res.data);
       setToast({
-        message: `✅ ${res.data.created} payslips generated!`,
+        message: `? ${res.data.created} payslips generated!`,
         type: "success",
       });
       load();
@@ -300,7 +300,7 @@ const ManagerPayroll = () => {
     <Layout>
       <style>{`
         .pay-page * { font-family: ${FONT}; }
-        /* ✅ FIX: Max-width and margin auto ah remove panni, full width ah maathiiruken */
+        /* ? FIX: Max-width and margin auto ah remove panni, full width ah maathiiruken */
         .pay-page { 
           font-family: ${FONT}; 
           width: 100%;
@@ -545,7 +545,7 @@ const ManagerPayroll = () => {
           />
           <Tile
             label="Total Amount"
-            value={`₹ ${formatCurrency(stats.total_amount || 0)}`}
+            value={`? ${formatCurrency(stats.total_amount || 0)}`}
             color="#0891b2"
             bg="#ecfeff"
             Icon={TrendingUp}
@@ -656,10 +656,10 @@ const ManagerPayroll = () => {
                         <td style={{ fontSize: 12.5 }}>{p.pay_period}</td>
                         <td>{p.paid_days}</td>
                         <td style={{ textAlign: "right", fontWeight: 600 }}>
-                          ₹ {formatCurrency(p.gross_earnings)}
+                          ? {formatCurrency(p.gross_earnings)}
                         </td>
                         <td style={{ textAlign: "right", color: "#dc2626" }}>
-                          ₹ {formatCurrency(p.total_deductions)}
+                          ? {formatCurrency(p.total_deductions)}
                         </td>
                         <td
                           style={{
@@ -668,7 +668,7 @@ const ManagerPayroll = () => {
                             color: "#1e40af",
                           }}
                         >
-                          ₹ {formatCurrency(p.net_salary)}
+                          ? {formatCurrency(p.net_salary)}
                         </td>
                         <td>
                           <span
@@ -678,7 +678,7 @@ const ManagerPayroll = () => {
                                 : "erp-badge erp-badge-yellow"
                             }
                           >
-                            {p.status === "Paid" ? "● Paid" : "● Generated"}
+                            {p.status === "Paid" ? "? Paid" : "? Generated"}
                           </span>
                         </td>
                         <td>
@@ -726,7 +726,7 @@ const ManagerPayroll = () => {
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div className="pay-mobile-name">{p.employee_name}</div>
                       <div className="pay-mobile-code">
-                        {p.employee_code} · {p.pay_period}
+                        {p.employee_code} � {p.pay_period}
                       </div>
                     </div>
                     <span
@@ -737,7 +737,7 @@ const ManagerPayroll = () => {
                       }
                       style={{ flexShrink: 0 }}
                     >
-                      {p.status === "Paid" ? "● Paid" : "● Generated"}
+                      {p.status === "Paid" ? "? Paid" : "? Generated"}
                     </span>
                   </div>
 
@@ -749,7 +749,7 @@ const ManagerPayroll = () => {
                     <div>
                       <div className="pay-field-label">Gross</div>
                       <div className="pay-field-value">
-                        ₹ {formatCurrency(p.gross_earnings)}
+                        ? {formatCurrency(p.gross_earnings)}
                       </div>
                     </div>
                     <div>
@@ -758,7 +758,7 @@ const ManagerPayroll = () => {
                         className="pay-field-value"
                         style={{ color: "#dc2626" }}
                       >
-                        ₹ {formatCurrency(p.total_deductions)}
+                        ? {formatCurrency(p.total_deductions)}
                       </div>
                     </div>
                     <div>
@@ -767,7 +767,7 @@ const ManagerPayroll = () => {
                         className="pay-field-value"
                         style={{ color: "#1e40af", fontSize: 14 }}
                       >
-                        ₹ {formatCurrency(p.net_salary)}
+                        ? {formatCurrency(p.net_salary)}
                       </div>
                     </div>
                   </div>
@@ -888,7 +888,7 @@ const ManagerPayroll = () => {
           </div>
 
           <div className="col-12 col-sm-4">
-            <label className="erp-label">Basic Salary (₹)</label>
+            <label className="erp-label">Basic Salary (?)</label>
             <input
               type="number"
               className="erp-input"
@@ -899,7 +899,7 @@ const ManagerPayroll = () => {
           </div>
 
           <div className="col-12 col-sm-4">
-            <label className="erp-label">HRA (₹)</label>
+            <label className="erp-label">HRA (?)</label>
             <input
               type="number"
               className="erp-input"
@@ -910,7 +910,7 @@ const ManagerPayroll = () => {
           </div>
 
           <div className="col-12 col-sm-4">
-            <label className="erp-label">Special Allowance (₹)</label>
+            <label className="erp-label">Special Allowance (?)</label>
             <input
               type="number"
               className="erp-input"
@@ -990,8 +990,8 @@ const ManagerPayroll = () => {
                       }}
                     >
                       {isPTApplicableMonth()
-                        ? "✓ PT will be deducted"
-                        : "⚠ Not applicable this month"}
+                        ? "? PT will be deducted"
+                        : "? Not applicable this month"}
                     </div>
                   )}
                 </div>
@@ -1102,7 +1102,7 @@ const ManagerPayroll = () => {
                 lineHeight: 1.55,
               }}
             >
-              <strong>⚠️ Warning:</strong> Existing payslips will be deleted and
+              <strong>?? Warning:</strong> Existing payslips will be deleted and
   new payslips will be generated. All changes must be reviewed and
   approved by the manager before they are applied.
             </div>
@@ -1332,7 +1332,7 @@ const ManagerPayroll = () => {
                     textTransform: "uppercase",
                   }}
                 >
-                  ⚠️ Skipped Employees
+                  ?? Skipped Employees
                 </div>
                 {bulkResult.errors.map((e, i) => (
                   <div
@@ -1347,7 +1347,7 @@ const ManagerPayroll = () => {
                           : "none",
                     }}
                   >
-                    <strong>{e.employee_name}</strong> ({e.employee_code}) —{" "}
+                    <strong>{e.employee_name}</strong> ({e.employee_code}) �{" "}
                     {e.error}
                   </div>
                 ))}

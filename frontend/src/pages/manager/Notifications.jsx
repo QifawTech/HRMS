@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Bell,
@@ -170,7 +170,7 @@ const ManagerNotifications = () => {
 
   return (
     <Layout>
-      {/* ✅ FIX: Max-width and margin auto ah remove panni, full width ah maathiiruken */}
+      {/* ? FIX: Max-width and margin auto ah remove panni, full width ah maathiiruken */}
       <div style={{ fontFamily: FONT, width: "100%", padding: "0 20px" }}>
         {/* ============================================
             Header
@@ -257,7 +257,7 @@ const ManagerNotifications = () => {
         </div>
 
         {/* ============================================
-            Tabs — segmented control
+            Tabs � segmented control
             ============================================ */}
         <div
           style={{
@@ -530,7 +530,7 @@ const NotificationRow = ({ notif, isLast, onClick, onDelete }) => {
                   {notif.from_name}
                 </strong>
               </span>
-              <span style={{ color: "#cbd5e1" }}>·</span>
+              <span style={{ color: "#cbd5e1" }}>�</span>
             </>
           )}
           <span>{timeAgo(notif.created_at)}</span>

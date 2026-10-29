@@ -23,11 +23,11 @@ MAX_FILES = 5
 def _get_base_url():
     """Get backend base URL from current request."""
     try:
-        # request.host_url = "http://localhost:5000/"
+        # request.host_url = "http://65.0.221.12:5000/"
         return request.host_url.rstrip("/")
     except RuntimeError:
         # Outside request context (fallback)
-        return "http://localhost:5000"
+        return "http://65.0.221.12:5000"
 
 
 def ensure_upload_dirs():
@@ -196,7 +196,7 @@ def save_profile_picture(file):
     file_path = os.path.join(PROFILE_FOLDER, unique_name)
     file.save(file_path)
 
-    # ✅ Build FULL URL: http://localhost:5000/uploads/profiles/xxx.jpg
+    # ✅ Build FULL URL: http://65.0.221.12:5000/uploads/profiles/xxx.jpg
     base_url = _get_base_url()
     full_url = f"{base_url}/uploads/profiles/{unique_name}"
 
@@ -230,7 +230,7 @@ def save_company_logo(file):
     file_path = os.path.join(LOGO_FOLDER, unique_name)
     file.save(file_path)
 
-    # ✅ Build FULL URL: http://localhost:5000/uploads/logos/xxx.jpg
+    # ✅ Build FULL URL: http://65.0.221.12:5000/uploads/logos/xxx.jpg
     base_url = _get_base_url()
     full_url = f"{base_url}/uploads/logos/{unique_name}"
 

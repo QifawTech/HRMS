@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Building2,
   Mail,
@@ -34,7 +34,7 @@ const MONTHS_SHORT = [
 ];
 
 const formatTime12 = (t) => {
-  if (!t) return "—";
+  if (!t) return "�";
   const [h, m] = t.split(":").map(Number);
   const ampm = h >= 12 ? "PM" : "AM";
   const h12 = h % 12 || 12;
@@ -54,7 +54,7 @@ const useIsMobile = () => {
 };
 
 // ============================================
-// 🕐 12-HOUR TIME PICKER — Railway Style
+// ?? 12-HOUR TIME PICKER � Railway Style
 // ============================================
 const TimePicker12 = ({ value, onChange, label, required }) => {
   const to12 = (time24) => {
@@ -103,7 +103,7 @@ const TimePicker12 = ({ value, onChange, label, required }) => {
 
         <span style={{ fontWeight: 700, color: "#6b7280" }}>:</span>
 
-        {/* Minute — 5-min increments */}
+        {/* Minute � 5-min increments */}
         <select
           className="erp-input"
           value={minute}
@@ -223,7 +223,7 @@ const ManagerSettings = () => {
     tds_percent: 0,
     pt_deduction_months: [4, 10],
     notice_period_days: 15,
-    // ✅ NEW: Location settings defaults
+    // ? NEW: Location settings defaults
     company_latitude: "10.794941",
     company_longitude: "78.680983",
     allowed_radius_meters: 200,
@@ -663,7 +663,7 @@ const ManagerSettings = () => {
     <Layout>
       <style>{`
         .settings-page * { font-family: ${FONT}; }
-        /* ✅ FIX: Max-width and margin auto ah remove panni, full width ah maathiiruken */
+        /* ? FIX: Max-width and margin auto ah remove panni, full width ah maathiiruken */
         .settings-page {
           font-family: ${FONT};
           width: 100%;
@@ -958,7 +958,7 @@ const ManagerSettings = () => {
                     {uploadingLogo ? "Uploading..." : "Upload Logo"}
                   </button>
                   <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 6 }}>
-                    PNG, JPG, SVG · Max 2MB
+                    PNG, JPG, SVG � Max 2MB
                   </div>
                 </div>
               </div>
@@ -1104,13 +1104,13 @@ const ManagerSettings = () => {
                     fontFamily: FONT,
                   }}
                 >
-                  ℹ️ Employees must serve {company.notice_period_days} days from
+                  ?? Employees must serve {company.notice_period_days} days from
                   resignation date
                 </div>
               )}
             </div>
 
-            {/* ✅ NEW: Location Settings */}
+            {/* ? NEW: Location Settings */}
             <div className="col-12 mt-3">
               <div
                 style={{
@@ -1130,7 +1130,7 @@ const ManagerSettings = () => {
                     marginBottom: 10,
                   }}
                 >
-                  📍 Office Location (Geo-fencing)
+                  ?? Office Location (Geo-fencing)
                 </div>
                 <div
                   style={{
@@ -1422,7 +1422,7 @@ const ManagerSettings = () => {
           <InfoBanner tone="green">
             <strong>How it works:</strong> Create insurance types with annual
             amount. Assign insurance to employee when adding. Monthly premium
-            auto-calculated (Annual ÷ 12) and deducted in payroll.
+            auto-calculated (Annual � 12) and deducted in payroll.
           </InfoBanner>
 
           {insurancesLoading ? (
@@ -1474,7 +1474,7 @@ const ManagerSettings = () => {
                           Annual
                         </span>
                         <span className="settings-mini-card-value">
-                          ₹
+                          ?
                           {Number(ins.annual_amount || 0).toLocaleString(
                             "en-IN"
                           )}
@@ -1488,7 +1488,7 @@ const ManagerSettings = () => {
                           className="settings-mini-card-value"
                           style={{ color: "#059669" }}
                         >
-                          ₹
+                          ?
                           {(Number(ins.annual_amount || 0) / 12).toLocaleString(
                             "en-IN",
                             { maximumFractionDigits: 2 }
@@ -1559,13 +1559,13 @@ const ManagerSettings = () => {
                             )}
                           </td>
                           <td style={{ fontWeight: 600, color: "#0f172a" }}>
-                            ₹
+                            ?
                             {Number(ins.annual_amount || 0).toLocaleString(
                               "en-IN"
                             )}
                           </td>
                           <td style={{ fontWeight: 600, color: "#059669" }}>
-                            ₹
+                            ?
                             {(
                               Number(ins.annual_amount || 0) / 12
                             ).toLocaleString("en-IN", {
@@ -1763,7 +1763,7 @@ const ManagerSettings = () => {
                     marginBottom: 6,
                   }}
                 >
-                  📅 PT Deduction Months
+                  ?? PT Deduction Months
                 </div>
                 <div
                   style={{
@@ -1798,7 +1798,7 @@ const ManagerSettings = () => {
                           }`,
                         }}
                       >
-                        {active && "✓ "}
+                        {active && "? "}
                         {label}
                       </button>
                     );
@@ -1817,7 +1817,7 @@ const ManagerSettings = () => {
                       color: "#991b1b",
                     }}
                   >
-                    ⚠ At least one month must be selected for PT deduction.
+                    ? At least one month must be selected for PT deduction.
                   </div>
                 )}
               </div>
@@ -1843,23 +1843,23 @@ const ManagerSettings = () => {
                 marginBottom: 10,
               }}
             >
-              Live Preview — If Total Salary is ₹15,000
+              Live Preview � If Total Salary is ?15,000
             </div>
             <div className="row g-2">
               <div className="col-6 col-md-3">
-                <MiniBox label="Basic" value={`₹${previewBasic.toFixed(0)}`} />
+                <MiniBox label="Basic" value={`?${previewBasic.toFixed(0)}`} />
               </div>
               <div className="col-6 col-md-3">
-                <MiniBox label="HRA" value={`₹${previewHra.toFixed(0)}`} />
+                <MiniBox label="HRA" value={`?${previewHra.toFixed(0)}`} />
               </div>
               <div className="col-6 col-md-3">
                 <MiniBox
                   label="Special"
-                  value={`₹${previewSpecial.toFixed(0)}`}
+                  value={`?${previewSpecial.toFixed(0)}`}
                 />
               </div>
               <div className="col-6 col-md-3">
-                <MiniBox label="Total" value={`₹${previewTotal}`} highlight />
+                <MiniBox label="Total" value={`?${previewTotal}`} highlight />
               </div>
             </div>
           </div>
@@ -1884,7 +1884,7 @@ const ManagerSettings = () => {
         >
           <InfoBanner tone="amber">
             <strong>How it works:</strong> The employee's 6-month gross income
-            (Monthly Salary × 6) is matched to one of these slabs. The
+            (Monthly Salary � 6) is matched to one of these slabs. The
             corresponding <strong>Tax Amount</strong> is deducted{" "}
             <strong>once per 6-month period</strong> (Apr & Oct by default).
             Leave <strong>Max Salary</strong> blank for the highest slab.
@@ -1919,7 +1919,7 @@ const ManagerSettings = () => {
                       </div>
 
                       <div className="mb-2">
-                        <label className="erp-label">Min Salary (₹)</label>
+                        <label className="erp-label">Min Salary (?)</label>
                         <input
                           type="number"
                           className="erp-input"
@@ -1932,7 +1932,7 @@ const ManagerSettings = () => {
                       </div>
 
                       <div className="mb-2">
-                        <label className="erp-label">Max Salary (₹)</label>
+                        <label className="erp-label">Max Salary (?)</label>
                         <input
                           type="number"
                           className="erp-input"
@@ -1951,7 +1951,7 @@ const ManagerSettings = () => {
                       </div>
 
                       <div>
-                        <label className="erp-label">Tax Amount (₹)</label>
+                        <label className="erp-label">Tax Amount (?)</label>
                         <input
                           type="number"
                           className="erp-input"
@@ -1995,9 +1995,9 @@ const ManagerSettings = () => {
                         }}
                       >
                         <th style={{ width: 40 }}>#</th>
-                        <th>Min Salary (₹)</th>
-                        <th>Max Salary (₹)</th>
-                        <th>Tax Amount (₹)</th>
+                        <th>Min Salary (?)</th>
+                        <th>Max Salary (?)</th>
+                        <th>Tax Amount (?)</th>
                         <th style={{ width: 60 }}></th>
                       </tr>
                     </thead>
@@ -2367,7 +2367,7 @@ const ManagerSettings = () => {
           </small>
         </div>
 
-        {/* ✅ 1st Time slot */}
+        {/* ? 1st Time slot */}
         <div className="row g-3 mb-3">
           <div className="col-12 col-sm-6">
             <TimePicker12
@@ -2387,11 +2387,11 @@ const ManagerSettings = () => {
           </div>
         </div>
 
-        {/* ✅ 2nd Time slot (Only if Custom Shift) */}
+        {/* ? 2nd Time slot (Only if Custom Shift) */}
         {isSplitShift && (
           <div className="row g-3 mb-3" style={{ padding: 12, background: "#eef2ff", borderRadius: 8, border: "1px dashed #c7d2fe" }}>
             <div className="col-12" style={{ fontSize: 12, fontWeight: 700, color: "#3730a3", marginBottom: 4 }}>
-              ⏱️ Split Shift (2nd Time Slot)
+              ?? Split Shift (2nd Time Slot)
             </div>
             <div className="col-12 col-sm-6">
               <TimePicker12
@@ -2466,7 +2466,7 @@ const ManagerSettings = () => {
         </div>
 
         <div className="mb-3">
-          <label className="erp-label">Annual Amount (₹) *</label>
+          <label className="erp-label">Annual Amount (?) *</label>
           <input
             type="number"
             className="erp-input"
@@ -2488,7 +2488,7 @@ const ManagerSettings = () => {
                 marginTop: 4,
               }}
             >
-              Monthly deduction: ₹
+              Monthly deduction: ?
               {(parseFloat(insuranceForm.annual_amount) / 12).toFixed(2)}
             </small>
           )}

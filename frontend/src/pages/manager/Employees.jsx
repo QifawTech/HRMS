@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   UserPlus,
   Search,
@@ -37,13 +37,13 @@ const FONT = "'Inter', 'Segoe UI', -apple-system, sans-serif";
 const getProfilePicUrl = (url) => {
   if (!url) return null;
   if (url.startsWith("http")) return url;
-  const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const backendUrl = import.meta.env.VITE_API_URL || "http://65.0.221.12:5000";
   return `${backendUrl}${url}`;
 };
 
-// 24-hour → 12-hour (AM/PM)
+// 24-hour ? 12-hour (AM/PM)
 const formatTime12 = (t) => {
-  if (!t) return "—";
+  if (!t) return "�";
   const [h, m] = t.split(":").map(Number);
   const ampm = h >= 12 ? "PM" : "AM";
   const h12 = h % 12 || 12;
@@ -104,7 +104,7 @@ const emptyForm = {
   employment_type: "PERMANENT",
   intern_end_date: "",
   
-  // ✅ NEW FIELDS
+  // ? NEW FIELDS
   dob: "",
   gender: "",
   blood_group: "",
@@ -134,7 +134,7 @@ const Employees = () => {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
 
-  // ✅ NEW: Deduction Toggles
+  // ? NEW: Deduction Toggles
   const [deductionToggles, setDeductionToggles] = useState({
     pf: true,
     esi: true,
@@ -286,7 +286,7 @@ const Employees = () => {
         ? item.intern_end_date.split("T")[0]
         : "",
         
-      // ✅ Load NEW fields in Edit
+      // ? Load NEW fields in Edit
       dob: item.dob || "",
       gender: item.gender || "",
       blood_group: item.blood_group || "",
@@ -772,7 +772,7 @@ const Employees = () => {
                                   }}
                                 >
                                   <Mail size={11} />
-                                  {emp.email || "—"}
+                                  {emp.email || "�"}
                                 </div>
                               </div>
                             </div>
@@ -794,7 +794,7 @@ const Employees = () => {
                                 {emp.department_name}
                               </span>
                             ) : (
-                              <span style={{ color: "#9ca3af" }}>—</span>
+                              <span style={{ color: "#9ca3af" }}>�</span>
                             )}
                           </td>
 
@@ -812,7 +812,7 @@ const Employees = () => {
                                 {emp.designation_title}
                               </span>
                             ) : (
-                              <span style={{ color: "#9ca3af" }}>—</span>
+                              <span style={{ color: "#9ca3af" }}>�</span>
                             )}
                           </td>
 
@@ -838,7 +838,7 @@ const Employees = () => {
                                       color: "#94a3b8",
                                     }}
                                   >
-                                    {formatTime12(emp.shift_start)} –{" "}
+                                    {formatTime12(emp.shift_start)} �{" "}
                                     {formatTime12(emp.shift_end)}
                                   </div>
                                 )}
@@ -850,7 +850,7 @@ const Employees = () => {
                             )}
                           </td>
 
-                          {/* ✅ FIXED: Phone number ah oru line la kaatka style maathiiruken */}
+                          {/* ? FIXED: Phone number ah oru line la kaatka style maathiiruken */}
                           <td style={{ minWidth: 120 }}>
                             {emp.phone ? (
                               <span
@@ -860,21 +860,21 @@ const Employees = () => {
                                   gap: 4,
                                   fontSize: 12.5,
                                   color: "#6b7280",
-                                  whiteSpace: "nowrap", // ✅ Ithu dhaan mukkiyam
+                                  whiteSpace: "nowrap", // ? Ithu dhaan mukkiyam
                                 }}
                               >
                                 <Phone size={12} style={{ flexShrink: 0 }} />
                                 {emp.phone}
                               </span>
                             ) : (
-                              <span style={{ color: "#9ca3af" }}>—</span>
+                              <span style={{ color: "#9ca3af" }}>�</span>
                             )}
                           </td>
 
                           <td>
                             {emp.status === "ACTIVE" && (
                               <span className="erp-badge erp-badge-green">
-                                ● Active
+                                ? Active
                               </span>
                             )}
                             {isResigned && (
@@ -886,7 +886,7 @@ const Employees = () => {
                                   fontWeight: 700,
                                 }}
                               >
-                                ● Resigned
+                                ? Resigned
                               </span>
                             )}
                             {isTerminated && (
@@ -898,12 +898,12 @@ const Employees = () => {
                                   fontWeight: 700,
                                 }}
                               >
-                                ● Terminated
+                                ? Terminated
                               </span>
                             )}
                             {isInactive && (
                               <span className="erp-badge erp-badge-gray">
-                                ○ Inactive
+                                ? Inactive
                               </span>
                             )}
                           </td>
@@ -1079,7 +1079,7 @@ const Employees = () => {
                               whiteSpace: "nowrap",
                             }}
                           >
-                            {emp.email || "—"}
+                            {emp.email || "�"}
                           </span>
                         </div>
                       </div>
@@ -1088,7 +1088,7 @@ const Employees = () => {
                     <div className="d-flex gap-2 align-items-center mb-3 flex-wrap">
                       {emp.status === "ACTIVE" && (
                         <span className="erp-badge erp-badge-green">
-                          ● Active
+                          ? Active
                         </span>
                       )}
                       {isResigned && (
@@ -1100,7 +1100,7 @@ const Employees = () => {
                             fontWeight: 700,
                           }}
                         >
-                          ● Resigned
+                          ? Resigned
                         </span>
                       )}
                       {isTerminated && (
@@ -1112,12 +1112,12 @@ const Employees = () => {
                             fontWeight: 700,
                           }}
                         >
-                          ● Terminated
+                          ? Terminated
                         </span>
                       )}
                       {isInactive && (
                         <span className="erp-badge erp-badge-gray">
-                          ○ Inactive
+                          ? Inactive
                         </span>
                       )}
                       {getTypeBadge(emp.employment_type)}
@@ -1161,7 +1161,7 @@ const Employees = () => {
                           Department
                         </div>
                         <div style={{ fontWeight: 600, marginTop: 2 }}>
-                          {emp.department_name || "—"}
+                          {emp.department_name || "�"}
                         </div>
                       </div>
                       <div>
@@ -1177,7 +1177,7 @@ const Employees = () => {
                           Designation
                         </div>
                         <div style={{ fontWeight: 600, marginTop: 2 }}>
-                          {emp.designation_title || "—"}
+                          {emp.designation_title || "�"}
                         </div>
                       </div>
                       <div>
@@ -1209,7 +1209,7 @@ const Employees = () => {
                           Phone
                         </div>
                         <div style={{ fontWeight: 600, marginTop: 2 }}>
-                          {emp.phone || "—"}
+                          {emp.phone || "�"}
                         </div>
                       </div>
                       <div>
@@ -1444,7 +1444,7 @@ const Employees = () => {
                 <label className="erp-label">
                   New Password{" "}
                   <span style={{ color: "#9ca3af", fontWeight: 400 }}>
-                    (optional — leave blank to keep current)
+                    (optional � leave blank to keep current)
                   </span>
                 </label>
                 <input
@@ -1556,7 +1556,7 @@ const Employees = () => {
                 }
                 style={{ fontFamily: FONT }}
               >
-                <option value="">— Use company default —</option>
+                <option value="">� Use company default �</option>
                 {shifts.map((s) => (
                   <option key={s._id} value={s._id}>
                     {s.name} ({formatTime12(s.start_time)} -{" "}
@@ -1576,10 +1576,10 @@ const Employees = () => {
                 }
                 style={{ fontFamily: FONT }}
               >
-                <option value="">— No insurance —</option>
+                <option value="">� No insurance �</option>
                 {insurances.map((ins) => (
                   <option key={ins._id} value={ins._id}>
-                    {ins.name} — ₹
+                    {ins.name} � ?
                     {Number(ins.annual_amount || 0).toLocaleString("en-IN")}
                     /year
                   </option>
@@ -1594,7 +1594,7 @@ const Employees = () => {
                     marginTop: 4,
                   }}
                 >
-                  Monthly deduction: ₹{monthlyInsurance.toFixed(2)}
+                  Monthly deduction: ?{monthlyInsurance.toFixed(2)}
                 </small>
               )}
             </div>
@@ -1611,7 +1611,7 @@ const Employees = () => {
               />
             </div>
 
-            {/* ✅ NEW: Personal Details Section */}
+            {/* ? NEW: Personal Details Section */}
             <div className="col-12 mt-3">
               <h6 style={{ fontWeight: 700, color: "#4f46e5", marginBottom: 12 }}>Personal Details</h6>
             </div>
@@ -1662,7 +1662,7 @@ const Employees = () => {
               </select>
             </div>
 
-            {/* ✅ NEW: Bank Details Section */}
+            {/* ? NEW: Bank Details Section */}
             <div className="col-12 mt-3">
               <h6 style={{ fontWeight: 700, color: "#4f46e5", marginBottom: 12 }}>Bank Details</h6>
             </div>
@@ -1700,7 +1700,7 @@ const Employees = () => {
               />
             </div>
 
-            {/* ✅ NEW: Emergency Contact Section */}
+            {/* ? NEW: Emergency Contact Section */}
             <div className="col-12 mt-3">
               <h6 style={{ fontWeight: 700, color: "#4f46e5", marginBottom: 12 }}>Emergency Contact</h6>
             </div>
@@ -1779,7 +1779,7 @@ const Employees = () => {
               </div>
             )}
 
-            {/* ✅ End Date — Only in EDIT mode */}
+            {/* ? End Date � Only in EDIT mode */}
             {editing && (
               <div className="col-12 col-sm-6">
                 <label className="erp-label">
@@ -1804,7 +1804,7 @@ const Employees = () => {
               </div>
             )}
 
-            {/* ✅ NEW: Termination Reason — only when end_date set */}
+            {/* ? NEW: Termination Reason � only when end_date set */}
             {editing && form.end_date && (
               <div className="col-12">
                 <div
@@ -1884,13 +1884,13 @@ const Employees = () => {
                     marginBottom: 12,
                   }}
                 >
-                  💰 Monthly Salary
+                  ?? Monthly Salary
                 </div>
 
                 <div className="row g-3">
                   <div className="col-12 col-md-6">
                     <label className="erp-label">
-                      Total Monthly Salary (₹) {!editing && "*"}
+                      Total Monthly Salary (?) {!editing && "*"}
                     </label>
                     <input
                       type="number"
@@ -1961,25 +1961,25 @@ const Employees = () => {
                             <div className="col-6 col-md-3">
                               <MiniBox
                                 label="Basic"
-                                value={`₹${basic.toFixed(0)}`}
+                                value={`?${basic.toFixed(0)}`}
                               />
                             </div>
                             <div className="col-6 col-md-3">
                               <MiniBox
                                 label="HRA"
-                                value={`₹${hra.toFixed(0)}`}
+                                value={`?${hra.toFixed(0)}`}
                               />
                             </div>
                             <div className="col-6 col-md-3">
                               <MiniBox
                                 label="Special"
-                                value={`₹${special.toFixed(0)}`}
+                                value={`?${special.toFixed(0)}`}
                               />
                             </div>
                             <div className="col-6 col-md-3">
                               <MiniBox
                                 label="Gross"
-                                value={`₹${total.toFixed(0)}`}
+                                value={`?${total.toFixed(0)}`}
                                 highlight
                               />
                             </div>
@@ -2009,7 +2009,7 @@ const Employees = () => {
                                 gap: 6,
                               }}
                             >
-                              📋 Professional Tax (6-Month Slab)
+                              ?? Professional Tax (6-Month Slab)
                               {ptLoading && (
                                 <span
                                   className="spinner-border spinner-border-sm"
@@ -2029,13 +2029,13 @@ const Employees = () => {
                                 <span>
                                   6-Month Gross:{" "}
                                   <strong>
-                                    ₹{sixMonthGross.toLocaleString("en-IN")}
+                                    ?{sixMonthGross.toLocaleString("en-IN")}
                                   </strong>
                                 </span>
                                 <span>
                                   PT Amount:{" "}
                                   <strong style={{ color: "#dc2626" }}>
-                                    ₹{pt.toLocaleString("en-IN")}
+                                    ?{pt.toLocaleString("en-IN")}
                                   </strong>
                                 </span>
                               </div>
@@ -2078,7 +2078,7 @@ const Employees = () => {
                                 />
                                 <span style={{ flex: 1 }}>PF</span>
                                 <span style={{ fontWeight: 700, color: deductionToggles.pf ? "#dc2626" : "#9ca3af" }}>
-                                  ₹{deductionToggles.pf ? pf.toFixed(0) : "0"}
+                                  ?{deductionToggles.pf ? pf.toFixed(0) : "0"}
                                 </span>
                               </label>
 
@@ -2091,7 +2091,7 @@ const Employees = () => {
                                 />
                                 <span style={{ flex: 1 }}>ESI</span>
                                 <span style={{ fontWeight: 700, color: deductionToggles.esi ? "#dc2626" : "#9ca3af" }}>
-                                  ₹{deductionToggles.esi ? esi.toFixed(2) : "0"}
+                                  ?{deductionToggles.esi ? esi.toFixed(2) : "0"}
                                 </span>
                               </label>
 
@@ -2104,7 +2104,7 @@ const Employees = () => {
                                 />
                                 <span style={{ flex: 1 }}>PT</span>
                                 <span style={{ fontWeight: 700, color: deductionToggles.pt ? "#dc2626" : "#9ca3af" }}>
-                                  ₹{deductionToggles.pt ? pt.toFixed(0) : "0"}
+                                  ?{deductionToggles.pt ? pt.toFixed(0) : "0"}
                                 </span>
                               </label>
 
@@ -2117,7 +2117,7 @@ const Employees = () => {
                                 />
                                 <span style={{ flex: 1 }}>TDS</span>
                                 <span style={{ fontWeight: 700, color: deductionToggles.tds ? "#dc2626" : "#9ca3af" }}>
-                                  ₹{deductionToggles.tds ? tds.toFixed(0) : "0"}
+                                  ?{deductionToggles.tds ? tds.toFixed(0) : "0"}
                                 </span>
                               </label>
 
@@ -2126,7 +2126,7 @@ const Employees = () => {
                                   <span style={{ width: 15 }}></span>
                                   <span style={{ flex: 1 }}>Insurance</span>
                                   <span style={{ fontWeight: 700, color: "#dc2626" }}>
-                                    ₹{insAmt.toFixed(0)}
+                                    ?{insAmt.toFixed(0)}
                                   </span>
                                 </div>
                               )}
@@ -2146,7 +2146,7 @@ const Employees = () => {
                                 Total Deduction
                               </span>
                               <span style={{ fontSize: 14, fontWeight: 800, color: "#dc2626" }}>
-                                ₹{totalDed.toFixed(2)}
+                                ?{totalDed.toFixed(2)}
                               </span>
                             </div>
                             <div
@@ -2168,7 +2168,7 @@ const Employees = () => {
                                   color: "#059669",
                                 }}
                               >
-                                ₹{net.toFixed(2)}
+                                ?{net.toFixed(2)}
                               </span>
                             </div>
                           </div>
@@ -2234,7 +2234,7 @@ const Employees = () => {
                 </strong>
                 <br />
                 <span style={{ fontSize: 12 }}>
-                  {confirmEmp.employment_type} → PERMANENT
+                  {confirmEmp.employment_type} ? PERMANENT
                 </span>
               </div>
             </div>
@@ -2257,7 +2257,7 @@ const Employees = () => {
 
             <div className="mb-3">
               <label className="erp-label">
-                New Monthly Salary (₹){" "}
+                New Monthly Salary (?){" "}
                 <span style={{ color: "#94a3b8" }}>
                   (leave to keep same)
                 </span>
@@ -2292,7 +2292,7 @@ const Employees = () => {
                 }
                 style={{ fontFamily: FONT }}
               >
-                <option value="">— Keep current —</option>
+                <option value="">� Keep current �</option>
                 {designations.map((d) => (
                   <option key={d._id} value={d._id}>
                     {d.title} {d.code ? `(${d.code})` : ""}
@@ -2369,7 +2369,7 @@ const Employees = () => {
               />
               <div style={{ fontSize: 13, lineHeight: 1.6 }}>
                 <strong style={{ fontSize: 14 }}>
-                  ⚠️ DANGER — PERMANENT DELETE
+                  ?? DANGER � PERMANENT DELETE
                 </strong>
                 <br />
                 This action will <strong>permanently delete</strong> the
@@ -2407,7 +2407,7 @@ const Employees = () => {
                     color: "#7f1d1d",
                   }}
                 >
-                  {deleteTarget.email || "—"}
+                  {deleteTarget.email || "�"}
                 </div>
               </div>
             </div>
@@ -2424,8 +2424,8 @@ const Employees = () => {
                 lineHeight: 1.55,
               }}
             >
-              💡 <strong>Tip:</strong> If you just want to deactivate this
-              employee, use <strong>"Edit → End Date"</strong> instead. Data
+              ?? <strong>Tip:</strong> If you just want to deactivate this
+              employee, use <strong>"Edit ? End Date"</strong> instead. Data
               will be preserved. Only use <strong>Permanent Delete</strong>{" "}
               for testing/cleanup purposes.
             </div>

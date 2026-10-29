@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   Megaphone,
@@ -196,7 +196,7 @@ const ManagerAnnouncements = () => {
     <Layout>
       <style>{`
         .ann-page * { font-family: ${FONT}; }
-        /* ✅ FIX: Max-width and margin auto ah remove panni, full width ah maathiiruken */
+        /* ? FIX: Max-width and margin auto ah remove panni, full width ah maathiiruken */
         .ann-page { 
           font-family: ${FONT}; 
           width: 100%;
@@ -636,10 +636,10 @@ const ManagerAnnouncements = () => {
               }
               style={{ fontFamily: FONT }}
             >
-              <option value="LOW">🟢 Low</option>
-              <option value="NORMAL">🔵 Normal</option>
-              <option value="HIGH">🟠 High</option>
-              <option value="URGENT">🔴 Urgent</option>
+              <option value="LOW">?? Low</option>
+              <option value="NORMAL">?? Normal</option>
+              <option value="HIGH">?? High</option>
+              <option value="URGENT">?? Urgent</option>
             </select>
           </div>
           <div className="col-6">
@@ -739,7 +739,7 @@ const ManagerAnnouncements = () => {
                         <div style={{ fontSize: 11, color: "#6b7280" }}>
                           {emp.employee_code}
                           {emp.department_name &&
-                            ` · ${emp.department_name}`}
+                            ` � ${emp.department_name}`}
                         </div>
                       </div>
                     </label>
@@ -983,7 +983,7 @@ const AnnouncementRow = ({
                 marginLeft: 2,
               }}
             >
-              → {ann.total_recipients}{" "}
+              ? {ann.total_recipients}{" "}
               {ann.total_recipients === 1 ? "recipient" : "recipients"}
             </span>
           )}
@@ -1044,7 +1044,7 @@ const AnnouncementRow = ({
               {ann.created_by_name}
             </strong>
           </span>
-          <span style={{ color: "#cbd5e1" }}>·</span>
+          <span style={{ color: "#cbd5e1" }}>�</span>
           <span>{formatSentTime(ann.created_at)}</span>
         </div>
 

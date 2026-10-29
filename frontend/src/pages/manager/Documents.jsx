@@ -1,4 +1,4 @@
-ï»¿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   FileText,
   Plus,
@@ -21,7 +21,7 @@ import { formatDateTime } from "../../utils/dateUtils";
 const FONT = "'Inter', 'Segoe UI', -apple-system, sans-serif";
 
 const formatSize = (b) => {
-  if (!b) return "â€”";
+  if (!b) return "—";
   if (b < 1024) return `${b} B`;
   if (b < 1024 * 1024) return `${Math.round(b / 1024)} KB`;
   return `${(b / 1024 / 1024).toFixed(1)} MB`;
@@ -1162,7 +1162,7 @@ const ManagerDocuments = () => {
                   fontFamily: FONT,
                 }}
               >
-                PDF, DOC, XLS, JPG, PNG, ZIP Â· Max 5MB
+                PDF, DOC, XLS, JPG, PNG, ZIP · Max 5MB
               </div>
             </label>
           ) : (

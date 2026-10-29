@@ -13,7 +13,7 @@ ATLAS_URI = "mongodb+srv://aslamapr1920_db_user:9Ij0R4GzaqZkhRrj@employeeerp.yn7
 DB_NAME = "employee_erp"
 
 # Backup folder (Project ku VELIYA!)
-BACKUP_ROOT = r"E:\employee-erpbackup\atlas_backups"
+BACKUP_ROOT = "/home/ubuntu/atlas_backups"
 
 
 def backup_atlas():

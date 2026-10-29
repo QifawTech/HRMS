@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   Megaphone,
@@ -71,7 +71,7 @@ const EmployeeAnnouncements = () => {
     }
   }, [load]);
 
-  // Tab/search change → reload silently
+  // Tab/search change ? reload silently
   useEffect(() => {
     if (initialLoadDone.current) {
       load(true);
@@ -79,7 +79,7 @@ const EmployeeAnnouncements = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, search]);
 
-  // Handle ?open=<id> — scroll + auto-mark seen
+  // Handle ?open=<id> � scroll + auto-mark seen
   useEffect(() => {
     if (!openId || loading || items.length === 0) return;
 
@@ -260,7 +260,7 @@ const EmployeeAnnouncements = () => {
                       fontWeight: 700,
                     }}
                   >
-                    {a.priority === "URGENT" && "🔴 "}
+                    {a.priority === "URGENT" && "?? "}
                     {p.label}
                   </span>
                   <span

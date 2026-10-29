@@ -1,4 +1,4 @@
-ï»¿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Check,
   X,
@@ -390,7 +390,7 @@ const LeaveManagement = () => {
                             whiteSpace: "nowrap",
                           }}
                         >
-                          {l.reason || "â€”"}
+                          {l.reason || "—"}
                         </td>
                         <td>
                           {statusBadge(l.status)}
@@ -458,7 +458,7 @@ const LeaveManagement = () => {
                             </div>
                           ) : (
                             <span style={{ fontSize: 11, color: "#9ca3af" }}>
-                              â€”
+                              —
                             </span>
                           )}
                         </td>
@@ -487,7 +487,7 @@ const LeaveManagement = () => {
                     <div>
                       <div className="lm-field-label">Leave Type</div>
                       <div className="lm-field-value">
-                        {l.leave_type_name || "â€”"}
+                        {l.leave_type_name || "—"}
                         {l.is_same_day && (
                           <span
                             style={{
@@ -555,7 +555,7 @@ const LeaveManagement = () => {
                                   fontWeight: 500,
                                 }}
                               >
-                                Â· {formatDateTime(l.reviewed_at)}
+                                · {formatDateTime(l.reviewed_at)}
                               </span>
                             )}
                           </div>
@@ -706,7 +706,7 @@ const LeaveManagement = () => {
                 >
                   <span style={{ color: "#6b7280" }}>Dates</span>
                   <strong>
-                    {formatDate(reviewTarget.start_date)} â†’{" "}
+                    {formatDate(reviewTarget.start_date)} ?{" "}
                     {formatDate(reviewTarget.end_date)}
                   </strong>
                 </div>

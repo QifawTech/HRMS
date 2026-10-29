@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Bell,
@@ -87,7 +87,7 @@ const EmployeeNotifications = () => {
   const handleNotificationClick = async (n) => {
     await handleMarkRead(n);
 
-    // Announcement → open in announcements page
+    // Announcement ? open in announcements page
     if (
       n.type === "ANNOUNCEMENT" ||
       n.type === "PRIVATE_MSG" ||
@@ -102,13 +102,13 @@ const EmployeeNotifications = () => {
       return;
     }
 
-    // Leave → leave page
+    // Leave ? leave page
     if (n.type?.startsWith("LEAVE")) {
       navigate("/employee/leaves");
       return;
     }
 
-    // Attendance → attendance page
+    // Attendance ? attendance page
     if (n.type === "LATE_CHECK_IN" || n.type === "EARLY_LOGOUT") {
       navigate("/employee/attendance");
       return;
@@ -284,7 +284,7 @@ const EmployeeNotifications = () => {
                     {n.message}
                   </div>
                   <div style={{ fontSize: 11, color: "#9ca3af" }}>
-                    {n.from_name && `By ${n.from_name} · `}
+                    {n.from_name && `By ${n.from_name} � `}
                     {timeAgo(n.created_at)}
                   </div>
                 </div>

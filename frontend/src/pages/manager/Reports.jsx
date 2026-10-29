@@ -1,4 +1,4 @@
-Ôªøimport { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Users,
   Clock,
@@ -57,7 +57,7 @@ const currentMonthStr = () => {
 };
 
 const formatTime = (iso) => {
-  if (!iso) return "‚Äî";
+  if (!iso) return "ó";
   try {
     return new Date(iso).toLocaleTimeString("en-IN", {
       hour: "2-digit",
@@ -65,12 +65,12 @@ const formatTime = (iso) => {
       hour12: true,
     });
   } catch {
-    return "‚Äî";
+    return "ó";
   }
 };
 
 const formatDate = (iso) => {
-  if (!iso) return "‚Äî";
+  if (!iso) return "ó";
   try {
     return new Date(iso).toLocaleDateString("en-IN", {
       day: "2-digit",
@@ -148,7 +148,7 @@ const reportTypes = [
     color: "#d97706",
     bg: "#fffbeb",
   },
-  // ‚úÖ NEW
+  // ? NEW
   {
     key: "monthly",
     label: "Monthly Summary",
@@ -253,7 +253,7 @@ const ManagerReports = () => {
       .toISOString()
       .split("T")[0],
     end_date: new Date().toISOString().split("T")[0],
-    month: currentMonthStr(),   // ‚úÖ For monthly summary
+    month: currentMonthStr(),   // ? For monthly summary
   });
 
   const [detailEmployeeId, setDetailEmployeeId] = useState(null);
@@ -731,7 +731,7 @@ const ManagerReports = () => {
         {/* Filters */}
         <div className="erp-card mb-3" style={{ padding: 14 }}>
           <div className="row g-2">
-            {/* Monthly summary ‚Äî Month picker */}
+            {/* Monthly summary ó Month picker */}
             {activeReport === "monthly" && (
               <div className="col-12 col-md-4">
                 <label className="erp-label">Month</label>
@@ -885,7 +885,7 @@ const ManagerReports = () => {
               )}
           </div>
 
-          {/* ‚úÖ Holiday list for monthly */}
+          {/* ? Holiday list for monthly */}
           {activeReport === "monthly" &&
             data.holiday_list?.length > 0 && (
               <div
@@ -917,7 +917,7 @@ const ManagerReports = () => {
                       border: "1px solid #fcd34d",
                     }}
                   >
-                    {h.name} ¬∑ {formatDate(h.date).slice(0, 6)}
+                    {h.name} ∑ {formatDate(h.date).slice(0, 6)}
                   </span>
                 ))}
               </div>
@@ -1064,7 +1064,7 @@ const ManagerReports = () => {
               </>
             )}
 
-            {/* ‚úÖ Monthly Summary cards */}
+            {/* ? Monthly Summary cards */}
             {activeReport === "monthly" && (
               <>
                 <div className="col-6 col-md-3">
@@ -1285,7 +1285,7 @@ const ManagerReports = () => {
                             <th>Description</th>
                           </tr>
                         )}
-                        {/* ‚úÖ Monthly Summary */}
+                        {/* ? Monthly Summary */}
                         {activeReport === "monthly" && (
                           <tr>
                             <th>Employee</th>
@@ -1340,7 +1340,7 @@ const ManagerReports = () => {
                                       : "erp-badge erp-badge-gray"
                                   }
                                 >
-                                  ‚óè {r.status}
+                                  ? {r.status}
                                 </span>
                               </td>
                               <td>
@@ -1391,7 +1391,7 @@ const ManagerReports = () => {
                                     {r.late_minutes}m
                                   </span>
                                 ) : (
-                                  <span style={{ color: "#9ca3af" }}>‚Äî</span>
+                                  <span style={{ color: "#9ca3af" }}>ó</span>
                                 )}
                               </td>
                               <td>
@@ -1405,7 +1405,7 @@ const ManagerReports = () => {
                                     {r.early_minutes}m
                                   </span>
                                 ) : (
-                                  <span style={{ color: "#9ca3af" }}>‚Äî</span>
+                                  <span style={{ color: "#9ca3af" }}>ó</span>
                                 )}
                               </td>
                               <td>
@@ -1466,7 +1466,7 @@ const ManagerReports = () => {
                                       : "erp-badge erp-badge-gray"
                                   }
                                 >
-                                  ‚óè {r.status}
+                                  ? {r.status}
                                 </span>
                               </td>
                             </tr>
@@ -1492,12 +1492,12 @@ const ManagerReports = () => {
                                   whiteSpace: "nowrap",
                                 }}
                               >
-                                {r.description || "‚Äî"}
+                                {r.description || "ó"}
                               </td>
                             </tr>
                           ))}
 
-                        {/* ‚úÖ Monthly Summary rows */}
+                        {/* ? Monthly Summary rows */}
                         {activeReport === "monthly" &&
                           data.employees.map((e) => (
                             <tr key={e.employee_id}>
@@ -1508,7 +1508,7 @@ const ManagerReports = () => {
                                 </span>
                               </td>
                               <td style={{ fontSize: 12.5 }}>
-                                {e.department || "‚Äî"}
+                                {e.department || "ó"}
                               </td>
                               <td
                                 style={{
@@ -1607,7 +1607,7 @@ const ManagerReports = () => {
                               </div>
                               <div className="rpt-mobile-sub">
                                 {r.code}
-                                {r.department && ` ¬∑ ${r.department}`}
+                                {r.department && ` ∑ ${r.department}`}
                               </div>
                             </div>
                             <span
@@ -1618,7 +1618,7 @@ const ManagerReports = () => {
                               }
                               style={{ flexShrink: 0 }}
                             >
-                              ‚óè {r.status}
+                              ? {r.status}
                             </span>
                           </div>
                           <div className="rpt-mobile-grid">
@@ -1678,7 +1678,7 @@ const ManagerReports = () => {
                                 {r.employee_name}
                               </div>
                               <div className="rpt-mobile-sub">
-                                {r.employee_code} ¬∑ {formatDate(r.date)}
+                                {r.employee_code} ∑ {formatDate(r.date)}
                               </div>
                             </div>
                             <span
@@ -1715,7 +1715,7 @@ const ManagerReports = () => {
                               value={
                                 r.late_minutes > 0
                                   ? `${r.late_minutes}m`
-                                  : "‚Äî"
+                                  : "ó"
                               }
                               color={
                                 r.late_minutes > 0 ? "#dc2626" : "#9ca3af"
@@ -1756,7 +1756,7 @@ const ManagerReports = () => {
                               }
                               style={{ flexShrink: 0, fontSize: 10 }}
                             >
-                              ‚óè {r.status}
+                              ? {r.status}
                             </span>
                           </div>
                           <div className="rpt-mobile-grid">
@@ -1827,7 +1827,7 @@ const ManagerReports = () => {
                         </MobileRecordCard>
                       ))}
 
-                    {/* ‚úÖ Monthly Summary mobile cards */}
+                    {/* ? Monthly Summary mobile cards */}
                     {activeReport === "monthly" &&
                       data.employees.map((e) => (
                         <MobileRecordCard key={e.employee_id}>
@@ -1838,7 +1838,7 @@ const ManagerReports = () => {
                               </div>
                               <div className="rpt-mobile-sub">
                                 {e.code}
-                                {e.department && ` ¬∑ ${e.department}`}
+                                {e.department && ` ∑ ${e.department}`}
                               </div>
                             </div>
                             <span

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Eye, Printer, Download, Wallet, Loader2 } from "lucide-react";
 import Layout from "../../components/layout/Layout";
 import Modal from "../../components/common/Modal";
@@ -37,7 +37,7 @@ const EmployeePayslips = () => {
     api.getCompanyInfo().then((r) => setCompany(r.data)).catch(() => {});
   }, [load]);
 
-  // Print — opens browser print dialog
+  // Print � opens browser print dialog
   const handlePrint = () => {
     const content = printRef.current;
     if (!content) return;
@@ -268,7 +268,7 @@ const EmployeePayslips = () => {
                           marginTop: 2,
                         }}
                       >
-                        Paid Days: {p.paid_days} · {p.payment_mode}
+                        Paid Days: {p.paid_days} � {p.payment_mode}
                       </div>
                     </div>
                   </div>
@@ -294,11 +294,11 @@ const EmployeePayslips = () => {
                         letterSpacing: "-0.5px",
                       }}
                     >
-                      ₹ {formatCurrency(p.net_salary)}
+                      ? {formatCurrency(p.net_salary)}
                     </div>
                   </div>
 
-                  {/* Actions — Icon only */}
+                  {/* Actions � Icon only */}
                   <div
                     style={{
                       display: "flex",
@@ -314,7 +314,7 @@ const EmployeePayslips = () => {
                           : "erp-badge erp-badge-yellow"
                       }
                     >
-                      {p.status === "Paid" ? "● Paid" : "● Generated"}
+                      {p.status === "Paid" ? "? Paid" : "? Generated"}
                     </span>
 
                     {/* Eye icon */}

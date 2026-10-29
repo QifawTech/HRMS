@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   CalendarDays,
   CheckCircle2,
@@ -25,7 +25,7 @@ const formatHours = (hours) => {
   return `${h}h ${m}m`;
 };
 
-// ⭐ NEW: Format minutes → "1h 9m" or "45m"
+// ? NEW: Format minutes ? "1h 9m" or "45m"
 const formatMinutes = (mins) => {
   if (!mins || mins <= 0) return "0m";
   const h = Math.floor(mins / 60);
@@ -36,7 +36,7 @@ const formatMinutes = (mins) => {
 };
 
 const formatTime = (iso) => {
-  if (!iso) return "—";
+  if (!iso) return "�";
   try {
     return new Date(iso).toLocaleTimeString("en-IN", {
       hour: "2-digit",
@@ -44,12 +44,12 @@ const formatTime = (iso) => {
       hour12: true,
     });
   } catch {
-    return "—";
+    return "�";
   }
 };
 
 const formatDateParts = (iso) => {
-  if (!iso) return { day: "—", rest: "" };
+  if (!iso) return { day: "�", rest: "" };
   try {
     const d = new Date(iso);
     const weekday = d.toLocaleDateString("en-IN", { weekday: "short" });
@@ -299,7 +299,7 @@ const EmployeeAttendance = () => {
           sub={
             summary.late_days > 0
               ? "Need improvement"
-              : "All on time ✓"
+              : "All on time ?"
           }
           Icon={AlertTriangle}
           color="#d97706"
@@ -408,7 +408,7 @@ const EmployeeAttendance = () => {
                               marginTop: 2,
                             }}
                           >
-                            ⚠ Late {formatMinutes(r.late_minutes)}
+                            ? Late {formatMinutes(r.late_minutes)}
                           </div>
                         )}
                       </td>
@@ -435,7 +435,7 @@ const EmployeeAttendance = () => {
                               marginTop: 2,
                             }}
                           >
-                            ⚠ Early {formatMinutes(r.early_minutes)}
+                            ? Early {formatMinutes(r.early_minutes)}
                           </div>
                         )}
                       </td>
@@ -465,7 +465,7 @@ const EmployeeAttendance = () => {
                             "{r.early_logout_reason}"
                           </div>
                         ) : (
-                          <span style={{ color: "#d1d5db" }}>—</span>
+                          <span style={{ color: "#d1d5db" }}>�</span>
                         )}
                       </td>
                     </tr>
@@ -494,7 +494,7 @@ const EmployeeAttendance = () => {
         >
           <Clock size={13} />
           <span>
-            Standard hours: <strong>09:30 AM – 05:30 PM</strong> · Late /
+            Standard hours: <strong>09:30 AM � 05:30 PM</strong> � Late /
             Early logouts are tracked
           </span>
         </div>

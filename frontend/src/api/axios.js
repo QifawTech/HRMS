@@ -2,7 +2,7 @@ import axios from "axios";
 
 const api = axios.create({
   // Local development ku
-  baseURL: "http://localhost:5000/api",
+  baseURL: "http://65.0.221.12:5000/api",
   timeout: 10000,
 });
 

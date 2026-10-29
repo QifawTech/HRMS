@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Lock,
   Save,
@@ -16,9 +16,9 @@ import * as empApi from "../../api/employeeApi";
 
 const FONT = "'Inter', 'Segoe UI', -apple-system, sans-serif";
 
-// ✅ 24-hour → 12-hour (AM/PM)
+// ? 24-hour ? 12-hour (AM/PM)
 const formatTime12 = (t) => {
-  if (!t) return "—";
+  if (!t) return "�";
   const [h, m] = t.split(":").map(Number);
   const ampm = h >= 12 ? "PM" : "AM";
   const h12 = h % 12 || 12;
@@ -82,7 +82,7 @@ const EmployeeSettings = () => {
       .then((res) => setCompany(res.data))
       .catch(() => {});
 
-    // ✅ Fetch employee's own profile for shift info
+    // ? Fetch employee's own profile for shift info
     empApi
       .getMyProfile()
       .then((res) => setMyProfile(res.data))
@@ -126,7 +126,7 @@ const EmployeeSettings = () => {
     }
   };
 
-  // ✅ Compute shift display values
+  // ? Compute shift display values
   const hasShift =
     myProfile?.shift_name &&
     myProfile?.shift_start &&
@@ -140,13 +140,13 @@ const EmployeeSettings = () => {
     ? formatTime12(myProfile.shift_start)
     : company
     ? formatTime12(company.work_start_time)
-    : "—";
+    : "�";
 
   const shiftEndText = hasShift
     ? formatTime12(myProfile.shift_end)
     : company
     ? formatTime12(company.work_end_time)
-    : "—";
+    : "�";
 
   return (
     <Layout>
@@ -201,7 +201,7 @@ const EmployeeSettings = () => {
                       fontFamily: FONT,
                     }}
                   >
-                    Read-only · Set by manager
+                    Read-only � Set by manager
                   </div>
                 </div>
               </div>
@@ -212,7 +212,7 @@ const EmployeeSettings = () => {
                 value={company.company_name}
               />
 
-              {/* ✅ Shift info — with name + 12-hour timing */}
+              {/* ? Shift info � with name + 12-hour timing */}
               <Row
                 Icon={Clock}
                 label="Your Shift"
@@ -222,7 +222,7 @@ const EmployeeSettings = () => {
               <Row
                 Icon={Clock}
                 label="Shift Hours"
-                value={`${shiftStartText} – ${shiftEndText}`}
+                value={`${shiftStartText} � ${shiftEndText}`}
               />
 
               <Row

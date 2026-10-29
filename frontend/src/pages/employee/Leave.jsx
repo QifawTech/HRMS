@@ -1,4 +1,4 @@
-ï»¿import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Plus,
   CalendarDays,
@@ -228,14 +228,14 @@ const EmployeeLeave = () => {
               fontFamily: FONT,
             }}
           >
-            <strong>Financial Year:</strong> {fyInfo.label} Â·{" "}
+            <strong>Financial Year:</strong> {fyInfo.label} ·{" "}
             <span style={{ color: "#6b7280" }}>
-              {formatDate(fyInfo.start_date)} â€” {formatDate(fyInfo.end_date)}
+              {formatDate(fyInfo.start_date)} — {formatDate(fyInfo.end_date)}
             </span>
           </div>
         )}
 
-        {/* Stats â€” Only CL + SL */}
+        {/* Stats — Only CL + SL */}
         {stats.length > 0 && (
           <div className="row g-3 mb-3">
             {stats.map((s) => {
@@ -475,7 +475,7 @@ const EmployeeLeave = () => {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {l.reason || "â€”"}
+                        {l.reason || "—"}
                       </td>
                       <td>
                         {statusBadge(l.status)}

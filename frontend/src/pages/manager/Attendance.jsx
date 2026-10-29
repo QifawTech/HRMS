@@ -1,4 +1,4 @@
-Ôªøimport { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Calendar as CalendarIcon,
   Search,
@@ -26,7 +26,7 @@ const MONTHS = [
 ];
 
 const formatHours = (hours) => {
-  if (!hours || hours <= 0) return "‚Äî";
+  if (!hours || hours <= 0) return "ó";
   const h = Math.floor(hours);
   const m = Math.round((hours - h) * 60);
   if (h === 0) return `${m}m`;
@@ -44,7 +44,7 @@ const formatMinutes = (mins) => {
 };
 
 const formatTime = (iso) => {
-  if (!iso) return "‚Äî";
+  if (!iso) return "ó";
   try {
     return new Date(iso).toLocaleTimeString("en-IN", {
       hour: "2-digit",
@@ -52,12 +52,12 @@ const formatTime = (iso) => {
       hour12: true,
     });
   } catch {
-    return "‚Äî";
+    return "ó";
   }
 };
 
 const formatDateLong = (isoDate) => {
-  if (!isoDate) return "‚Äî";
+  if (!isoDate) return "ó";
   try {
     return new Date(isoDate).toLocaleDateString("en-IN", {
       weekday: "short",
@@ -71,7 +71,7 @@ const formatDateLong = (isoDate) => {
 };
 
 const formatDateShort = (iso) => {
-  if (!iso) return "‚Äî";
+  if (!iso) return "ó";
   try {
     return new Date(iso).toLocaleDateString("en-IN", {
       weekday: "short",
@@ -181,7 +181,7 @@ const EmployeeReportModal = ({ open, onClose, employee }) => {
               </div>
               <div style={{ fontSize: 12, color: "#6b7280" }}>
                 {employee.employee_code}
-                {employee.department_name && ` ¬∑ ${employee.department_name}`}
+                {employee.department_name && ` ∑ ${employee.department_name}`}
               </div>
             </div>
           </div>
@@ -362,7 +362,7 @@ const EmployeeReportModal = ({ open, onClose, employee }) => {
             </div>
           </div>
 
-          {/* Records ‚Äî Desktop table + Mobile cards */}
+          {/* Records ó Desktop table + Mobile cards */}
           <div
             style={{
               maxHeight: 350,
@@ -798,7 +798,7 @@ const Attendance = () => {
           <div>
             <h1 className="erp-page-title">Attendance</h1>
             <p className="erp-page-subtitle mb-0">
-              View and manage employee attendance ¬∑{" "}
+              View and manage employee attendance ∑{" "}
               <span style={{ color: "#4f46e5", fontWeight: 600 }}>
                 Tap any employee for full report
               </span>
@@ -912,7 +912,7 @@ const Attendance = () => {
           </div>
         ) : (
           <>
-            {/* Desktop View ‚Äî Table */}
+            {/* Desktop View ó Table */}
             <div
               className="erp-card d-none d-lg-block"
               style={{ padding: 0, overflow: "hidden" }}
@@ -975,7 +975,7 @@ const Attendance = () => {
                               {r.department_name}
                             </span>
                           ) : (
-                            <span style={{ color: "#9ca3af" }}>‚Äî</span>
+                            <span style={{ color: "#9ca3af" }}>ó</span>
                           )}
                         </td>
                         <td>
@@ -1000,7 +1000,7 @@ const Attendance = () => {
                                 fontWeight: 600,
                               }}
                             >
-                              ‚ö† Late {formatMinutes(r.late_minutes)}
+                              ? Late {formatMinutes(r.late_minutes)}
                             </div>
                           )}
                         </td>
@@ -1026,7 +1026,7 @@ const Attendance = () => {
                                 fontWeight: 600,
                               }}
                             >
-                              ‚ö† Early {formatMinutes(r.early_minutes)}
+                              ? Early {formatMinutes(r.early_minutes)}
                             </div>
                           )}
                         </td>
@@ -1041,17 +1041,17 @@ const Attendance = () => {
                         <td>
                           {r.status === "PRESENT" && (
                             <span className="erp-badge erp-badge-green">
-                              ‚óè Present
+                              ? Present
                             </span>
                           )}
                           {r.status === "WORKING" && (
                             <span className="erp-badge erp-badge-blue">
-                              ‚óè Working
+                              ? Working
                             </span>
                           )}
                           {r.status === "ABSENT" && (
                             <span className="erp-badge erp-badge-gray">
-                              ‚óã Absent
+                              ? Absent
                             </span>
                           )}
                         </td>
@@ -1062,7 +1062,7 @@ const Attendance = () => {
               </div>
             </div>
 
-            {/* Mobile + Tablet ‚Äî Cards */}
+            {/* Mobile + Tablet ó Cards */}
             <div className="d-lg-none">
               {data.records.map((r) => (
                 <div
@@ -1115,7 +1115,7 @@ const Attendance = () => {
                         <span>{r.employee_code}</span>
                         {r.department_name && (
                           <>
-                            <span style={{ color: "#cbd5e1" }}>¬∑</span>
+                            <span style={{ color: "#cbd5e1" }}>∑</span>
                             <span>{r.department_name}</span>
                           </>
                         )}
@@ -1124,17 +1124,17 @@ const Attendance = () => {
                     <div style={{ flexShrink: 0 }}>
                       {r.status === "PRESENT" && (
                         <span className="erp-badge erp-badge-green">
-                          ‚óè Present
+                          ? Present
                         </span>
                       )}
                       {r.status === "WORKING" && (
                         <span className="erp-badge erp-badge-blue">
-                          ‚óè Working
+                          ? Working
                         </span>
                       )}
                       {r.status === "ABSENT" && (
                         <span className="erp-badge erp-badge-gray">
-                          ‚óã Absent
+                          ? Absent
                         </span>
                       )}
                     </div>
@@ -1164,7 +1164,7 @@ const Attendance = () => {
                             marginTop: 1,
                           }}
                         >
-                          ‚ö† Late {formatMinutes(r.late_minutes)}
+                          ? Late {formatMinutes(r.late_minutes)}
                         </div>
                       )}
                     </div>
@@ -1191,7 +1191,7 @@ const Attendance = () => {
                             marginTop: 1,
                           }}
                         >
-                          ‚ö† Early {formatMinutes(r.early_minutes)}
+                          ? Early {formatMinutes(r.early_minutes)}
                         </div>
                       )}
                     </div>
@@ -1211,7 +1211,7 @@ const Attendance = () => {
                         Department
                       </div>
                       <div className="att-mobile-field-value">
-                        {r.department_name || "‚Äî"}
+                        {r.department_name || "ó"}
                       </div>
                     </div>
                   </div>
