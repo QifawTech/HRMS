@@ -3,7 +3,8 @@ import uuid
 from werkzeug.utils import secure_filename
 from flask import request
 
-UPLOAD_BASE = "uploads"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+UPLOAD_BASE = os.path.join(BASE_DIR, "uploads")
 ANNOUNCEMENT_FOLDER = os.path.join(UPLOAD_BASE, "announcements")
 TASK_FOLDER = os.path.join(UPLOAD_BASE, "tasks")
 DOCUMENTS_FOLDER = os.path.join(UPLOAD_BASE, "documents")

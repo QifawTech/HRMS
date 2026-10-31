@@ -114,8 +114,14 @@ def _enrich_employee(emp, context=None):
         emp["user_active"] = u.get("is_active", True) if u else False
         emp["user_role"] = u.get("role", "EMPLOYEE") if u else "EMPLOYEE"
 
-        # ✅ Always build picture URL — endpoint will 404 if no picture
-        emp["profile_picture_url"] = f"/api/employees/{str(emp['_id'])}/picture"
+        # Preserve actual picture URL from database
+        pic_url = emp.get("profile_picture_url")
+        if not pic_url or pic_url.endswith("/picture"):
+            pic_path = emp.get("profile_picture_path")
+            if pic_path and "/profiles/" in pic_path:
+                emp["profile_picture_url"] = "/uploads/profiles/" + pic_path.split("/profiles/", 1)[1]
+            elif not emp.get("profile_picture_path") and not emp.get("profile_picture_data"):
+                emp["profile_picture_url"] = None
 
         emp.setdefault("employment_type", "PERMANENT")
         return emp
@@ -180,8 +186,14 @@ def _enrich_employee(emp, context=None):
     emp["user_active"] = user.get("is_active", True) if user else False
     emp["user_role"] = user.get("role", "EMPLOYEE") if user else "EMPLOYEE"
 
-    # ✅ Always build picture URL
-    emp["profile_picture_url"] = f"/api/employees/{str(emp['_id'])}/picture"
+    # Preserve actual picture URL from database
+    pic_url = emp.get("profile_picture_url")
+    if not pic_url or pic_url.endswith("/picture"):
+        pic_path = emp.get("profile_picture_path")
+        if pic_path and "/profiles/" in pic_path:
+            emp["profile_picture_url"] = "/uploads/profiles/" + pic_path.split("/profiles/", 1)[1]
+        elif not emp.get("profile_picture_path") and not emp.get("profile_picture_data"):
+            emp["profile_picture_url"] = None
 
     emp.setdefault("employment_type", "PERMANENT")
     return emp
