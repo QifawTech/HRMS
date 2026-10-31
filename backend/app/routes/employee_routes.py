@@ -1,4 +1,5 @@
-from flask import Blueprint, request, jsonify, Response
+from flask import Blueprint, request, jsonify, Response, send_file
+import os
 from app.middleware.auth_middleware import token_required, role_required
 from app.services import employee_service as svc
 from app.services.professional_tax_service import calculate_professional_tax
@@ -293,19 +294,33 @@ def get_profile_picture(emp_id):
     if not emp:
         return jsonify({"error": "Employee not found"}), 404
 
+    # 1. Try file on disk (from profile_picture_path)
+    pic_path = emp.get("profile_picture_path")
+    if pic_path and os.path.exists(pic_path):
+        mime = emp.get("profile_picture_mime", "image/jpeg")
+        return send_file(pic_path, mimetype=mime)
+
+    # 2. Try file from profile_picture_url if it points to /uploads/
+    pic_url = emp.get("profile_picture_url")
+    if pic_url and "/uploads/" in pic_url:
+        rel_path = pic_url.split("/uploads/", 1)[1]
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        full_path = os.path.join(base_dir, "uploads", rel_path.replace("/", os.sep))
+        if os.path.exists(full_path):
+            return send_file(full_path)
+
+    # 3. Fallback to base64 data if present
     pic_data = emp.get("profile_picture_data")
-    mime = emp.get("profile_picture_mime", "image/jpeg")
+    if pic_data:
+        mime = emp.get("profile_picture_mime", "image/jpeg")
+        try:
+            decoded = base64.b64decode(pic_data)
+            return Response(
+                decoded,
+                mimetype=mime,
+                headers={"Cache-Control": "public, max-age=86400"},
+            )
+        except Exception:
+            pass
 
-    if not pic_data:
-        return jsonify({"error": "No picture"}), 404
-
-    try:
-        decoded = base64.b64decode(pic_data)
-    except Exception:
-        return jsonify({"error": "Invalid image data"}), 500
-
-    return Response(
-        decoded,
-        mimetype=mime,
-        headers={"Cache-Control": "public, max-age=86400"},
-    )
+    return jsonify({"error": "No picture"}), 404

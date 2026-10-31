@@ -1,3 +1,4 @@
+import { getFullFileUrl } from '../../utils/apiUrl';
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Mail,
@@ -29,7 +30,7 @@ import * as holidayApi from "../../api/holidayApi";
 const FONT = "'Inter', 'Segoe UI', -apple-system, sans-serif";
 
 const formatDateShort = (dateStr) => {
-  if (!dateStr) return "—";
+  if (!dateStr) return "ï¿½";
   try {
     return new Date(dateStr).toLocaleDateString("en-IN", {
       day: "2-digit",
@@ -42,7 +43,7 @@ const formatDateShort = (dateStr) => {
 };
 
 const formatTime = (iso) => {
-  if (!iso) return "—";
+  if (!iso) return "ï¿½";
   try {
     return new Date(iso).toLocaleTimeString("en-IN", {
       hour: "2-digit",
@@ -50,7 +51,7 @@ const formatTime = (iso) => {
       hour12: true,
     });
   } catch {
-    return "—";
+    return "ï¿½";
   }
 };
 
@@ -64,7 +65,7 @@ const formatHours = (h) => {
 };
 
 const formatDateLong = (dateStr) => {
-  if (!dateStr) return "—";
+  if (!dateStr) return "ï¿½";
   try {
     return new Date(dateStr).toLocaleDateString("en-IN", {
       weekday: "long",
@@ -248,14 +249,8 @@ const EmployeeProfile = () => {
   const initials = `${profile.first_name?.[0] || ""}${profile.last_name?.[0] || ""}`;
   const fullName = `${profile.first_name} ${profile.last_name}`;
 
-  // ? Single getImageUrl (conflict resolved)
-  const getImageUrl = (url) => {
-    if (!url) return null;
-    if (url.startsWith("http")) return url;
-    return `http://65.0.221.12:5000${url}`;
-  };
-
-  const profilePicUrl = getImageUrl(profile.profile_picture_url);
+  // Use centralized getFullFileUrl
+  const profilePicUrl = getFullFileUrl(profile.profile_picture_url);
   const hasPicture = !!profilePicUrl;
 
   return (
@@ -496,7 +491,7 @@ const EmployeeProfile = () => {
         {/* Info Grid */}
         <div className="row g-3 mb-4">
           <div className="col-12 col-md-4">
-            <InfoCard Icon={Phone} label="Phone" value={profile.phone || "—"} />
+            <InfoCard Icon={Phone} label="Phone" value={profile.phone || "ï¿½"} />
           </div>
           <div className="col-12 col-md-4">
             <InfoCard
@@ -509,7 +504,7 @@ const EmployeeProfile = () => {
             <InfoCard
               Icon={MapPin}
               label="Address"
-              value={profile.address || "—"}
+              value={profile.address || "ï¿½"}
               truncate
             />
           </div>
@@ -541,7 +536,7 @@ const EmployeeProfile = () => {
             >
               {upcomingHolidays.map((h) => (
                 <span key={h._id} className="holiday-chip">
-                  {h.name} · {formatDateShort(h.date).slice(0, 6)}
+                  {h.name} ï¿½ {formatDateShort(h.date).slice(0, 6)}
                 </span>
               ))}
             </div>

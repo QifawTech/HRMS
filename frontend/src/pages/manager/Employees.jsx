@@ -1,3 +1,4 @@
+import { getFullFileUrl } from '../../utils/apiUrl';
 import { useState, useEffect, useCallback } from "react";
 import {
   UserPlus,
@@ -34,16 +35,11 @@ import { formatDateTime } from "../../utils/dateUtils";
 
 const FONT = "'Inter', 'Segoe UI', -apple-system, sans-serif";
 
-const getProfilePicUrl = (url) => {
-  if (!url) return null;
-  if (url.startsWith("http")) return url;
-  const backendUrl = import.meta.env.VITE_API_URL || "http://65.0.221.12:5000";
-  return `${backendUrl}${url}`;
-};
+const getProfilePicUrl = (url) => getFullFileUrl(url);
 
 // 24-hour ? 12-hour (AM/PM)
 const formatTime12 = (t) => {
-  if (!t) return "—";
+  if (!t) return "ï¿½";
   const [h, m] = t.split(":").map(Number);
   const ampm = h >= 12 ? "PM" : "AM";
   const h12 = h % 12 || 12;
@@ -772,7 +768,7 @@ const Employees = () => {
                                   }}
                                 >
                                   <Mail size={11} />
-                                  {emp.email || "—"}
+                                  {emp.email || "ï¿½"}
                                 </div>
                               </div>
                             </div>
@@ -794,7 +790,7 @@ const Employees = () => {
                                 {emp.department_name}
                               </span>
                             ) : (
-                              <span style={{ color: "#9ca3af" }}>—</span>
+                              <span style={{ color: "#9ca3af" }}>ï¿½</span>
                             )}
                           </td>
 
@@ -812,7 +808,7 @@ const Employees = () => {
                                 {emp.designation_title}
                               </span>
                             ) : (
-                              <span style={{ color: "#9ca3af" }}>—</span>
+                              <span style={{ color: "#9ca3af" }}>ï¿½</span>
                             )}
                           </td>
 
@@ -838,7 +834,7 @@ const Employees = () => {
                                       color: "#94a3b8",
                                     }}
                                   >
-                                    {formatTime12(emp.shift_start)} –{" "}
+                                    {formatTime12(emp.shift_start)} ï¿½{" "}
                                     {formatTime12(emp.shift_end)}
                                   </div>
                                 )}
@@ -867,7 +863,7 @@ const Employees = () => {
                                 {emp.phone}
                               </span>
                             ) : (
-                              <span style={{ color: "#9ca3af" }}>—</span>
+                              <span style={{ color: "#9ca3af" }}>ï¿½</span>
                             )}
                           </td>
 
@@ -1079,7 +1075,7 @@ const Employees = () => {
                               whiteSpace: "nowrap",
                             }}
                           >
-                            {emp.email || "—"}
+                            {emp.email || "ï¿½"}
                           </span>
                         </div>
                       </div>
@@ -1161,7 +1157,7 @@ const Employees = () => {
                           Department
                         </div>
                         <div style={{ fontWeight: 600, marginTop: 2 }}>
-                          {emp.department_name || "—"}
+                          {emp.department_name || "ï¿½"}
                         </div>
                       </div>
                       <div>
@@ -1177,7 +1173,7 @@ const Employees = () => {
                           Designation
                         </div>
                         <div style={{ fontWeight: 600, marginTop: 2 }}>
-                          {emp.designation_title || "—"}
+                          {emp.designation_title || "ï¿½"}
                         </div>
                       </div>
                       <div>
@@ -1209,7 +1205,7 @@ const Employees = () => {
                           Phone
                         </div>
                         <div style={{ fontWeight: 600, marginTop: 2 }}>
-                          {emp.phone || "—"}
+                          {emp.phone || "ï¿½"}
                         </div>
                       </div>
                       <div>
@@ -1444,7 +1440,7 @@ const Employees = () => {
                 <label className="erp-label">
                   New Password{" "}
                   <span style={{ color: "#9ca3af", fontWeight: 400 }}>
-                    (optional — leave blank to keep current)
+                    (optional ï¿½ leave blank to keep current)
                   </span>
                 </label>
                 <input
@@ -1556,7 +1552,7 @@ const Employees = () => {
                 }
                 style={{ fontFamily: FONT }}
               >
-                <option value="">— Use company default —</option>
+                <option value="">ï¿½ Use company default ï¿½</option>
                 {shifts.map((s) => (
                   <option key={s._id} value={s._id}>
                     {s.name} ({formatTime12(s.start_time)} -{" "}
@@ -1576,10 +1572,10 @@ const Employees = () => {
                 }
                 style={{ fontFamily: FONT }}
               >
-                <option value="">— No insurance —</option>
+                <option value="">ï¿½ No insurance ï¿½</option>
                 {insurances.map((ins) => (
                   <option key={ins._id} value={ins._id}>
-                    {ins.name} — ?
+                    {ins.name} ï¿½ ?
                     {Number(ins.annual_amount || 0).toLocaleString("en-IN")}
                     /year
                   </option>
@@ -1779,7 +1775,7 @@ const Employees = () => {
               </div>
             )}
 
-            {/* ? End Date — Only in EDIT mode */}
+            {/* ? End Date ï¿½ Only in EDIT mode */}
             {editing && (
               <div className="col-12 col-sm-6">
                 <label className="erp-label">
@@ -1804,7 +1800,7 @@ const Employees = () => {
               </div>
             )}
 
-            {/* ? NEW: Termination Reason — only when end_date set */}
+            {/* ? NEW: Termination Reason ï¿½ only when end_date set */}
             {editing && form.end_date && (
               <div className="col-12">
                 <div
@@ -2292,7 +2288,7 @@ const Employees = () => {
                 }
                 style={{ fontFamily: FONT }}
               >
-                <option value="">— Keep current —</option>
+                <option value="">ï¿½ Keep current ï¿½</option>
                 {designations.map((d) => (
                   <option key={d._id} value={d._id}>
                     {d.title} {d.code ? `(${d.code})` : ""}
@@ -2369,7 +2365,7 @@ const Employees = () => {
               />
               <div style={{ fontSize: 13, lineHeight: 1.6 }}>
                 <strong style={{ fontSize: 14 }}>
-                  ?? DANGER — PERMANENT DELETE
+                  ?? DANGER ï¿½ PERMANENT DELETE
                 </strong>
                 <br />
                 This action will <strong>permanently delete</strong> the
@@ -2407,7 +2403,7 @@ const Employees = () => {
                     color: "#7f1d1d",
                   }}
                 >
-                  {deleteTarget.email || "—"}
+                  {deleteTarget.email || "ï¿½"}
                 </div>
               </div>
             </div>

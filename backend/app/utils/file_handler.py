@@ -21,13 +21,14 @@ MAX_FILES = 5
 
 
 def _get_base_url():
-    """Get backend base URL from current request."""
+    """Get backend base URL from current request or env."""
+    env_url = os.getenv("BACKEND_URL")
+    if env_url:
+        return env_url.rstrip("/")
     try:
-        # request.host_url = "http://65.0.221.12:5000/"
         return request.host_url.rstrip("/")
     except RuntimeError:
-        # Outside request context (fallback)
-        return "http://65.0.221.12:5000"
+        return "http://localhost:5000"
 
 
 def ensure_upload_dirs():
@@ -174,7 +175,7 @@ def save_document_file(file):
 
 def save_profile_picture(file):
     """Save profile picture. Only images allowed.
-    Returns FULL URL for the picture."""
+    Returns relative URL and path for the picture."""
     ensure_upload_dirs()
 
     if not file or file.filename == "":
@@ -196,19 +197,32 @@ def save_profile_picture(file):
     file_path = os.path.join(PROFILE_FOLDER, unique_name)
     file.save(file_path)
 
-    # ✅ Build FULL URL: http://65.0.221.12:5000/uploads/profiles/xxx.jpg
+    relative_url = f"/uploads/profiles/{unique_name}"
     base_url = _get_base_url()
     full_url = f"{base_url}/uploads/profiles/{unique_name}"
 
+    mime_types = {
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg",
+        "png": "image/png",
+        "gif": "image/gif",
+        "webp": "image/webp",
+    }
+
     return {
+        "file_name": secure_filename(file.filename),
+        "stored_name": unique_name,
         "picture_path": file_path.replace("\\", "/"),
-        "picture_url": full_url,
+        "picture_url": relative_url,
+        "full_url": full_url,
+        "file_size": size,
+        "mime_type": mime_types.get(ext, file.content_type or "image/jpeg"),
     }
 
 
 def save_company_logo(file):
     """Save company logo (image only).
-    Returns FULL URL for the logo."""
+    Returns relative URL and path for the logo."""
     ensure_upload_dirs()
 
     if not file or file.filename == "":
@@ -230,11 +244,16 @@ def save_company_logo(file):
     file_path = os.path.join(LOGO_FOLDER, unique_name)
     file.save(file_path)
 
-    # ✅ Build FULL URL: http://65.0.221.12:5000/uploads/logos/xxx.jpg
+    relative_url = f"/uploads/logos/{unique_name}"
     base_url = _get_base_url()
     full_url = f"{base_url}/uploads/logos/{unique_name}"
 
     return {
+        "file_name": secure_filename(file.filename),
+        "stored_name": unique_name,
         "logo_path": file_path.replace("\\", "/"),
-        "logo_url": full_url,
+        "logo_url": relative_url,
+        "full_url": full_url,
+        "file_size": size,
+        "mime_type": f"image/{ext}" if ext != "svg" else "image/svg+xml",
     }

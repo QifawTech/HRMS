@@ -1,3 +1,4 @@
+import { getFullFileUrl } from '../../utils/apiUrl';
 import { useState, useEffect } from "react";
 import {
   ArrowLeft,
@@ -59,11 +60,7 @@ const formatHours = (h) => {
   return `${hrs}h ${mins}m`;
 };
 
-const getProfilePicUrl = (url) => {
-  if (!url) return null;
-  if (url.startsWith("http")) return url;
-  return `${url}`;
-};
+const getProfilePicUrl = (url) => getFullFileUrl(url);
 
 // ============================================
 // Small components

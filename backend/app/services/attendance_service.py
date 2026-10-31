@@ -594,6 +594,7 @@ from bson.errors import InvalidId
 from app.db import attendance, employees, departments, shifts
 from app.services.notification_service import notify_all_managers, create_notification
 from app.utils.helpers import serialize, serialize_list
+from app.utils.time_utils import now_ist
 
 
 def _oid(s):
@@ -604,7 +605,7 @@ def _oid(s):
 
 
 def _now():
-    return datetime.now()
+    return now_ist()
 
 
 def _fmt_dt(dt):
@@ -745,7 +746,7 @@ def _find_open_session_2(employee_id):
     if not oid:
         return None
 
-    today = date.today().isoformat()
+    today = _now().date().isoformat()
     return attendance().find_one(
         {
             "employee_id": oid,
@@ -767,7 +768,7 @@ def get_today_status(employee_id):
     if not oid:
         return None
 
-    today = date.today().isoformat()
+    today = _now().date().isoformat()
     today_record = attendance().find_one({"employee_id": oid, "date": today})
     open_session = _find_open_session(employee_id)
     
@@ -779,7 +780,7 @@ def get_today_status(employee_id):
             "check_in": _fmt_dt(open_session.get("check_in")),
             "is_overnight": open_session["date"] != today,
             "days_pending": (
-                (date.today() - date.fromisoformat(open_session["date"])).days
+                (_now().date() - date.fromisoformat(open_session["date"])).days
                 if open_session["date"] != today else 0
             ),
         }
@@ -830,7 +831,7 @@ def get_today_status(employee_id):
 #     if not oid:
 #         raise ValueError("Invalid employee ID")
 
-#     today = date.today().isoformat()
+#     today = _now().date().isoformat()
 #     now = _now()
 
 #     if is_second_shift:
@@ -913,7 +914,7 @@ def check_in(employee_id, is_second_shift=False):
     if not oid:
         raise ValueError("Invalid employee ID")
 
-    today = date.today().isoformat()
+    today = _now().date().isoformat()
     now = _now()
 
     if is_second_shift:
@@ -999,7 +1000,7 @@ def check_in(employee_id, is_second_shift=False):
 #         raise ValueError("Invalid employee ID")
 
 #     now = _now()
-#     today = date.today().isoformat()
+#     today = _now().date().isoformat()
 
 #     # ✅ 2nd Shift Check-out Logic
 #     if is_second_shift:
@@ -1101,7 +1102,7 @@ def check_out(employee_id, early_reason=None, is_second_shift=False):
         raise ValueError("Invalid employee ID")
 
     now = _now()
-    today = date.today().isoformat()
+    today = _now().date().isoformat()
 
     # ✅ 2nd Shift Check-out Logic
     if is_second_shift:
@@ -1244,7 +1245,7 @@ def get_employee_attendance(employee_id, days=30):
     if not oid:
         return []
 
-    cutoff = (date.today() - timedelta(days=days)).isoformat()
+    cutoff = (_now().date() - timedelta(days=days)).isoformat()
     records = list(
         attendance()
         .find({"employee_id": oid, "date": {"$gte": cutoff}})
@@ -1259,7 +1260,7 @@ def get_employee_attendance(employee_id, days=30):
 
 def get_attendance_by_date(target_date=None, department_id=None, search=None):
     if not target_date:
-        target_date = date.today().isoformat()
+        target_date = _now().date().isoformat()
 
     emp_query = {"status": "ACTIVE"}
     

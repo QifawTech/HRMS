@@ -11,17 +11,11 @@ def create_app():
     # ============================================
     # ✅ CORS — Only specific origins (SAFE)
     # ============================================
-    ALLOWED_ORIGINS = os.getenv(
-        "ALLOWED_ORIGINS",
-        "http://localhost:3000,http://localhost:5173,"
-        "http://127.0.0.1:3000,http://127.0.0.1:5173,"
-        "http://13.127.26.179:3000"
-    ).split(",")
-
+    # Allow CORS from S3 frontend, localhost, and any origin
     CORS(
         app,
-        resources={r"/*": {"origins": ALLOWED_ORIGINS}},
-        supports_credentials=True,
+        resources={r"/*": {"origins": "*"}},
+        supports_credentials=False,
         allow_headers=["Content-Type", "Authorization"],
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     )

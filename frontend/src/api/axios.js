@@ -1,9 +1,9 @@
 import axios from "axios";
+import { getApiUrl } from "../utils/apiUrl";
 
 const api = axios.create({
-  // Local development ku
-  baseURL: "http://65.0.221.12:5000/api",
-  timeout: 10000,
+  baseURL: getApiUrl(),
+  timeout: 15000,
 });
 
 // Request interceptor - attach JWT token

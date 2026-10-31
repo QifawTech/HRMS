@@ -1,3 +1,4 @@
+import { getFullFileUrl } from '../../utils/apiUrl';
 import { useState, useEffect, useRef } from "react";
 import {
   Building2,
@@ -34,7 +35,7 @@ const MONTHS_SHORT = [
 ];
 
 const formatTime12 = (t) => {
-  if (!t) return "—";
+  if (!t) return "ï¿½";
   const [h, m] = t.split(":").map(Number);
   const ampm = h >= 12 ? "PM" : "AM";
   const h12 = h % 12 || 12;
@@ -54,7 +55,7 @@ const useIsMobile = () => {
 };
 
 // ============================================
-// ?? 12-HOUR TIME PICKER — Railway Style
+// ?? 12-HOUR TIME PICKER ï¿½ Railway Style
 // ============================================
 const TimePicker12 = ({ value, onChange, label, required }) => {
   const to12 = (time24) => {
@@ -103,7 +104,7 @@ const TimePicker12 = ({ value, onChange, label, required }) => {
 
         <span style={{ fontWeight: 700, color: "#6b7280" }}>:</span>
 
-        {/* Minute — 5-min increments */}
+        {/* Minute ï¿½ 5-min increments */}
         <select
           className="erp-input"
           value={minute}
@@ -335,11 +336,7 @@ const ManagerSettings = () => {
     }
   };
 
-  const getLogoUrl = (url) => {
-    if (!url) return null;
-    if (url.startsWith("http")) return url;
-    return `${url}`;
-  };
+  const getLogoUrl = (url) => getFullFileUrl(url);
 
   const handleCompanySave = async () => {
     setCompanySaving(true);
@@ -958,7 +955,7 @@ const ManagerSettings = () => {
                     {uploadingLogo ? "Uploading..." : "Upload Logo"}
                   </button>
                   <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 6 }}>
-                    PNG, JPG, SVG · Max 2MB
+                    PNG, JPG, SVG ï¿½ Max 2MB
                   </div>
                 </div>
               </div>
@@ -1422,7 +1419,7 @@ const ManagerSettings = () => {
           <InfoBanner tone="green">
             <strong>How it works:</strong> Create insurance types with annual
             amount. Assign insurance to employee when adding. Monthly premium
-            auto-calculated (Annual ÷ 12) and deducted in payroll.
+            auto-calculated (Annual ï¿½ 12) and deducted in payroll.
           </InfoBanner>
 
           {insurancesLoading ? (
@@ -1843,7 +1840,7 @@ const ManagerSettings = () => {
                 marginBottom: 10,
               }}
             >
-              Live Preview — If Total Salary is ?15,000
+              Live Preview ï¿½ If Total Salary is ?15,000
             </div>
             <div className="row g-2">
               <div className="col-6 col-md-3">
@@ -1884,7 +1881,7 @@ const ManagerSettings = () => {
         >
           <InfoBanner tone="amber">
             <strong>How it works:</strong> The employee's 6-month gross income
-            (Monthly Salary × 6) is matched to one of these slabs. The
+            (Monthly Salary ï¿½ 6) is matched to one of these slabs. The
             corresponding <strong>Tax Amount</strong> is deducted{" "}
             <strong>once per 6-month period</strong> (Apr & Oct by default).
             Leave <strong>Max Salary</strong> blank for the highest slab.

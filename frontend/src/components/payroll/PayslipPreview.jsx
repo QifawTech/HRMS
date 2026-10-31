@@ -1,3 +1,4 @@
+import { getFullFileUrl } from '../../utils/apiUrl';
 import { Banknote, AlertTriangle } from "lucide-react";
 
 const FONT = "'Calibri', 'Segoe UI', -apple-system, sans-serif";
@@ -23,11 +24,7 @@ const formatDate = (iso) => {
   }
 };
 
-const getLogoUrl = (url) => {
-  if (!url) return null;
-  if (url.startsWith("http")) return url;
-  return `${url}`;
-};
+const getLogoUrl = (url) => getFullFileUrl(url);
 
 const PayslipPreview = ({ payslip, company, innerRef }) => {
   if (!payslip || !company) return null;

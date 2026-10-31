@@ -829,20 +829,29 @@ def update_profile_picture(employee_id, picture_data):
     if not emp:
         raise ValueError("Employee not found")
 
+    picture_path = picture_data.get("picture_path")
+    picture_url = picture_data.get("picture_url")
+
+    # Keep clean relative URL: /uploads/profiles/...
+    if picture_url and "/uploads/" in picture_url:
+        relative_url = "/uploads/" + picture_url.split("/uploads/", 1)[1]
+    else:
+        relative_url = picture_url or f"/uploads/profiles/{picture_data.get('stored_name')}"
+
     employees().update_one(
         {"_id": oid},
         {
             "$set": {
-                "profile_picture_data": picture_data.get("picture_data"),
-                "profile_picture_mime": picture_data.get("picture_mime"),
-                "profile_picture_size": picture_data.get("picture_size"),
-                "profile_picture_url": f"/api/employees/{employee_id}/picture",
+                "profile_picture_path": picture_path,
+                "profile_picture_url": relative_url,
+                "profile_picture_mime": picture_data.get("mime_type", "image/jpeg"),
+                "profile_picture_size": picture_data.get("file_size"),
                 "updated_at": now_ist(),
             }
         },
     )
 
-    return f"/api/employees/{employee_id}/picture"
+    return relative_url
 
 
 # ============================================

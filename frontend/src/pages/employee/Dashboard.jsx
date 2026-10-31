@@ -190,6 +190,9 @@ const EmployeeDashboard = () => {
   const [earlyMinutes, setEarlyMinutes] = useState(0);
   const [earlyShift2, setEarlyShift2] = useState(false);
 
+  const openSession = today?.open_session;
+  const hasOpenSession = today?.has_open_session;
+
   useEffect(() => {
     settingsApi
       .getCompanySettings()
@@ -287,8 +290,15 @@ const EmployeeDashboard = () => {
   const verifyLocation = () => {
     return new Promise((resolve, reject) => {
       if (!company?.company_latitude || !company?.company_longitude || !company?.allowed_radius_meters) {
-        // Settings ille na skip panrom
+        // Settings not configured - skip check
         resolve(true); 
+        return;
+      }
+
+      // If running on HTTP (insecure origin), browsers block Geolocation API completely
+      if (typeof window !== "undefined" && !window.isSecureContext) {
+        console.warn("Geolocation requires HTTPS (secure origin). Bypassing check on HTTP.");
+        resolve(true);
         return;
       }
 
@@ -319,8 +329,16 @@ const EmployeeDashboard = () => {
           }
         },
         (error) => {
+          let msg = "Please allow location access to check-in.";
+          if (error.code === 1) {
+            msg = "Location permission denied. Please allow location in browser settings.";
+          } else if (error.code === 2) {
+            msg = "Location unavailable. Please check device GPS.";
+          } else if (error.code === 3) {
+            msg = "Location request timed out. Please try again.";
+          }
           setToast({
-            message: "Please allow location access to check-in.",
+            message: msg,
             type: "error",
           });
           reject(error.message);
@@ -350,14 +368,21 @@ const EmployeeDashboard = () => {
       });
       load();
     } catch (err) {
-      // Location check fail aana, error handle panniten
-      const errMsg = err.response?.data?.error || "Failed";
+      if (err === "Out of range" || err === "No geolocation") {
+        return;
+      }
+      const errMsg = err.response?.data?.error || err.message || "Failed";
       if (errMsg.startsWith("OPEN_SESSION|")) {
         setToast({
           message: `You have an open session. Please check out first.`,
           type: "error",
         });
         load();
+      } else {
+        setToast({
+          message: errMsg,
+          type: "error",
+        });
       }
     } finally {
       setBusy(false);
@@ -421,8 +446,6 @@ const EmployeeDashboard = () => {
   const isEarly = today?.is_early_logout;
   const notMarked = !hasCheckedIn && !hasCheckedOut;
 
-  const openSession = today?.open_session;
-  const hasOpenSession = today?.has_open_session;
 
   const hasShift =
     myProfile?.shift_name && myProfile?.shift_start && myProfile?.shift_end;
