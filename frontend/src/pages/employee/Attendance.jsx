@@ -36,7 +36,7 @@ const formatMinutes = (mins) => {
 };
 
 const formatTime = (iso) => {
-  if (!iso) return "—";
+  if (!iso) return "â€”";
   try {
     return new Date(iso).toLocaleTimeString("en-IN", {
       hour: "2-digit",
@@ -44,12 +44,12 @@ const formatTime = (iso) => {
       hour12: true,
     });
   } catch {
-    return "—";
+    return "â€”";
   }
 };
 
 const formatDateParts = (iso) => {
-  if (!iso) return { day: "—", rest: "" };
+  if (!iso) return { day: "â€”", rest: "" };
   try {
     const d = new Date(iso);
     const weekday = d.toLocaleDateString("en-IN", { weekday: "short" });
@@ -465,7 +465,7 @@ const EmployeeAttendance = () => {
                             "{r.early_logout_reason}"
                           </div>
                         ) : (
-                          <span style={{ color: "#d1d5db" }}>—</span>
+                          <span style={{ color: "#d1d5db" }}>â€¢</span>
                         )}
                       </td>
                     </tr>
@@ -494,7 +494,7 @@ const EmployeeAttendance = () => {
         >
           <Clock size={13} />
           <span>
-            Standard hours: <strong>09:30 AM – 05:30 PM</strong> · Late /
+            Standard hours: <strong>09:30 AM - 05:30 PM</strong> â€¢ Late /
             Early logouts are tracked
           </span>
         </div>

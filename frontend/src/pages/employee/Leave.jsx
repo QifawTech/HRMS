@@ -228,14 +228,14 @@ const EmployeeLeave = () => {
               fontFamily: FONT,
             }}
           >
-            <strong>Financial Year:</strong> {fyInfo.label} ·{" "}
+            <strong>Financial Year:</strong> {fyInfo.label} â€¢{" "}
             <span style={{ color: "#6b7280" }}>
-              {formatDate(fyInfo.start_date)} — {formatDate(fyInfo.end_date)}
+              {formatDate(fyInfo.start_date)} â€¢ {formatDate(fyInfo.end_date)}
             </span>
           </div>
         )}
 
-        {/* Stats — Only CL + SL */}
+        {/* Stats â€¢ Only CL + SL */}
         {stats.length > 0 && (
           <div className="row g-3 mb-3">
             {stats.map((s) => {
@@ -475,7 +475,7 @@ const EmployeeLeave = () => {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {l.reason || "—"}
+                        {l.reason || "â€”"}
                       </td>
                       <td>
                         {statusBadge(l.status)}

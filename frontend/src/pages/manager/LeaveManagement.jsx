@@ -390,7 +390,7 @@ const LeaveManagement = () => {
                             whiteSpace: "nowrap",
                           }}
                         >
-                          {l.reason || "—"}
+                          {l.reason || "â€”"}
                         </td>
                         <td>
                           {statusBadge(l.status)}
@@ -458,7 +458,7 @@ const LeaveManagement = () => {
                             </div>
                           ) : (
                             <span style={{ fontSize: 11, color: "#9ca3af" }}>
-                              —
+                              â€¢
                             </span>
                           )}
                         </td>
@@ -487,7 +487,7 @@ const LeaveManagement = () => {
                     <div>
                       <div className="lm-field-label">Leave Type</div>
                       <div className="lm-field-value">
-                        {l.leave_type_name || "—"}
+                        {l.leave_type_name || "â€”"}
                         {l.is_same_day && (
                           <span
                             style={{
@@ -555,7 +555,7 @@ const LeaveManagement = () => {
                                   fontWeight: 500,
                                 }}
                               >
-                                · {formatDateTime(l.reviewed_at)}
+                                â€¢ {formatDateTime(l.reviewed_at)}
                               </span>
                             )}
                           </div>

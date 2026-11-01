@@ -739,7 +739,7 @@ const ManagerAnnouncements = () => {
                         <div style={{ fontSize: 11, color: "#6b7280" }}>
                           {emp.employee_code}
                           {emp.department_name &&
-                            ` · ${emp.department_name}`}
+                            ` â€¢ ${emp.department_name}`}
                         </div>
                       </div>
                     </label>
@@ -1044,7 +1044,7 @@ const AnnouncementRow = ({
               {ann.created_by_name}
             </strong>
           </span>
-          <span style={{ color: "#cbd5e1" }}>·</span>
+          <span style={{ color: "#cbd5e1" }}>â€¢</span>
           <span>{formatSentTime(ann.created_at)}</span>
         </div>
 

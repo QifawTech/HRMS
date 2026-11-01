@@ -20,7 +20,7 @@ import { formatDateTime } from "../../utils/dateUtils";
 const FONT = "'Calibri', 'Segoe UI', -apple-system, sans-serif";
 
 const formatSize = (b) => {
-  if (!b) return "—";
+  if (!b) return "â€”";
   if (b < 1024) return `${b} B`;
   if (b < 1024 * 1024) return `${Math.round(b / 1024)} KB`;
   return `${(b / 1024 / 1024).toFixed(1)} MB`;
@@ -435,7 +435,7 @@ const EmployeeDocuments = () => {
                           </div>
                         </td>
 
-                        {/* Source — Manager or Me */}
+                        {/* Source â€¢ Manager or Me */}
                         <td>
                           <div
                             style={{
@@ -638,7 +638,7 @@ const EmployeeDocuments = () => {
                   fontFamily: FONT,
                 }}
               >
-                PDF, DOC, Image, ZIP · Max 5MB
+                PDF, DOC, Image, ZIP â€¢ Max 5MB
               </div>
             </label>
           ) : (

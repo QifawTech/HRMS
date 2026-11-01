@@ -174,7 +174,7 @@ const ManagerPayroll = () => {
   };
 
   // ============================================
-  // Generate — Single
+  // Generate â€¢ Single
   // ============================================
   const handleSubmit = async () => {
     if (!form.employee_id)
@@ -216,7 +216,7 @@ const ManagerPayroll = () => {
   };
 
   // ============================================
-  // Generate — BULK (All Employees)
+  // Generate â€¢ BULK (All Employees)
   // ============================================
   const handleBulkGenerate = async () => {
     setBulkRunning(true);
@@ -726,7 +726,7 @@ const ManagerPayroll = () => {
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div className="pay-mobile-name">{p.employee_name}</div>
                       <div className="pay-mobile-code">
-                        {p.employee_code} · {p.pay_period}
+                        {p.employee_code} â€¢ {p.pay_period}
                       </div>
                     </div>
                     <span
@@ -1347,7 +1347,7 @@ const ManagerPayroll = () => {
                           : "none",
                     }}
                   >
-                    <strong>{e.employee_name}</strong> ({e.employee_code}) —{" "}
+                    <strong>{e.employee_name}</strong> ({e.employee_code}) â€¢{" "}
                     {e.error}
                   </div>
                 ))}

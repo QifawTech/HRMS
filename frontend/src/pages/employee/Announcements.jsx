@@ -79,7 +79,7 @@ const EmployeeAnnouncements = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, search]);
 
-  // Handle ?open=<id> — scroll + auto-mark seen
+  // Handle ?open=<id> â€¢ scroll + auto-mark seen
   useEffect(() => {
     if (!openId || loading || items.length === 0) return;
 

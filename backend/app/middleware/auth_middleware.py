@@ -24,12 +24,16 @@ def token_required(f):
         return f(*args, **kwargs)
     return decorated
 
-def role_required(role):
-    """Decorator to require specific role."""
+def role_required(*roles):
+    """Decorator to require specific role or roles. ADMIN and SUPER_ADMIN have manager privileges."""
     def decorator(f):
         @wraps(f)
         def decorated(*args, **kwargs):
-            if request.user.get("role") != role:
+            user_role = (request.user.get("role") or "").strip().upper()
+            allowed = {r.strip().upper() for r in roles}
+            if "MANAGER" in allowed:
+                allowed.update(["ADMIN", "SUPER_ADMIN"])
+            if user_role not in allowed:
                 return jsonify({"error": "Forbidden - insufficient permissions"}), 403
             return f(*args, **kwargs)
         return decorated

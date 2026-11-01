@@ -37,7 +37,7 @@ const EmployeePayslips = () => {
     api.getCompanyInfo().then((r) => setCompany(r.data)).catch(() => {});
   }, [load]);
 
-  // Print — opens browser print dialog
+  // Print â€¢ opens browser print dialog
   const handlePrint = () => {
     const content = printRef.current;
     if (!content) return;
@@ -268,7 +268,7 @@ const EmployeePayslips = () => {
                           marginTop: 2,
                         }}
                       >
-                        Paid Days: {p.paid_days} · {p.payment_mode}
+                        Paid Days: {p.paid_days} â€¢ {p.payment_mode}
                       </div>
                     </div>
                   </div>
@@ -298,7 +298,7 @@ const EmployeePayslips = () => {
                     </div>
                   </div>
 
-                  {/* Actions — Icon only */}
+                  {/* Actions â€¢ Icon only */}
                   <div
                     style={{
                       display: "flex",

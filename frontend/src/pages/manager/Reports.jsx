@@ -57,7 +57,7 @@ const currentMonthStr = () => {
 };
 
 const formatTime = (iso) => {
-  if (!iso) return "—";
+  if (!iso) return "â€”";
   try {
     return new Date(iso).toLocaleTimeString("en-IN", {
       hour: "2-digit",
@@ -65,12 +65,12 @@ const formatTime = (iso) => {
       hour12: true,
     });
   } catch {
-    return "—";
+    return "â€”";
   }
 };
 
 const formatDate = (iso) => {
-  if (!iso) return "—";
+  if (!iso) return "â€”";
   try {
     return new Date(iso).toLocaleDateString("en-IN", {
       day: "2-digit",
@@ -731,7 +731,7 @@ const ManagerReports = () => {
         {/* Filters */}
         <div className="erp-card mb-3" style={{ padding: 14 }}>
           <div className="row g-2">
-            {/* Monthly summary — Month picker */}
+            {/* Monthly summary â€¢ Month picker */}
             {activeReport === "monthly" && (
               <div className="col-12 col-md-4">
                 <label className="erp-label">Month</label>
@@ -917,7 +917,7 @@ const ManagerReports = () => {
                       border: "1px solid #fcd34d",
                     }}
                   >
-                    {h.name} · {formatDate(h.date).slice(0, 6)}
+                    {h.name} â€¢ {formatDate(h.date).slice(0, 6)}
                   </span>
                 ))}
               </div>
@@ -1391,7 +1391,7 @@ const ManagerReports = () => {
                                     {r.late_minutes}m
                                   </span>
                                 ) : (
-                                  <span style={{ color: "#9ca3af" }}>—</span>
+                                  <span style={{ color: "#9ca3af" }}>â€¢</span>
                                 )}
                               </td>
                               <td>
@@ -1405,7 +1405,7 @@ const ManagerReports = () => {
                                     {r.early_minutes}m
                                   </span>
                                 ) : (
-                                  <span style={{ color: "#9ca3af" }}>—</span>
+                                  <span style={{ color: "#9ca3af" }}>â€¢</span>
                                 )}
                               </td>
                               <td>
@@ -1492,7 +1492,7 @@ const ManagerReports = () => {
                                   whiteSpace: "nowrap",
                                 }}
                               >
-                                {r.description || "—"}
+                                {r.description || "â€”"}
                               </td>
                             </tr>
                           ))}
@@ -1508,7 +1508,7 @@ const ManagerReports = () => {
                                 </span>
                               </td>
                               <td style={{ fontSize: 12.5 }}>
-                                {e.department || "—"}
+                                {e.department || "â€”"}
                               </td>
                               <td
                                 style={{
@@ -1607,7 +1607,7 @@ const ManagerReports = () => {
                               </div>
                               <div className="rpt-mobile-sub">
                                 {r.code}
-                                {r.department && ` · ${r.department}`}
+                                {r.department && ` â€¢ ${r.department}`}
                               </div>
                             </div>
                             <span
@@ -1678,7 +1678,7 @@ const ManagerReports = () => {
                                 {r.employee_name}
                               </div>
                               <div className="rpt-mobile-sub">
-                                {r.employee_code} · {formatDate(r.date)}
+                                {r.employee_code} â€¢ {formatDate(r.date)}
                               </div>
                             </div>
                             <span
@@ -1715,7 +1715,7 @@ const ManagerReports = () => {
                               value={
                                 r.late_minutes > 0
                                   ? `${r.late_minutes}m`
-                                  : "—"
+                                  : "â€¢"
                               }
                               color={
                                 r.late_minutes > 0 ? "#dc2626" : "#9ca3af"
@@ -1838,7 +1838,7 @@ const ManagerReports = () => {
                               </div>
                               <div className="rpt-mobile-sub">
                                 {e.code}
-                                {e.department && ` · ${e.department}`}
+                                {e.department && ` â€¢ ${e.department}`}
                               </div>
                             </div>
                             <span

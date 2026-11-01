@@ -26,9 +26,11 @@ const MONTHS = [
 ];
 
 const formatHours = (hours) => {
-  if (!hours || hours <= 0) return "—";
-  const h = Math.floor(hours);
-  const m = Math.round((hours - h) * 60);
+  if (hours === undefined || hours === null) return "â€”";
+  const num = Number(hours);
+  if (isNaN(num) || num <= 0) return "0h";
+  const h = Math.floor(num);
+  const m = Math.round((num - h) * 60);
   if (h === 0) return `${m}m`;
   if (m === 0) return `${h}h`;
   return `${h}h ${m}m`;
@@ -36,50 +38,71 @@ const formatHours = (hours) => {
 
 const formatMinutes = (mins) => {
   if (!mins || mins <= 0) return "0m";
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
+  const num = Number(mins);
+  if (isNaN(num) || num <= 0) return "0m";
+  const h = Math.floor(num / 60);
+  const m = Math.round(num % 60);
   if (h === 0) return `${m}m`;
   if (m === 0) return `${h}h`;
   return `${h}h ${m}m`;
 };
 
 const formatTime = (iso) => {
-  if (!iso) return "—";
+  if (!iso) return "â€”";
+  if (typeof iso === "string" && /^\d{1,2}:\d{2}\s*(AM|PM)$/i.test(iso.trim())) {
+    return iso.trim();
+  }
   try {
-    return new Date(iso).toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
+    const d = new Date(iso);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+    }
+    const match = String(iso).match(/(\d{2}):(\d{2})/);
+    if (match) {
+      let [_, h, m] = match;
+      h = parseInt(h, 10);
+      const ampm = h >= 12 ? "PM" : "AM";
+      h = h % 12 || 12;
+      return `${h}:${m} ${ampm}`;
+    }
+    return "â€”";
   } catch {
-    return "—";
+    return "â€”";
   }
 };
 
 const formatDateLong = (isoDate) => {
-  if (!isoDate) return "—";
+  if (!isoDate) return "â€”";
   try {
-    return new Date(isoDate).toLocaleDateString("en-IN", {
+    const d = new Date(isoDate);
+    if (isNaN(d.getTime())) return String(isoDate);
+    return d.toLocaleDateString("en-IN", {
       weekday: "short",
       day: "2-digit",
       month: "short",
       year: "numeric",
     });
   } catch {
-    return isoDate;
+    return String(isoDate);
   }
 };
 
 const formatDateShort = (iso) => {
-  if (!iso) return "—";
+  if (!iso) return "â€”";
   try {
-    return new Date(iso).toLocaleDateString("en-IN", {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso);
+    return d.toLocaleDateString("en-IN", {
       weekday: "short",
       day: "2-digit",
       month: "short",
     });
   } catch {
-    return iso;
+    return String(iso);
   }
 };
 
@@ -181,7 +204,7 @@ const EmployeeReportModal = ({ open, onClose, employee }) => {
               </div>
               <div style={{ fontSize: 12, color: "#6b7280" }}>
                 {employee.employee_code}
-                {employee.department_name && ` · ${employee.department_name}`}
+                {employee.department_name && ` â€¢ ${employee.department_name}`}
               </div>
             </div>
           </div>
@@ -362,7 +385,7 @@ const EmployeeReportModal = ({ open, onClose, employee }) => {
             </div>
           </div>
 
-          {/* Records — Desktop table + Mobile cards */}
+          {/* Records â€” Desktop table + Mobile cards */}
           <div
             style={{
               maxHeight: 350,
@@ -705,9 +728,15 @@ const Attendance = () => {
   const [data, setData] = useState({ records: [], summary: {} });
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const getTodayDateStr = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const [selectedDate, setSelectedDate] = useState(getTodayDateStr);
   const [filterDept, setFilterDept] = useState("");
   const [search, setSearch] = useState("");
   const [reportEmployee, setReportEmployee] = useState(null);
@@ -798,7 +827,7 @@ const Attendance = () => {
           <div>
             <h1 className="erp-page-title">Attendance</h1>
             <p className="erp-page-subtitle mb-0">
-              View and manage employee attendance ·{" "}
+              View and manage employee attendance â€¢{" "}
               <span style={{ color: "#4f46e5", fontWeight: 600 }}>
                 Tap any employee for full report
               </span>
@@ -912,7 +941,7 @@ const Attendance = () => {
           </div>
         ) : (
           <>
-            {/* Desktop View — Table */}
+            {/* Desktop View â€” Table */}
             <div
               className="erp-card d-none d-lg-block"
               style={{ padding: 0, overflow: "hidden" }}
@@ -975,7 +1004,7 @@ const Attendance = () => {
                               {r.department_name}
                             </span>
                           ) : (
-                            <span style={{ color: "#9ca3af" }}>—</span>
+                            <span style={{ color: "#9ca3af" }}>â€”</span>
                           )}
                         </td>
                         <td>
@@ -1062,7 +1091,7 @@ const Attendance = () => {
               </div>
             </div>
 
-            {/* Mobile + Tablet — Cards */}
+            {/* Mobile + Tablet â€” Cards */}
             <div className="d-lg-none">
               {data.records.map((r) => (
                 <div
@@ -1115,7 +1144,7 @@ const Attendance = () => {
                         <span>{r.employee_code}</span>
                         {r.department_name && (
                           <>
-                            <span style={{ color: "#cbd5e1" }}>·</span>
+                            <span style={{ color: "#cbd5e1" }}>â€¢</span>
                             <span>{r.department_name}</span>
                           </>
                         )}
@@ -1211,7 +1240,7 @@ const Attendance = () => {
                         Department
                       </div>
                       <div className="att-mobile-field-value">
-                        {r.department_name || "—"}
+                        {r.department_name || "â€”"}
                       </div>
                     </div>
                   </div>

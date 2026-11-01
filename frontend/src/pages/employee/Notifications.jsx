@@ -284,7 +284,7 @@ const EmployeeNotifications = () => {
                     {n.message}
                   </div>
                   <div style={{ fontSize: 11, color: "#9ca3af" }}>
-                    {n.from_name && `By ${n.from_name} · `}
+                    {n.from_name && `By ${n.from_name} â€¢ `}
                     {timeAgo(n.created_at)}
                   </div>
                 </div>

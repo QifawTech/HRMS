@@ -257,7 +257,7 @@ const ManagerNotifications = () => {
         </div>
 
         {/* ============================================
-            Tabs — segmented control
+            Tabs â€¢ segmented control
             ============================================ */}
         <div
           style={{
@@ -530,7 +530,7 @@ const NotificationRow = ({ notif, isLast, onClick, onDelete }) => {
                   {notif.from_name}
                 </strong>
               </span>
-              <span style={{ color: "#cbd5e1" }}>·</span>
+              <span style={{ color: "#cbd5e1" }}>â€¢</span>
             </>
           )}
           <span>{timeAgo(notif.created_at)}</span>

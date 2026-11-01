@@ -30,7 +30,7 @@ import * as holidayApi from "../../api/holidayApi";
 const FONT = "'Inter', 'Segoe UI', -apple-system, sans-serif";
 
 const formatDateShort = (dateStr) => {
-  if (!dateStr) return "�";
+  if (!dateStr) return "—";
   try {
     return new Date(dateStr).toLocaleDateString("en-IN", {
       day: "2-digit",
@@ -43,7 +43,7 @@ const formatDateShort = (dateStr) => {
 };
 
 const formatTime = (iso) => {
-  if (!iso) return "�";
+  if (!iso) return "—";
   try {
     return new Date(iso).toLocaleTimeString("en-IN", {
       hour: "2-digit",
@@ -51,7 +51,7 @@ const formatTime = (iso) => {
       hour12: true,
     });
   } catch {
-    return "�";
+    return "—";
   }
 };
 
@@ -65,7 +65,7 @@ const formatHours = (h) => {
 };
 
 const formatDateLong = (dateStr) => {
-  if (!dateStr) return "�";
+  if (!dateStr) return "—";
   try {
     return new Date(dateStr).toLocaleDateString("en-IN", {
       weekday: "long",
@@ -491,7 +491,7 @@ const EmployeeProfile = () => {
         {/* Info Grid */}
         <div className="row g-3 mb-4">
           <div className="col-12 col-md-4">
-            <InfoCard Icon={Phone} label="Phone" value={profile.phone || "�"} />
+            <InfoCard Icon={Phone} label="Phone" value={profile.phone || "—"} />
           </div>
           <div className="col-12 col-md-4">
             <InfoCard
@@ -504,7 +504,7 @@ const EmployeeProfile = () => {
             <InfoCard
               Icon={MapPin}
               label="Address"
-              value={profile.address || "�"}
+              value={profile.address || "—"}
               truncate
             />
           </div>
@@ -536,7 +536,7 @@ const EmployeeProfile = () => {
             >
               {upcomingHolidays.map((h) => (
                 <span key={h._id} className="holiday-chip">
-                  {h.name} � {formatDateShort(h.date).slice(0, 6)}
+                  {h.name} • {formatDateShort(h.date).slice(0, 6)}
                 </span>
               ))}
             </div>
