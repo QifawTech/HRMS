@@ -260,7 +260,7 @@ const EmployeeAnnouncements = () => {
                       fontWeight: 700,
                     }}
                   >
-                    {a.priority === "URGENT" && "?? "}
+                    {a.priority === "URGENT" && "🔴 "}
                     {p.label}
                   </span>
                   <span

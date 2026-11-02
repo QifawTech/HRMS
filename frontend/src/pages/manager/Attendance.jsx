@@ -1029,7 +1029,7 @@ const Attendance = () => {
                                 fontWeight: 600,
                               }}
                             >
-                              ? Late {formatMinutes(r.late_minutes)}
+                              ⚠️ Late {formatMinutes(r.late_minutes)}
                             </div>
                           )}
                         </td>
@@ -1055,7 +1055,7 @@ const Attendance = () => {
                                 fontWeight: 600,
                               }}
                             >
-                              ? Early {formatMinutes(r.early_minutes)}
+                              ⚠️ Early {formatMinutes(r.early_minutes)}
                             </div>
                           )}
                         </td>
@@ -1069,19 +1069,13 @@ const Attendance = () => {
                         </td>
                         <td>
                           {r.status === "PRESENT" && (
-                            <span className="erp-badge erp-badge-green">
-                              ? Present
-                            </span>
+                            <span className="erp-badge erp-badge-green">● Present</span>
                           )}
                           {r.status === "WORKING" && (
-                            <span className="erp-badge erp-badge-blue">
-                              ? Working
-                            </span>
+                            <span className="erp-badge erp-badge-blue">● Working</span>
                           )}
                           {r.status === "ABSENT" && (
-                            <span className="erp-badge erp-badge-gray">
-                              ? Absent
-                            </span>
+                            <span className="erp-badge erp-badge-gray">● Absent</span>
                           )}
                         </td>
                       </tr>
@@ -1152,19 +1146,13 @@ const Attendance = () => {
                     </div>
                     <div style={{ flexShrink: 0 }}>
                       {r.status === "PRESENT" && (
-                        <span className="erp-badge erp-badge-green">
-                          ? Present
-                        </span>
+                        <span className="erp-badge erp-badge-green">● Present</span>
                       )}
                       {r.status === "WORKING" && (
-                        <span className="erp-badge erp-badge-blue">
-                          ? Working
-                        </span>
+                        <span className="erp-badge erp-badge-blue">● Working</span>
                       )}
                       {r.status === "ABSENT" && (
-                        <span className="erp-badge erp-badge-gray">
-                          ? Absent
-                        </span>
+                        <span className="erp-badge erp-badge-gray">● Absent</span>
                       )}
                     </div>
                   </div>
@@ -1193,7 +1181,7 @@ const Attendance = () => {
                             marginTop: 1,
                           }}
                         >
-                          ? Late {formatMinutes(r.late_minutes)}
+                          ⚠️ Late {formatMinutes(r.late_minutes)}
                         </div>
                       )}
                     </div>
@@ -1220,7 +1208,7 @@ const Attendance = () => {
                             marginTop: 1,
                           }}
                         >
-                          ? Early {formatMinutes(r.early_minutes)}
+                          ⚠️ Early {formatMinutes(r.early_minutes)}
                         </div>
                       )}
                     </div>

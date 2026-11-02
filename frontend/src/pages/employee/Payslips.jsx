@@ -294,7 +294,7 @@ const EmployeePayslips = () => {
                         letterSpacing: "-0.5px",
                       }}
                     >
-                      ? {formatCurrency(p.net_salary)}
+                      ₹{formatCurrency(p.net_salary)}
                     </div>
                   </div>
 

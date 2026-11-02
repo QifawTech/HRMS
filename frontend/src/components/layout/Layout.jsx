@@ -32,7 +32,7 @@ const Layout = ({ children }) => {
         />
 
         {/* Mobile overlay */}
-        {sidebarOpen && window.innerWidth <= 992 && (
+        {sidebarOpen && (
           <div
             className="erp-sidebar-overlay"
             onClick={() => setSidebarOpen(false)}

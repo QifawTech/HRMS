@@ -869,9 +869,7 @@ const Employees = () => {
 
                           <td>
                             {emp.status === "ACTIVE" && (
-                              <span className="erp-badge erp-badge-green">
-                                ? Active
-                              </span>
+                              <span className="erp-badge erp-badge-green">● Active</span>
                             )}
                             {isResigned && (
                               <span
@@ -881,9 +879,7 @@ const Employees = () => {
                                   color: "#6d28d9",
                                   fontWeight: 700,
                                 }}
-                              >
-                                ? Resigned
-                              </span>
+                              >● Resigned</span>
                             )}
                             {isTerminated && (
                               <span
@@ -893,14 +889,10 @@ const Employees = () => {
                                   color: "#991b1b",
                                   fontWeight: 700,
                                 }}
-                              >
-                                ? Terminated
-                              </span>
+                              >● Terminated</span>
                             )}
                             {isInactive && (
-                              <span className="erp-badge erp-badge-gray">
-                                ? Inactive
-                              </span>
+                              <span className="erp-badge erp-badge-gray">● Inactive</span>
                             )}
                           </td>
 
@@ -1083,9 +1075,7 @@ const Employees = () => {
 
                     <div className="d-flex gap-2 align-items-center mb-3 flex-wrap">
                       {emp.status === "ACTIVE" && (
-                        <span className="erp-badge erp-badge-green">
-                          ? Active
-                        </span>
+                        <span className="erp-badge erp-badge-green">● Active</span>
                       )}
                       {isResigned && (
                         <span
@@ -1095,9 +1085,7 @@ const Employees = () => {
                             color: "#6d28d9",
                             fontWeight: 700,
                           }}
-                        >
-                          ? Resigned
-                        </span>
+                        >● Resigned</span>
                       )}
                       {isTerminated && (
                         <span
@@ -1107,14 +1095,10 @@ const Employees = () => {
                             color: "#991b1b",
                             fontWeight: 700,
                           }}
-                        >
-                          ? Terminated
-                        </span>
+                        >● Terminated</span>
                       )}
                       {isInactive && (
-                        <span className="erp-badge erp-badge-gray">
-                          ? Inactive
-                        </span>
+                        <span className="erp-badge erp-badge-gray">● Inactive</span>
                       )}
                       {getTypeBadge(emp.employment_type)}
                     </div>
@@ -1575,7 +1559,7 @@ const Employees = () => {
                 <option value="">• No insurance •</option>
                 {insurances.map((ins) => (
                   <option key={ins._id} value={ins._id}>
-                    {ins.name} • ?
+                    {ins.name} • ₹{ins.monthly_premium}
                     {Number(ins.annual_amount || 0).toLocaleString("en-IN")}
                     /year
                   </option>
@@ -1590,7 +1574,7 @@ const Employees = () => {
                     marginTop: 4,
                   }}
                 >
-                  Monthly deduction: ?{monthlyInsurance.toFixed(2)}
+                  Monthly deduction: ₹{monthlyInsurance.toFixed(2)}
                 </small>
               )}
             </div>
@@ -1880,7 +1864,7 @@ const Employees = () => {
                     marginBottom: 12,
                   }}
                 >
-                  ?? Monthly Salary
+                  💼 Monthly Salary
                 </div>
 
                 <div className="row g-3">
@@ -1957,25 +1941,25 @@ const Employees = () => {
                             <div className="col-6 col-md-3">
                               <MiniBox
                                 label="Basic"
-                                value={`?${basic.toFixed(0)}`}
+                                value={`₹${basic.toFixed(0)}`}
                               />
                             </div>
                             <div className="col-6 col-md-3">
                               <MiniBox
                                 label="HRA"
-                                value={`?${hra.toFixed(0)}`}
+                                value={`₹${hra.toFixed(0)}`}
                               />
                             </div>
                             <div className="col-6 col-md-3">
                               <MiniBox
                                 label="Special"
-                                value={`?${special.toFixed(0)}`}
+                                value={`₹${special.toFixed(0)}`}
                               />
                             </div>
                             <div className="col-6 col-md-3">
                               <MiniBox
                                 label="Gross"
-                                value={`?${total.toFixed(0)}`}
+                                value={`₹${total.toFixed(0)}`}
                                 highlight
                               />
                             </div>
@@ -2005,7 +1989,7 @@ const Employees = () => {
                                 gap: 6,
                               }}
                             >
-                              ?? Professional Tax (6-Month Slab)
+                              📋 Professional Tax (6-Month Slab)
                               {ptLoading && (
                                 <span
                                   className="spinner-border spinner-border-sm"
@@ -2025,13 +2009,13 @@ const Employees = () => {
                                 <span>
                                   6-Month Gross:{" "}
                                   <strong>
-                                    ?{sixMonthGross.toLocaleString("en-IN")}
+                                    ₹{sixMonthGross.toLocaleString("en-IN")}
                                   </strong>
                                 </span>
                                 <span>
                                   PT Amount:{" "}
                                   <strong style={{ color: "#dc2626" }}>
-                                    ?{pt.toLocaleString("en-IN")}
+                                    ₹{pt.toLocaleString("en-IN")}
                                   </strong>
                                 </span>
                               </div>
@@ -2074,7 +2058,7 @@ const Employees = () => {
                                 />
                                 <span style={{ flex: 1 }}>PF</span>
                                 <span style={{ fontWeight: 700, color: deductionToggles.pf ? "#dc2626" : "#9ca3af" }}>
-                                  ?{deductionToggles.pf ? pf.toFixed(0) : "0"}
+                                  ₹{deductionToggles.pf ? pf.toFixed(0) : "0"}
                                 </span>
                               </label>
 
@@ -2087,7 +2071,7 @@ const Employees = () => {
                                 />
                                 <span style={{ flex: 1 }}>ESI</span>
                                 <span style={{ fontWeight: 700, color: deductionToggles.esi ? "#dc2626" : "#9ca3af" }}>
-                                  ?{deductionToggles.esi ? esi.toFixed(2) : "0"}
+                                  ₹{deductionToggles.esi ? esi.toFixed(2) : "0"}
                                 </span>
                               </label>
 
@@ -2100,7 +2084,7 @@ const Employees = () => {
                                 />
                                 <span style={{ flex: 1 }}>PT</span>
                                 <span style={{ fontWeight: 700, color: deductionToggles.pt ? "#dc2626" : "#9ca3af" }}>
-                                  ?{deductionToggles.pt ? pt.toFixed(0) : "0"}
+                                  ₹{deductionToggles.pt ? pt.toFixed(0) : "0"}
                                 </span>
                               </label>
 
@@ -2113,7 +2097,7 @@ const Employees = () => {
                                 />
                                 <span style={{ flex: 1 }}>TDS</span>
                                 <span style={{ fontWeight: 700, color: deductionToggles.tds ? "#dc2626" : "#9ca3af" }}>
-                                  ?{deductionToggles.tds ? tds.toFixed(0) : "0"}
+                                  ₹{deductionToggles.tds ? tds.toFixed(0) : "0"}
                                 </span>
                               </label>
 
@@ -2122,7 +2106,7 @@ const Employees = () => {
                                   <span style={{ width: 15 }}></span>
                                   <span style={{ flex: 1 }}>Insurance</span>
                                   <span style={{ fontWeight: 700, color: "#dc2626" }}>
-                                    ?{insAmt.toFixed(0)}
+                                    ₹{insAmt.toFixed(0)}
                                   </span>
                                 </div>
                               )}
@@ -2142,7 +2126,7 @@ const Employees = () => {
                                 Total Deduction
                               </span>
                               <span style={{ fontSize: 14, fontWeight: 800, color: "#dc2626" }}>
-                                ?{totalDed.toFixed(2)}
+                                ₹{totalDed.toFixed(2)}
                               </span>
                             </div>
                             <div
@@ -2164,7 +2148,7 @@ const Employees = () => {
                                   color: "#059669",
                                 }}
                               >
-                                ?{net.toFixed(2)}
+                                ₹{net.toFixed(2)}
                               </span>
                             </div>
                           </div>
@@ -2365,7 +2349,7 @@ const Employees = () => {
               />
               <div style={{ fontSize: 13, lineHeight: 1.6 }}>
                 <strong style={{ fontSize: 14 }}>
-                  ?? DANGER • PERMANENT DELETE
+                  ⚠️ DANGER • PERMANENT DELETE
                 </strong>
                 <br />
                 This action will <strong>permanently delete</strong> the
@@ -2420,7 +2404,7 @@ const Employees = () => {
                 lineHeight: 1.55,
               }}
             >
-              ?? <strong>Tip:</strong> If you just want to deactivate this
+              💡 <strong>Tip:</strong> If you just want to deactivate this
               employee, use <strong>"Edit ? End Date"</strong> instead. Data
               will be preserved. Only use <strong>Permanent Delete</strong>{" "}
               for testing/cleanup purposes.

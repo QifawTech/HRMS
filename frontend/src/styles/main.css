@@ -330,34 +330,85 @@ body {
 @media (max-width: 992px) {
   .erp-sidebar {
     position: fixed;
-    top: 60px;
+    top: 0;
     left: 0;
-    height: calc(100vh - 60px);
-    z-index: 90;
-    box-shadow: var(--shadow-md);
+    width: 280px;
+    max-width: 85vw;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 1050;
+    background: #ffffff;
+    box-shadow: 4px 0 25px rgba(0, 0, 0, 0.18);
     transform: translateX(0);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .erp-sidebar.closed {
     transform: translateX(-100%);
-    width: 240px;
+    width: 280px;
+    max-width: 85vw;
+  }
+
+  .erp-sidebar-mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    background: #f8fafc;
+    flex-shrink: 0;
+  }
+
+  .erp-sidebar-close-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: white;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .erp-sidebar-close-btn:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+  }
+
+  .erp-sidebar-nav {
+    flex: 1;
+    padding: 12px 10px 80px 10px !important;
+    overflow-y: auto;
   }
 
   .erp-sidebar-overlay {
     display: block;
     position: fixed;
-    top: 60px;
+    top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.4);
-    z-index: 89;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    z-index: 1040;
+    animation: fadeIn 0.2s ease;
   }
 }
 
 @media (min-width: 993px) {
+  .erp-sidebar-mobile-header {
+    display: none !important;
+  }
   .erp-sidebar-overlay {
-    display: none;
+    display: none !important;
   }
 }
 

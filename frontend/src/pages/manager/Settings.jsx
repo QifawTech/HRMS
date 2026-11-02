@@ -55,7 +55,7 @@ const useIsMobile = () => {
 };
 
 // ============================================
-// ?? 12-HOUR TIME PICKER • Railway Style
+// 12-HOUR TIME PICKER • Railway Style
 // ============================================
 const TimePicker12 = ({ value, onChange, label, required }) => {
   const to12 = (time24) => {
@@ -1101,7 +1101,7 @@ const ManagerSettings = () => {
                     fontFamily: FONT,
                   }}
                 >
-                  ?? Employees must serve {company.notice_period_days} days from
+                  📋 Employees must serve {company.notice_period_days} days from
                   resignation date
                 </div>
               )}
@@ -1127,7 +1127,7 @@ const ManagerSettings = () => {
                     marginBottom: 10,
                   }}
                 >
-                  ?? Office Location (Geo-fencing)
+                  📍 Office Location (Geo-fencing)
                 </div>
                 <div
                   style={{
@@ -1760,7 +1760,7 @@ const ManagerSettings = () => {
                     marginBottom: 6,
                   }}
                 >
-                  ?? PT Deduction Months
+                  📅 PT Deduction Months
                 </div>
                 <div
                   style={{
@@ -1840,23 +1840,23 @@ const ManagerSettings = () => {
                 marginBottom: 10,
               }}
             >
-              Live Preview • If Total Salary is ?15,000
+              Live Preview • If Total Salary is ₹15,000
             </div>
             <div className="row g-2">
               <div className="col-6 col-md-3">
-                <MiniBox label="Basic" value={`?${previewBasic.toFixed(0)}`} />
+                <MiniBox label="Basic" value={`₹${previewBasic.toFixed(0)}`} />
               </div>
               <div className="col-6 col-md-3">
-                <MiniBox label="HRA" value={`?${previewHra.toFixed(0)}`} />
+                <MiniBox label="HRA" value={`₹${previewHra.toFixed(0)}`} />
               </div>
               <div className="col-6 col-md-3">
                 <MiniBox
                   label="Special"
-                  value={`?${previewSpecial.toFixed(0)}`}
+                  value={`₹${previewSpecial.toFixed(0)}`}
                 />
               </div>
               <div className="col-6 col-md-3">
-                <MiniBox label="Total" value={`?${previewTotal}`} highlight />
+                <MiniBox label="Total" value={`₹${previewTotal}`} highlight />
               </div>
             </div>
           </div>
@@ -2388,7 +2388,7 @@ const ManagerSettings = () => {
         {isSplitShift && (
           <div className="row g-3 mb-3" style={{ padding: 12, background: "#eef2ff", borderRadius: 8, border: "1px dashed #c7d2fe" }}>
             <div className="col-12" style={{ fontSize: 12, fontWeight: 700, color: "#3730a3", marginBottom: 4 }}>
-              ?? Split Shift (2nd Time Slot)
+              ⏰ Split Shift (2nd Time Slot)
             </div>
             <div className="col-12 col-sm-6">
               <TimePicker12
@@ -2463,7 +2463,7 @@ const ManagerSettings = () => {
         </div>
 
         <div className="mb-3">
-          <label className="erp-label">Annual Amount (?) *</label>
+          <label className="erp-label">Annual Amount (₹) *</label>
           <input
             type="number"
             className="erp-input"
@@ -2485,7 +2485,7 @@ const ManagerSettings = () => {
                 marginTop: 4,
               }}
             >
-              Monthly deduction: ?
+              Monthly deduction: ₹
               {(parseFloat(insuranceForm.annual_amount) / 12).toFixed(2)}
             </small>
           )}

@@ -636,10 +636,10 @@ const ManagerAnnouncements = () => {
               }
               style={{ fontFamily: FONT }}
             >
-              <option value="LOW">?? Low</option>
-              <option value="NORMAL">?? Normal</option>
-              <option value="HIGH">?? High</option>
-              <option value="URGENT">?? Urgent</option>
+              <option value="LOW">🟢 Low</option>
+              <option value="NORMAL">🔵 Normal</option>
+              <option value="HIGH">🟠 High</option>
+              <option value="URGENT">🔴 Urgent</option>
             </select>
           </div>
           <div className="col-6">

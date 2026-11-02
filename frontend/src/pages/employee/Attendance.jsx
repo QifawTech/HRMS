@@ -408,7 +408,7 @@ const EmployeeAttendance = () => {
                               marginTop: 2,
                             }}
                           >
-                            ? Late {formatMinutes(r.late_minutes)}
+                            ⚠️ Late {formatMinutes(r.late_minutes)}
                           </div>
                         )}
                       </td>
@@ -435,7 +435,7 @@ const EmployeeAttendance = () => {
                               marginTop: 2,
                             }}
                           >
-                            ? Early {formatMinutes(r.early_minutes)}
+                            ⚠️ Early {formatMinutes(r.early_minutes)}
                           </div>
                         )}
                       </td>

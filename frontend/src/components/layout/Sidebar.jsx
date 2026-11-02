@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"; // ✅ useRef add panniruken
+import { useState, useEffect, useRef } from "react";
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -21,6 +21,7 @@ import {
   UserMinus,
   FolderKanban,
   MessageSquareWarning,
+  X,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import * as resignApi from "../../api/resignationApi";
@@ -78,7 +79,6 @@ const Sidebar = ({ open, role, onClose }) => {
   const { user } = useAuth();
   const links = role === "MANAGER" ? managerLinks : employeeLinks;
 
-  // ✅ Scroll Position ah Save panna Ref
   const scrollRef = useRef(null);
 
   const [badges, setBadges] = useState({
@@ -114,12 +114,10 @@ const Sidebar = ({ open, role, onClose }) => {
     return () => clearInterval(t);
   }, [role]);
 
-  // ✅ Scroll Position ah restore panna function
   const handleLinkClick = () => {
     if (window.innerWidth <= 992 && onClose) {
       onClose();
     } else {
-      // Namma scroll position ah save pandrom
       if (scrollRef.current) {
         const scrollPos = scrollRef.current.scrollTop;
         sessionStorage.setItem("sidebarScrollPos", scrollPos);
@@ -127,7 +125,6 @@ const Sidebar = ({ open, role, onClose }) => {
     }
   };
 
-  // ✅ Page load aagumbothu scroll position ah set pannum
   useEffect(() => {
     if (scrollRef.current) {
       const savedPos = sessionStorage.getItem("sidebarScrollPos");
@@ -135,14 +132,52 @@ const Sidebar = ({ open, role, onClose }) => {
         scrollRef.current.scrollTop = parseInt(savedPos);
       }
     }
-  }, [links]); // Links maarum pothu (page load aagumbothu)
+  }, [links]);
 
   return (
     <aside
       className={`erp-sidebar ${open ? "" : "closed"}`}
       style={{ fontFamily: FONT }}
-      ref={scrollRef} // ✅ Ref ah kuduthiruken
+      ref={scrollRef}
     >
+      {/* Mobile Drawer Header */}
+      <div className="erp-sidebar-mobile-header">
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              background: "#4f46e5",
+              color: "white",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 800,
+              fontSize: 13,
+            }}
+          >
+            ERP
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 14, color: "#111827", lineHeight: 1.2 }}>
+              {role === "MANAGER" ? "Admin Portal" : "Employee Portal"}
+            </div>
+            <div style={{ fontSize: 11, color: "#6b7280" }}>
+              {user?.first_name ? `${user.first_name} ${user.last_name || ""}` : "Navigation Menu"}
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          className="erp-sidebar-close-btn"
+          onClick={onClose}
+          aria-label="Close menu"
+        >
+          <X size={18} />
+        </button>
+      </div>
+
       <ul className="erp-sidebar-nav" style={{ padding: 0, margin: 0, listStyle: "none" }}>
         {links.map(({ to, label, Icon, badgeKey }) => {
           const badgeCount = badgeKey ? badges[badgeKey] || 0 : 0;
@@ -153,13 +188,13 @@ const Sidebar = ({ open, role, onClose }) => {
                 className={({ isActive }) =>
                   `erp-sidebar-link ${isActive ? "active" : ""}`
                 }
-                onClick={handleLinkClick} // ✅ Ithu dhaan mukkiyam
+                onClick={handleLinkClick}
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: 12,
                   fontFamily: FONT,
-                  whiteSpace: "nowrap", 
+                  whiteSpace: "nowrap",
                   boxSizing: "border-box",
                   height: 44,
                   textDecoration: "none",
@@ -168,20 +203,20 @@ const Sidebar = ({ open, role, onClose }) => {
                 <div style={{ width: 20, display: "flex", justifyContent: "center", flexShrink: 0 }}>
                   <Icon size={18} />
                 </div>
-                
-                <span 
-                  style={{ 
-                    flex: 1, 
-                    overflow: "hidden", 
+
+                <span
+                  style={{
+                    flex: 1,
+                    overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
-                    display: "flex", 
-                    alignItems: "center"
+                    display: "flex",
+                    alignItems: "center",
                   }}
                 >
                   {label}
                 </span>
-                
+
                 {badgeCount > 0 && (
                   <span
                     style={{
@@ -194,7 +229,7 @@ const Sidebar = ({ open, role, onClose }) => {
                       minWidth: 18,
                       textAlign: "center",
                       lineHeight: 1.4,
-                      flexShrink: 0, 
+                      flexShrink: 0,
                     }}
                   >
                     {badgeCount > 99 ? "99+" : badgeCount}

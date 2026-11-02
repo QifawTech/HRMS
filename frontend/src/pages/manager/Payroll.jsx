@@ -137,7 +137,7 @@ const ManagerPayroll = () => {
   }, []);
 
   // ============================================
-  // Employee select ? auto-fill salary
+  // Employee select -> auto-fill salary
   // ============================================
   const onSelectEmployee = (empId) => {
     const emp = employees.find((e) => e._id === empId);
@@ -545,7 +545,7 @@ const ManagerPayroll = () => {
           />
           <Tile
             label="Total Amount"
-            value={`? ${formatCurrency(stats.total_amount || 0)}`}
+            value={`₹${formatCurrency(stats.total_amount || 0)}`}
             color="#0891b2"
             bg="#ecfeff"
             Icon={TrendingUp}
@@ -656,10 +656,10 @@ const ManagerPayroll = () => {
                         <td style={{ fontSize: 12.5 }}>{p.pay_period}</td>
                         <td>{p.paid_days}</td>
                         <td style={{ textAlign: "right", fontWeight: 600 }}>
-                          ? {formatCurrency(p.gross_earnings)}
+                          ₹{formatCurrency(p.gross_earnings)}
                         </td>
                         <td style={{ textAlign: "right", color: "#dc2626" }}>
-                          ? {formatCurrency(p.total_deductions)}
+                          ₹{formatCurrency(p.total_deductions)}
                         </td>
                         <td
                           style={{
@@ -668,7 +668,7 @@ const ManagerPayroll = () => {
                             color: "#1e40af",
                           }}
                         >
-                          ? {formatCurrency(p.net_salary)}
+                          ₹{formatCurrency(p.net_salary)}
                         </td>
                         <td>
                           <span
@@ -749,7 +749,7 @@ const ManagerPayroll = () => {
                     <div>
                       <div className="pay-field-label">Gross</div>
                       <div className="pay-field-value">
-                        ? {formatCurrency(p.gross_earnings)}
+                        ₹{formatCurrency(p.gross_earnings)}
                       </div>
                     </div>
                     <div>
@@ -758,7 +758,7 @@ const ManagerPayroll = () => {
                         className="pay-field-value"
                         style={{ color: "#dc2626" }}
                       >
-                        ? {formatCurrency(p.total_deductions)}
+                        ₹{formatCurrency(p.total_deductions)}
                       </div>
                     </div>
                     <div>
@@ -767,7 +767,7 @@ const ManagerPayroll = () => {
                         className="pay-field-value"
                         style={{ color: "#1e40af", fontSize: 14 }}
                       >
-                        ? {formatCurrency(p.net_salary)}
+                        ₹{formatCurrency(p.net_salary)}
                       </div>
                     </div>
                   </div>
@@ -1102,7 +1102,7 @@ const ManagerPayroll = () => {
                 lineHeight: 1.55,
               }}
             >
-              <strong>?? Warning:</strong> Existing payslips will be deleted and
+              <strong>⚠️ Warning:</strong> Existing payslips will be deleted and
   new payslips will be generated. All changes must be reviewed and
   approved by the manager before they are applied.
             </div>
@@ -1332,7 +1332,7 @@ const ManagerPayroll = () => {
                     textTransform: "uppercase",
                   }}
                 >
-                  ?? Skipped Employees
+                  ⚠️ Skipped Employees
                 </div>
                 {bulkResult.errors.map((e, i) => (
                   <div

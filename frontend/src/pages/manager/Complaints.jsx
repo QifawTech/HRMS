@@ -517,7 +517,7 @@ const ManagerComplaints = () => {
                 {/* Employee */}
                 <div className="mcmp-emp">
                   <div className="mcmp-emp-avatar">
-                    {(c.employee_name || "??")
+                    {(c.employee_name || "—")
                       .split(" ")
                       .map((n) => n[0])
                       .slice(0, 2)

@@ -706,7 +706,7 @@ const LeaveManagement = () => {
                 >
                   <span style={{ color: "#6b7280" }}>Dates</span>
                   <strong>
-                    {formatDate(reviewTarget.start_date)} ?{" "}
+                    {formatDate(reviewTarget.start_date)} - {" "}
                     {formatDate(reviewTarget.end_date)}
                   </strong>
                 </div>
