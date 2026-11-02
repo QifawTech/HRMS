@@ -225,7 +225,7 @@ const ManagerPayroll = () => {
       const res = await api.generateBulkPayroll(month, bulkOverwrite);
       setBulkResult(res.data);
       setToast({
-        message: `? ${res.data.created} payslips generated!`,
+        message: `🎉 ${res.data.created} payslips generated!`,
         type: "success",
       });
       load();
@@ -678,7 +678,7 @@ const ManagerPayroll = () => {
                                 : "erp-badge erp-badge-yellow"
                             }
                           >
-                            {p.status === "Paid" ? "? Paid" : "? Generated"}
+                            {p.status === "Paid" ? "● Paid" : "● Generated"}
                           </span>
                         </td>
                         <td>
@@ -737,7 +737,7 @@ const ManagerPayroll = () => {
                       }
                       style={{ flexShrink: 0 }}
                     >
-                      {p.status === "Paid" ? "? Paid" : "? Generated"}
+                      {p.status === "Paid" ? "● Paid" : "● Generated"}
                     </span>
                   </div>
 
@@ -888,7 +888,7 @@ const ManagerPayroll = () => {
           </div>
 
           <div className="col-12 col-sm-4">
-            <label className="erp-label">Basic Salary (?)</label>
+            <label className="erp-label">Basic Salary (₹)</label>
             <input
               type="number"
               className="erp-input"
@@ -899,7 +899,7 @@ const ManagerPayroll = () => {
           </div>
 
           <div className="col-12 col-sm-4">
-            <label className="erp-label">HRA (?)</label>
+            <label className="erp-label">HRA (₹)</label>
             <input
               type="number"
               className="erp-input"
@@ -910,7 +910,7 @@ const ManagerPayroll = () => {
           </div>
 
           <div className="col-12 col-sm-4">
-            <label className="erp-label">Special Allowance (?)</label>
+            <label className="erp-label">Special Allowance (₹)</label>
             <input
               type="number"
               className="erp-input"
@@ -990,8 +990,8 @@ const ManagerPayroll = () => {
                       }}
                     >
                       {isPTApplicableMonth()
-                        ? "? PT will be deducted"
-                        : "? Not applicable this month"}
+                        ? "✓ PT will be deducted"
+                        : "• Not applicable this month"}
                     </div>
                   )}
                 </div>

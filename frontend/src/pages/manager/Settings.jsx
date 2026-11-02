@@ -1419,7 +1419,7 @@ const ManagerSettings = () => {
           <InfoBanner tone="green">
             <strong>How it works:</strong> Create insurance types with annual
             amount. Assign insurance to employee when adding. Monthly premium
-            auto-calculated (Annual • 12) and deducted in payroll.
+            auto-calculated (Annual ÷ 12) and deducted in payroll.
           </InfoBanner>
 
           {insurancesLoading ? (
@@ -1470,9 +1470,7 @@ const ManagerSettings = () => {
                         <span className="settings-mini-card-label">
                           Annual
                         </span>
-                        <span className="settings-mini-card-value">
-                          ?
-                          {Number(ins.annual_amount || 0).toLocaleString(
+                        <span className="settings-mini-card-value">₹{Number(ins.annual_amount || 0).toLocaleString(
                             "en-IN"
                           )}
                         </span>
@@ -1529,8 +1527,8 @@ const ManagerSettings = () => {
                       >
                         <th style={{ width: 40 }}>#</th>
                         <th>Name</th>
-                        <th>Annual Amount</th>
-                        <th>Monthly</th>
+                        <th>Annual Amount (₹)</th>
+                        <th>Monthly (₹)</th>
                         <th>Employees</th>
                         <th style={{ width: 100 }}>Actions</th>
                       </tr>
@@ -1555,16 +1553,11 @@ const ManagerSettings = () => {
                               </div>
                             )}
                           </td>
-                          <td style={{ fontWeight: 600, color: "#0f172a" }}>
-                            ?
-                            {Number(ins.annual_amount || 0).toLocaleString(
+                          <td style={{ fontWeight: 600, color: "#0f172a" }}>₹{Number(ins.annual_amount || 0).toLocaleString(
                               "en-IN"
                             )}
                           </td>
-                          <td style={{ fontWeight: 600, color: "#059669" }}>
-                            ?
-                            {(
-                              Number(ins.annual_amount || 0) / 12
+                          <td style={{ fontWeight: 600, color: "#059669" }}>₹{(Number(ins.annual_amount || 0) / 12
                             ).toLocaleString("en-IN", {
                               maximumFractionDigits: 2,
                             })}
@@ -1795,7 +1788,7 @@ const ManagerSettings = () => {
                           }`,
                         }}
                       >
-                        {active && "? "}
+                        {active && "✓ "}
                         {label}
                       </button>
                     );
@@ -1881,7 +1874,7 @@ const ManagerSettings = () => {
         >
           <InfoBanner tone="amber">
             <strong>How it works:</strong> The employee's 6-month gross income
-            (Monthly Salary • 6) is matched to one of these slabs. The
+            (Monthly Salary × 6) is matched to one of these slabs. The
             corresponding <strong>Tax Amount</strong> is deducted{" "}
             <strong>once per 6-month period</strong> (Apr & Oct by default).
             Leave <strong>Max Salary</strong> blank for the highest slab.
@@ -1916,7 +1909,7 @@ const ManagerSettings = () => {
                       </div>
 
                       <div className="mb-2">
-                        <label className="erp-label">Min Salary (?)</label>
+                        <label className="erp-label">Min Salary (₹)</label>
                         <input
                           type="number"
                           className="erp-input"
@@ -1929,7 +1922,7 @@ const ManagerSettings = () => {
                       </div>
 
                       <div className="mb-2">
-                        <label className="erp-label">Max Salary (?)</label>
+                        <label className="erp-label">Max Salary (₹)</label>
                         <input
                           type="number"
                           className="erp-input"
@@ -1948,7 +1941,7 @@ const ManagerSettings = () => {
                       </div>
 
                       <div>
-                        <label className="erp-label">Tax Amount (?)</label>
+                        <label className="erp-label">Tax Amount (₹)</label>
                         <input
                           type="number"
                           className="erp-input"
@@ -1992,9 +1985,9 @@ const ManagerSettings = () => {
                         }}
                       >
                         <th style={{ width: 40 }}>#</th>
-                        <th>Min Salary (?)</th>
-                        <th>Max Salary (?)</th>
-                        <th>Tax Amount (?)</th>
+                        <th>Min Salary (₹)</th>
+                        <th>Max Salary (₹)</th>
+                        <th>Tax Amount (₹)</th>
                         <th style={{ width: 60 }}></th>
                       </tr>
                     </thead>

@@ -1340,7 +1340,7 @@ const ManagerReports = () => {
                                       : "erp-badge erp-badge-gray"
                                   }
                                 >
-                                  ? {r.status}
+                                  ● {r.status}
                                 </span>
                               </td>
                               <td>
@@ -1466,7 +1466,7 @@ const ManagerReports = () => {
                                       : "erp-badge erp-badge-gray"
                                   }
                                 >
-                                  ? {r.status}
+                                  ● {r.status}
                                 </span>
                               </td>
                             </tr>
@@ -1618,7 +1618,7 @@ const ManagerReports = () => {
                               }
                               style={{ flexShrink: 0 }}
                             >
-                              ? {r.status}
+                              ● {r.status}
                             </span>
                           </div>
                           <div className="rpt-mobile-grid">
@@ -1756,7 +1756,7 @@ const ManagerReports = () => {
                               }
                               style={{ flexShrink: 0, fontSize: 10 }}
                             >
-                              ? {r.status}
+                              ● {r.status}
                             </span>
                           </div>
                           <div className="rpt-mobile-grid">

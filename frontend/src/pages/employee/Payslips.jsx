@@ -314,7 +314,7 @@ const EmployeePayslips = () => {
                           : "erp-badge erp-badge-yellow"
                       }
                     >
-                      {p.status === "Paid" ? "? Paid" : "? Generated"}
+                      {p.status === "Paid" ? "● Paid" : "● Generated"}
                     </span>
 
                     {/* Eye icon */}

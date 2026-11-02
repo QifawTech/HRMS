@@ -1870,7 +1870,7 @@ const Employees = () => {
                 <div className="row g-3">
                   <div className="col-12 col-md-6">
                     <label className="erp-label">
-                      Total Monthly Salary (?) {!editing && "*"}
+                      Total Monthly Salary (₹) {!editing && "*"}
                     </label>
                     <input
                       type="number"
@@ -2237,7 +2237,7 @@ const Employees = () => {
 
             <div className="mb-3">
               <label className="erp-label">
-                New Monthly Salary (?){" "}
+                New Monthly Salary (₹){" "}
                 <span style={{ color: "#94a3b8" }}>
                   (leave to keep same)
                 </span>
