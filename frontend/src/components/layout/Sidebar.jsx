@@ -27,7 +27,7 @@ import { useAuth } from "../../hooks/useAuth";
 import * as resignApi from "../../api/resignationApi";
 import * as leaveApi from "../../api/leaveApi";
 
-const FONT = "'Inter', 'Segoe UI', -apple-system, sans-serif";
+const FONT = "'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif";
 
 const managerLinks = [
   { to: "/manager/dashboard", label: "Dashboard", Icon: LayoutDashboard },
@@ -194,6 +194,7 @@ const Sidebar = ({ open, role, onClose }) => {
                   alignItems: "center",
                   gap: 12,
                   fontFamily: FONT,
+                  fontSize: 14,
                   whiteSpace: "nowrap",
                   boxSizing: "border-box",
                   height: 44,
@@ -212,6 +213,7 @@ const Sidebar = ({ open, role, onClose }) => {
                     whiteSpace: "nowrap",
                     display: "flex",
                     alignItems: "center",
+                    fontSize: 14,
                   }}
                 >
                   {label}

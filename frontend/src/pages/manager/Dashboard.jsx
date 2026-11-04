@@ -17,7 +17,7 @@ import { useAuth } from "../../hooks/useAuth";
 import * as api from "../../api/dashboardApi";
 import * as empApi from "../../api/employeeApi";
 
-const FONT = "'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif";
+const FONT = "'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif";
 
 // ============================================
 // Stat Card
@@ -48,12 +48,22 @@ const StatCard = ({ title, value, Icon, color, bg, subtitle }) => (
 );
 
 // ============================================
-// ✅ Simple Donut Chart (SVG, no library)
+// ✅ Animated Donut Chart (Smooth SVG Bloom)
 // ============================================
 const DonutChart = ({ segments, size = 180, strokeWidth = 22 }) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const total = segments.reduce((s, seg) => s + seg.value, 0);
+  const [animated, setAnimated] = useState(false);
+  const [hoveredIdx, setHoveredIdx] = useState(null);
+
+  useEffect(() => {
+    setAnimated(false);
+    const timer = setTimeout(() => {
+      setAnimated(true);
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [segments]);
 
   if (total === 0) {
     return (
@@ -72,14 +82,47 @@ const DonutChart = ({ segments, size = 180, strokeWidth = 22 }) => {
 
   let offset = 0;
   return (
-    <svg width={size} height={size}>
-      <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
+    <div
+      style={{
+        position: "relative",
+        width: size,
+        height: size,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <svg
+        width={size}
+        height={size}
+        style={{
+          transform: animated
+            ? "rotate(-90deg) scale(1)"
+            : "rotate(-120deg) scale(0.85)",
+          opacity: animated ? 1 : 0,
+          transition:
+            "transform 1s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease",
+          overflow: "visible",
+        }}
+      >
+        {/* Subtle background track */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="#f1f5f9"
+          strokeWidth={strokeWidth}
+        />
         {segments.map((seg, i) => {
           const pct = seg.value / total;
           const dashLength = pct * circumference;
-          const dashArray = `${dashLength} ${circumference - dashLength}`;
+          const currentLength = animated ? dashLength : 0;
+          const dashArray = `${currentLength} ${circumference - currentLength}`;
           const dashOffset = -offset;
           offset += dashLength;
+          const isHovered = hoveredIdx === i;
+
           return (
             <circle
               key={i}
@@ -88,64 +131,88 @@ const DonutChart = ({ segments, size = 180, strokeWidth = 22 }) => {
               r={radius}
               fill="none"
               stroke={seg.color}
-              strokeWidth={strokeWidth}
+              strokeWidth={isHovered ? strokeWidth + 4 : strokeWidth}
               strokeDasharray={dashArray}
               strokeDashoffset={dashOffset}
               strokeLinecap="butt"
+              onMouseEnter={() => setHoveredIdx(i)}
+              onMouseLeave={() => setHoveredIdx(null)}
+              style={{
+                cursor: "pointer",
+                transition:
+                  "stroke-dasharray 1.2s cubic-bezier(0.16, 1, 0.3, 1), stroke-dashoffset 1.2s cubic-bezier(0.16, 1, 0.3, 1), stroke-width 0.2s ease, filter 0.2s ease",
+                filter: isHovered
+                  ? "drop-shadow(0 2px 6px rgba(0,0,0,0.25))"
+                  : "none",
+              }}
             />
           );
         })}
-      </g>
-    </svg>
+      </svg>
+    </div>
   );
 };
 
 // ============================================
-// Chart Legend
+// Chart Legend (Animated Cascade)
 // ============================================
-const ChartLegend = ({ items }) => (
-  <div
-    style={{
-      display: "flex",
-      flexDirection: "column",
-      gap: 10,
-      fontFamily: FONT,
-    }}
-  >
-    {items.map((item, i) => (
-      <div
-        key={i}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          fontSize: 13,
-        }}
-      >
-        <span
-          style={{
-            width: 12,
-            height: 12,
-            borderRadius: 3,
-            background: item.color,
-            flexShrink: 0,
-          }}
-        />
-        <span
-          style={{ flex: 1, color: "#4b5563", fontWeight: 500 }}
-        >
-          {item.label}
-        </span>
-        <span style={{ fontWeight: 700, color: "#111827" }}>
-          {item.value}
-        </span>
-      </div>
-    ))}
-  </div>
-);
+const ChartLegend = ({ items }) => {
+  const [animated, setAnimated] = useState(false);
 
-// ============================================
-// Manager Dashboard
+  useEffect(() => {
+    setAnimated(false);
+    const timer = setTimeout(() => {
+      setAnimated(true);
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [items]);
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+        fontFamily: FONT,
+      }}
+    >
+      {items.map((item, i) => (
+        <div
+          key={i}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            fontSize: 13,
+            opacity: animated ? 1 : 0,
+            transform: animated ? "translateX(0)" : "translateX(16px)",
+            transition: `opacity 0.6s ease ${0.12 + i * 0.08}s, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${0.12 + i * 0.08}s`,
+          }}
+        >
+          <span
+            style={{
+              width: 12,
+              height: 12,
+              borderRadius: 3,
+              background: item.color,
+              flexShrink: 0,
+              boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+            }}
+          />
+          <span
+            style={{ flex: 1, color: "#4b5563", fontWeight: 500 }}
+          >
+            {item.label}
+          </span>
+          <span style={{ fontWeight: 700, color: "#111827" }}>
+            {item.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 // ============================================
 const ManagerDashboard = () => {
   const { user } = useAuth();
@@ -247,7 +314,6 @@ const ManagerDashboard = () => {
   return (
     <Layout>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
         .mgr-dashboard,
         .mgr-dashboard * {

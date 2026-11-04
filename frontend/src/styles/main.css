@@ -149,6 +149,7 @@ body {
   overflow-y: auto;
   transition: width 0.25s ease, transform 0.25s ease;
   flex-shrink: 0;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
 }
 
 .erp-sidebar.closed {
@@ -171,8 +172,9 @@ body {
   border-radius: 8px;
   color: var(--text-secondary);
   text-decoration: none;
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 500;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
   transition: all 0.15s;
   margin-bottom: 2px;
   white-space: nowrap;
@@ -187,6 +189,7 @@ body {
   background: var(--sidebar-active);
   color: var(--primary);
   font-weight: 600;
+  font-size: 14px;
 }
 
 .erp-sidebar-link.active svg {

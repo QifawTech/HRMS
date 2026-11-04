@@ -15,7 +15,7 @@ import Layout from "../../components/layout/Layout";
 import Toast from "../../components/common/Toast";
 import * as holidayApi from "../../api/holidayApi";
 
-const FONT = "'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif";
+const FONT = "'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif";
 
 const TYPE_STYLES = {
   National: { bg: "#fee2e2", color: "#991b1b", border: "#fecaca" },
@@ -248,7 +248,6 @@ const ManagerHolidays = () => {
   return (
     <Layout>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
         .hol-page,
         .hol-page * {
