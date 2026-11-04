@@ -282,7 +282,7 @@ const Employees = () => {
         ? item.intern_end_date.split("T")[0]
         : "",
         
-      // ? Load NEW fields in Edit
+      // Load NEW fields in Edit
       dob: item.dob || "",
       gender: item.gender || "",
       blood_group: item.blood_group || "",
@@ -385,7 +385,9 @@ const Employees = () => {
         }
 
         const updateData = { ...finalForm };
-        delete updateData.employee_code;
+        if (updateData.employee_code) {
+          updateData.employee_code = updateData.employee_code.trim().toUpperCase();
+        }
 
         if (!updateData.password || !updateData.password.trim()) {
           delete updateData.password;
@@ -1759,7 +1761,7 @@ const Employees = () => {
               </div>
             )}
 
-            {/* ? End Date • Only in EDIT mode */}
+            {/* End Date • Only in EDIT mode */}
             {editing && (
               <div className="col-12 col-sm-6">
                 <label className="erp-label">
@@ -2405,7 +2407,7 @@ const Employees = () => {
               }}
             >
               💡 <strong>Tip:</strong> If you just want to deactivate this
-              employee, use <strong>"Edit ? End Date"</strong> instead. Data
+              employee, use <strong>"Edit → End Date"</strong> instead. Data
               will be preserved. Only use <strong>Permanent Delete</strong>{" "}
               for testing/cleanup purposes.
             </div>

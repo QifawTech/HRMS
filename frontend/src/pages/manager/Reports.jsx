@@ -1827,7 +1827,7 @@ const ManagerReports = () => {
                         </MobileRecordCard>
                       ))}
 
-                    {/* ? Monthly Summary mobile cards */}
+                    {/* Monthly Summary mobile cards */}
                     {activeReport === "monthly" &&
                       data.employees.map((e) => (
                         <MobileRecordCard key={e.employee_id}>

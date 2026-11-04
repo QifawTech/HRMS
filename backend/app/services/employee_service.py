@@ -5,7 +5,7 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from app.db import (
     users, employees, departments, designations, shifts, insurances,
-    confirmations,
+    confirmations, tasks,
 )
 from app.utils.helpers import serialize, serialize_list
 from app.utils.time_utils import now_ist
@@ -529,6 +529,27 @@ def update_employee(emp_id, data):
             {"_id": emp["user_id"]},
             {"$set": {"password_hash": pw_hash, "updated_at": now_ist()}},
         )
+
+    if "employee_code" in data and data["employee_code"]:
+        new_code = (data["employee_code"] or "").strip().upper()
+        if not new_code:
+            raise ValueError("Employee code cannot be empty")
+        existing_code = employees().find_one({
+            "employee_code": new_code,
+            "_id": {"$ne": oid},
+        })
+        if existing_code:
+            raise ValueError(
+                f"Employee code '{new_code}' already in use by {existing_code.get('first_name', '')} {existing_code.get('last_name', '')}"
+            )
+        update_fields["employee_code"] = new_code
+        try:
+            tasks().update_many(
+                {"assigned_to_id": oid},
+                {"$set": {"assigned_to_code": new_code}},
+            )
+        except Exception:
+            pass
 
     for field in ["first_name", "last_name", "phone", "address"]:
         if field in data:

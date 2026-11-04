@@ -1807,7 +1807,7 @@ const ManagerSettings = () => {
                       color: "#991b1b",
                     }}
                   >
-                    ? At least one month must be selected for PT deduction.
+                    ⚠️ At least one month must be selected for PT deduction.
                   </div>
                 )}
               </div>
@@ -2357,7 +2357,7 @@ const ManagerSettings = () => {
           </small>
         </div>
 
-        {/* ? 1st Time slot */}
+        {/* 1st Time slot */}
         <div className="row g-3 mb-3">
           <div className="col-12 col-sm-6">
             <TimePicker12
@@ -2377,7 +2377,7 @@ const ManagerSettings = () => {
           </div>
         </div>
 
-        {/* ? 2nd Time slot (Only if Custom Shift) */}
+        {/* 2nd Time slot (Only if Custom Shift) */}
         {isSplitShift && (
           <div className="row g-3 mb-3" style={{ padding: 12, background: "#eef2ff", borderRadius: 8, border: "1px dashed #c7d2fe" }}>
             <div className="col-12" style={{ fontSize: 12, fontWeight: 700, color: "#3730a3", marginBottom: 4 }}>

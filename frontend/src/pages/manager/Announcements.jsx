@@ -983,7 +983,7 @@ const AnnouncementRow = ({
                 marginLeft: 2,
               }}
             >
-              ? {ann.total_recipients}{" "}
+              • {ann.total_recipients}{" "}
               {ann.total_recipients === 1 ? "recipient" : "recipients"}
             </span>
           )}

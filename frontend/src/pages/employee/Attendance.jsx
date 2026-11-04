@@ -299,7 +299,7 @@ const EmployeeAttendance = () => {
           sub={
             summary.late_days > 0
               ? "Need improvement"
-              : "All on time ?"
+              : "All on time 🎉"
           }
           Icon={AlertTriangle}
           color="#d97706"
