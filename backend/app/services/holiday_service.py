@@ -1,7 +1,7 @@
 from datetime import datetime, date
 from bson import ObjectId
 from bson.errors import InvalidId
-from app.db import holidays
+from app.db import holidays, attendance, employees, notifications
 from app.utils.time_utils import now_ist
 
 
@@ -223,6 +223,12 @@ def create_holiday(data):
     }
 
     result = holidays().insert_one(doc)
+
+    # ✅ NEW: If holiday is today, mark paid holiday for all employees
+    today = date.today().isoformat()
+    if date_str == today:
+        mark_paid_holiday(today, name)
+
     return str(result.inserted_id)
 
 
@@ -299,3 +305,64 @@ def _serialize(doc):
         "created_at": doc["created_at"].isoformat() if doc.get("created_at") else None,
         "updated_at": doc["updated_at"].isoformat() if doc.get("updated_at") else None,
     }
+
+
+# ============================================
+# ✅ NEW: PAID HOLIDAY LOGIC
+# ============================================
+
+def mark_paid_holiday(holiday_date, holiday_name):
+    """
+    Mark all active employees as PAID_HOLIDAY for the given date.
+    Also send a notification to each employee.
+    """
+    from app.db import users
+    from app.services.notification_service import create_notification
+
+    active_emps = list(employees().find({"status": "ACTIVE"}))
+    now = _now()
+
+    for emp in active_emps:
+        # Check if attendance already exists for this date
+        existing = attendance().find_one({
+            "employee_id": emp["_id"],
+            "date": holiday_date,
+        })
+
+        if existing:
+            # Update existing record
+            attendance().update_one(
+                {"_id": existing["_id"]},
+                {"$set": {
+                    "status": "PAID_HOLIDAY",
+                    "notes": f"Paid Holiday: {holiday_name}",
+                    "updated_at": now,
+                }},
+            )
+        else:
+            # Insert new record
+            attendance().insert_one({
+                "employee_id": emp["_id"],
+                "date": holiday_date,
+                "check_in": None,
+                "check_out": None,
+                "working_hours": 0,
+                "status": "PAID_HOLIDAY",
+                "is_late": False,
+                "late_minutes": 0,
+                "is_early_logout": False,
+                "early_minutes": 0,
+                "early_logout_reason": None,
+                "notes": f"Paid Holiday: {holiday_name}",
+                "created_at": now,
+                "updated_at": now,
+            })
+
+        # Send notification
+        create_notification(
+            employee_id=str(emp["_id"]),
+            title="Paid Holiday",
+            message=f"Today is a Paid Holiday: {holiday_name}",
+            notif_type="PAID_HOLIDAY",
+            link="/employee/dashboard",
+        )

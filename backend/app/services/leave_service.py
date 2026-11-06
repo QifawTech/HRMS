@@ -183,8 +183,11 @@ def apply_leave(employee_id, data):
     is_same_day = start == today
     is_past = start < today
 
+    # ✅ FIX: Remove the past date check and enforce reason
     if is_past:
-        raise ValueError("Cannot apply leave for past dates")
+        reason = (data.get("reason") or "").strip()
+        if not reason or len(reason) < 10:
+            raise ValueError("Reason is required (min 10 characters) for past date leave.")
 
     # Get leave type
     lt = leave_types().find_one({"_id": leave_type_id, "is_active": True})
@@ -197,6 +200,9 @@ def apply_leave(employee_id, data):
     # Sick leave: allow same day
     # Casual leave: allow same day but flag it
     same_day_flag = is_same_day and lt_code == "CL"
+    
+    # ✅ NEW: Past date flag
+    past_date_flag = is_past
 
     # ============================================
     # Check FY-based balance
@@ -271,6 +277,7 @@ def apply_leave(employee_id, data):
         "reason": (data.get("reason") or "").strip(),
         "status": "Pending",
         "is_same_day": same_day_flag,
+        "is_past_date": past_date_flag, # ✅ NEW
         "fy_label": fy_label,
         "reviewed_by": None,
         "reviewed_at": None,
@@ -290,13 +297,14 @@ def apply_leave(employee_id, data):
 
     days_str = f"{total_days} day" + ("s" if total_days > 1 else "")
     same_day_text = " [SAME DAY]" if same_day_flag else ""
+    past_date_text = " [PAST DATE]" if past_date_flag else "" # ✅ NEW
 
     for mu in manager_users:
         mgr_emp = employees().find_one({"user_id": mu["_id"]})
         if mgr_emp:
             notifications().insert_one({
                 "employee_id": mgr_emp["_id"],
-                "title": f"Leave Applied{same_day_text}",
+                "title": f"Leave Applied{same_day_text}{past_date_text}", # ✅ NEW
                 "message": f"{emp_name} applied for {lt_name} ({days_str})",
                 "type": "LEAVE_APPLIED",
                 "link": "/manager/leaves",

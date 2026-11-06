@@ -114,6 +114,21 @@ const EmployeeLeave = () => {
       setToast({ message: "Start and end dates required", type: "error" });
       return;
     }
+
+    // ✅ NEW: Past date validation
+    const todayStr = new Date().toISOString().split("T")[0];
+    const isPast = form.start_date < todayStr;
+
+    if (isPast) {
+      if (!form.reason.trim() || form.reason.trim().length < 10) {
+        setToast({
+          message: "Reason is required (min 10 characters) for past date leave.",
+          type: "error",
+        });
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       await api.applyLeave(form);
@@ -155,6 +170,12 @@ const EmployeeLeave = () => {
   const isSameDayRequest = () => {
     const today = new Date().toISOString().split("T")[0];
     return form.start_date === today;
+  };
+
+  // ✅ NEW: Past date check for UI
+  const isPastDateRequest = () => {
+    const today = new Date().toISOString().split("T")[0];
+    return form.start_date < today;
   };
 
   const selectedType = useMemo(() => {
@@ -625,7 +646,7 @@ const EmployeeLeave = () => {
                 onChange={(e) =>
                   setForm({ ...form, start_date: e.target.value })
                 }
-                min={new Date().toISOString().split("T")[0]}
+                // ✅ REMOVED min attribute
                 style={{ fontFamily: FONT }}
               />
             </div>
@@ -638,7 +659,7 @@ const EmployeeLeave = () => {
                 onChange={(e) =>
                   setForm({ ...form, end_date: e.target.value })
                 }
-                min={form.start_date}
+                // ✅ REMOVED min attribute
                 style={{ fontFamily: FONT }}
               />
             </div>
@@ -674,6 +695,30 @@ const EmployeeLeave = () => {
             </div>
           </div>
 
+          {/* ✅ Past Date Warning */}
+          {isPastDateRequest() && (
+            <div
+              style={{
+                padding: 10,
+                background: "#fef2f2",
+                border: "1px solid #fecaca",
+                borderRadius: 8,
+                marginBottom: 16,
+                fontSize: 12,
+                color: "#991b1b",
+                fontFamily: FONT,
+                lineHeight: 1.5,
+              }}
+            >
+              <AlertTriangle
+                size={13}
+                style={{ display: "inline", marginRight: 6 }}
+              />
+              <strong>Past date leave:</strong> You are applying for a past
+              date. Reason is mandatory.
+            </div>
+          )}
+
           {/* Same Day Warning */}
           {isSameDayRequest() && (
             <div
@@ -706,7 +751,10 @@ const EmployeeLeave = () => {
           )}
 
           <div className="mb-3">
-            <label className="erp-label">Reason *</label>
+            <label className="erp-label">
+              Reason {isPastDateRequest() && "*"}{" "}
+              {!isPastDateRequest() && "*"}
+            </label>
             <textarea
               className="erp-input"
               rows={3}

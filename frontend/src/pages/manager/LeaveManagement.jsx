@@ -52,6 +52,26 @@ const statusBadge = (status) => {
   }
 };
 
+// ✅ NEW: Past date badge
+const PastDateBadge = () => (
+  <span
+    style={{
+      fontSize: 10,
+      marginLeft: 4,
+      marginTop: 4,
+      background: "#fef2f2",
+      color: "#dc2626",
+      border: "1px solid #fecaca",
+      padding: "1px 6px",
+      borderRadius: 4,
+      display: "inline-block",
+      fontWeight: 700,
+    }}
+  >
+    PAST DATE
+  </span>
+);
+
 const StatCard = ({ label, value, icon: Icon, color, bg, active, onClick }) => (
   <div className="col-6 col-md-3">
     <div
@@ -368,6 +388,8 @@ const LeaveManagement = () => {
                               SAME DAY
                             </div>
                           )}
+                          {/* ✅ NEW: Past date badge */}
+                          {l.is_past_date && <PastDateBadge />}
                         </td>
                         <td style={{ fontSize: 12.5 }}>
                           {formatDate(l.start_date)}
@@ -501,6 +523,23 @@ const LeaveManagement = () => {
                             }}
                           >
                             SAME DAY
+                          </span>
+                        )}
+                        {/* ✅ NEW: Past date badge (mobile) */}
+                        {l.is_past_date && (
+                          <span
+                            style={{
+                              marginLeft: 6,
+                              fontSize: 9.5,
+                              background: "#fef2f2",
+                              color: "#dc2626",
+                              border: "1px solid #fecaca",
+                              padding: "1px 5px",
+                              borderRadius: 4,
+                              fontWeight: 700,
+                            }}
+                          >
+                            PAST DATE
                           </span>
                         )}
                       </div>
@@ -661,6 +700,34 @@ const LeaveManagement = () => {
                   <div>
                     <strong>Same-day request.</strong> Employee applied for
                     leave starting today.
+                  </div>
+                </div>
+              )}
+
+              {/* ✅ NEW: Past date alert in modal */}
+              {reviewTarget.is_past_date && (
+                <div
+                  style={{
+                    padding: 12,
+                    background: "#fef2f2",
+                    border: "1px solid #fecaca",
+                    borderRadius: 8,
+                    marginBottom: 12,
+                    display: "flex",
+                    gap: 8,
+                    alignItems: "flex-start",
+                    fontSize: 12.5,
+                    color: "#991b1b",
+                    fontFamily: FONT,
+                  }}
+                >
+                  <AlertTriangle
+                    size={14}
+                    style={{ flexShrink: 0, marginTop: 2 }}
+                  />
+                  <div>
+                    <strong>Past-date request.</strong> Employee applied for
+                    leave for a past date. Please review carefully.
                   </div>
                 </div>
               )}
